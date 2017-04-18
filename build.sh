@@ -109,6 +109,8 @@ function main
         return 1
     fi
 
+    InstallCMakeModules "${root_install_directory}/cmake" || return 1
+
     rm "$LOG_FILE" 2> /dev/null
 
     printf "\nAdd the following line to your .bashrc/.zshenv file:\n"
