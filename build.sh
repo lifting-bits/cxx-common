@@ -206,8 +206,11 @@ function ShowUsage
     printf "\tglog\n"
     printf "\tclang\n\n"
 
-    printf "LLVM and clang version can be selected by appending the version\n"
-    printf "number to the name. Example: llvm39, clang39, llvm38, clang38...\n\n"
+    printf "The LLVM and clang version can be selected by appending the version\n"
+    printf "number to the llvm target name. Example: llvm39, llvm38\n\n"
+
+    printf "To install clang, you also have to add llvm to the target list (it is\n"
+    printf "ignored otherwise).\n\n"
 
     return 0
 }
