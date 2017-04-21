@@ -367,7 +367,7 @@ function InstallLLVM
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
+    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -436,7 +436,7 @@ function InstallGoogleGflags
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="RelWithDebInfo" "../gflags" ) >> "$LOG_FILE" 2>&1
+    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../gflags" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -505,7 +505,7 @@ function InstallGoogleTest
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="RelWithDebInfo" "../googletest" ) >> "$LOG_FILE" 2>&1
+    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../googletest" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -642,7 +642,7 @@ function InstallGoogleGlog
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="RelWithDebInfo" "../glog" ) >> "$LOG_FILE" 2>&1
+    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../glog" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
