@@ -100,7 +100,7 @@ function main
             InstallLLVM "$llvm_version" "$install_clang" "${root_install_directory}/llvm" || return 1
 
         else
-            printf "Unknown target!\n"
+            printf "Unknown target $target_name!\n"
             return 1
         fi
     done
@@ -367,7 +367,7 @@ function InstallLLVM
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
+    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86;ARM" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -436,7 +436,7 @@ function InstallGoogleGflags
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../gflags" ) >> "$LOG_FILE" 2>&1
+    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DGFLAGS_BUILD_TESTING=OFF -DGFLAGS_BUILD_SHARED_LIBS=OFF -DGFLAGS_BUILD_STATIC_LIBS=ON -DGFLAGS_NAMESPACE="google" -DWITH_GFLAGS=OFF "../gflags" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -505,7 +505,7 @@ function InstallGoogleTest
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../googletest" ) >> "$LOG_FILE" 2>&1
+    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" "../googletest" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -573,7 +573,7 @@ function InstallGoogleProtocolBuffers
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf" && ./configure "--prefix=${install_directory}" ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf" && ./configure "--prefix=${install_directory}" --disable-shared ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -642,7 +642,7 @@ function InstallGoogleGlog
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_BUILD_TYPE="Release" "../glog" ) >> "$LOG_FILE" 2>&1
+    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DBUILD_TESTING=OFF -DWITH_GFLAGS=OFF "../glog" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
