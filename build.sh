@@ -113,7 +113,7 @@ function main
 
     rm "$LOG_FILE" 2> /dev/null
 
-    printf "\nAdd the following line to your .bashrc/.zshenv file:\n"
+    printf "\nAdd the following lines to your .bashrc/.zshenv file:\n"
     printf "  export TRAILOFBITS_LIBRARIES=${root_install_directory}\n"
 
     printf "\nAdd the following to your CMakeLists.txt file:\n"
@@ -535,6 +535,9 @@ function InstallGoogleTest
 
 function InstallGoogleProtocolBuffers
 {
+    local protobuf_version="2.6.1"
+    local gtest_version="1.5.0"
+
     if [ $# -ne 1 ] ; then
         printf "Usage:\n"
         printf "\tInstallGoogleProtocolBuffers /path/to/libraries"
@@ -547,33 +550,81 @@ function InstallGoogleProtocolBuffers
     local install_directory="$1"
     printf " > Install directory: ${install_directory}\n"
 
-    # acquire or update the source code
-    rm "$LOG_FILE" 2> /dev/null
-    if [ ! -d "protobuf" ] ; then
-        printf " > Acquiring the source code...\n"
-        git clone "https://github.com/google/protobuf.git" protobuf >> "$LOG_FILE" 2>&1
-    else
-        printf " > Updating the source code...\n"
-        ( cd "protobuf" && git pull origin master ) >> "$LOG_FILE" 2>&1
+    # acquire the source code
+    if [ ! -f "protobuf-v${protobuf_version}.tar.gz" ] ; then
+        printf " > Acquiring the source code for protobuf...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        wget "https://github.com/google/protobuf/archive/v${protobuf_version}.tar.gz" -O "protobuf-v${protobuf_version}.tar.gz" >> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm "protobuf-v${protobuf_version}.tar.gz" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
     fi
 
-    if [ $? -ne 0 ] ; then
-        ShowLog
-        return 1
+    if [ ! -d "protobuf-${protobuf_version}" ] ; then
+        printf " > Extracting the protobuf source code...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        tar xzf "protobuf-v${protobuf_version}.tar.gz" >> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm -rf "v${protobuf_version}" 2> /dev/null
+            rm "protobuf-v${protobuf_version}.tar.gz" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
+    fi
+
+    # autogen.sh will attempt to fetch gtest from a broken link
+    # we can work around the issue by downloading it manually
+    if [ ! -f "gtest-${gtest_version}.tar.gz" ] ; then
+        printf " > Acquiring the source code for protobuf/gtest...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        wget "https://codeload.github.com/google/googletest/tar.gz/release-${gtest_version}" -O "gtest-${gtest_version}.tar.gz">> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm "gtest-${gtest_version}.tar.gz" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
+    fi
+
+    if [ ! -d "protobuf-${protobuf_version}/gtest" ] ; then
+        printf " > Extracting the protobuf/gtest source code...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        tar xzf "gtest-${gtest_version}.tar.gz" >> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm -rf "googletest-release-${gtest_version}" 2> /dev/null
+            rm "gtest-${gtest_version}.tar.gz" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
+
+        mv "googletest-release-${gtest_version}" "protobuf-${protobuf_version}/gtest" 2> /dev/null
+        if [ $? -ne 0 ] ; then
+            printf "Failed to copy the gtest folder inside the protobuf source tree\n"
+            return 1
+        fi
     fi
 
     # configure
     printf " > Configuring...\n"
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf" && ./autogen.sh ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && ./autogen.sh ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf" && ./configure "--prefix=${install_directory}" --disable-shared ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && ./configure "--prefix=${install_directory}" --enable-shared --enable-static ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -583,7 +634,17 @@ function InstallGoogleProtocolBuffers
     printf " > Building...\n"
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
+    fi
+
+    export LIBRARY_PATH="${install_directory}/lib"
+    export LD_LIBRARY_PATH="$LIBRARY_PATH"
+
+    rm "$LOG_FILE" 2> /dev/null
+    ( cd "protobuf-${protobuf_version}/python" && python2 setup.py build ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -592,11 +653,33 @@ function InstallGoogleProtocolBuffers
     printf " > Installing...\n"
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf" && make install ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && make install ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
     fi
+
+    rm "$LOG_FILE" 2> /dev/null
+    ( cd "protobuf-${protobuf_version}/python" && python2 setup.py build ) >> "$LOG_FILE" 2>&1
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
+    fi
+
+    mkdir -p "${install_directory}/python" 2> /dev/null
+    if [ $? -ne 0 ] ; then
+        printf "Failed to create the installation directory for the protobuf python module.\n"
+        return 1
+    fi
+
+    cp -r "protobuf-${protobuf_version}/python/build/lib.linux-$(uname -p)-2.7/google" "${install_directory}/python" 2> /dev/null
+    if [ $? -ne 0 ] ; then
+        printf "Failed to install the protobuf python module.\n"
+        return 1
+    fi
+
+    unset LIBRARY_PATH
+    unset LD_LIBRARY_PATH
 
     return 0
 }
