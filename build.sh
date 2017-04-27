@@ -789,9 +789,9 @@ function InstallDynamorioDecoder
     if [ ! -d "$TARGET_NAME" ] ; then
         printf " > Acquiring the source code...\n"
         git clone "https://github.com/DynamoRIO/dynamorio.git" "$TARGET_NAME" >> "$LOG_FILE" 2>&1
-        ( cd $TARGET_NAME && git checkout $TAG_VER )
+        ( cd $TARGET_NAME && git checkout $TAG_VER >> "$LOG_FILE" 2>&1 )
     fi
-    check_error $? || return 1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1)
     
     # configure dynamorio to build drdecode
     printf " > Configuring ${TARGET_NAME} ...\n"
@@ -805,20 +805,20 @@ function InstallDynamorioDecoder
     fi
     
     ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DBUILD_EXT=ON -DBUILD_SAMPLES=OFF -DDRSTATS_DEMO=OFF -DBUILD_DOCS=OFF -DDEBUG=OFF -DNOT_DYNAMORIO_CORE_PROP=ON -DSTANDALONE_DECODER=ON "../${TARGET_NAME}" ) >> "$LOG_FILE" 2>&1
-    check_error $? || return 1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
 
     # build and install
     printf " > Building ${TARGET_NAME}...\n"
     ( cd "${TARGET_NAME}-build" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1 
-    check_error $? || return 1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
     
     printf " > Installing...\n"
     ( cd "${TARGET_NAME}-build" && make install ) >> "$LOG_FILE" 2>&1
-    check_error $? || return 1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
 
     # cleanup and remove sources and build directories   
 	printf " > Remove build directories ...\n"
-    if [ ! -d "${TARGET_NAME}" ] ; then
+    if [ -d "${TARGET_NAME}" ] ; then
         rm -rf ${TARGET_NAME}*
     fi
 
