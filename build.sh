@@ -2,9 +2,9 @@
 
 TEMPLATE_DESCRIPTOR_LIST=(
     "remill:llvm39,xed,gtest,glog,gflags,protobuf"
-    "mcsema:llvm38,protobuf"
+    "mcsema:llvm38,protobuf,drdecode"
     "remill-experimental:llvm39,clang,gflags,glog,gtest"
-    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog"
+    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,drdecode"
 )
 
 LIBRARY_LIST=(
@@ -15,6 +15,7 @@ LIBRARY_LIST=(
     "gtest"
     "protobuf"
     "glog"
+    "drdecode"
 )
 
 DEFAULT_LLVM_VERSION=39
@@ -87,6 +88,9 @@ function main
 
         elif [[ "$target_name" == "glog" ]] ; then
             InstallGoogleGlog "${root_install_directory}/glog" || return 1
+            
+        elif [[ "$target_name" == "drdecode" ]] ; then
+            InstallDynamorioDecoder "${root_install_directory}/$target_name" || return 1
 
         elif [[ "$target_name" == "llvm" ]] ; then
             if [ -z "$llvm_version" ] ; then
@@ -206,6 +210,7 @@ function ShowUsage
     printf "\tgtest\n"
     printf "\tprotobuf\n"
     printf "\tglog\n"
+    printf "\tdrdecode\n"
     printf "\tclang\n\n"
 
     printf "The LLVM and clang version can be selected by appending the version\n"
@@ -752,6 +757,74 @@ function InstallGoogleGlog
 
     return 0
 }
+
+function InstallDynamorioDecoder
+{
+    if [ $# -ne 1 ]; then
+        printf "Usage:\n"
+        printf "\tInstallDynamorioDecoder /path/to/libraries"
+    fi
+	
+    printf "\nInstall dynamorio decoder modules...\n"
+
+    local TAG_VER=tags/release_7_0_0_rc1
+    local BUILD_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local INSTALL_PATH="$1"
+    local TARGET_NAME=$(basename "${INSTALL_PATH}")
+	
+    printf " > Install directory: ${INSTALL_PATH}\n"
+
+    function check_error
+    {
+        local ERR_CODE="$1"
+        if [ $ERR_CODE -ne 0 ]; then
+            ShowLog
+            return 1
+        fi
+        return 0
+    }
+	
+    # get the source code from dynamorio with correct tag version
+    rm "$LOG_FILE" 2> /dev/null
+    if [ ! -d "$TARGET_NAME" ] ; then
+        printf " > Acquiring the source code...\n"
+        git clone "https://github.com/DynamoRIO/dynamorio.git" "$TARGET_NAME" >> "$LOG_FILE" 2>&1
+        ( cd $TARGET_NAME && git checkout $TAG_VER )
+    fi
+    check_error $? || return 1
+    
+    # configure dynamorio to build drdecode
+    printf " > Configuring ${TARGET_NAME} ...\n"
+
+    if [ ! -d "${TARGET_NAME}-build" ] ; then
+        mkdir "${TARGET_NAME}-build" 2> /dev/null
+        if [ $? -ne 0 ] ; then
+            printf "Failed to create the build directory for dynamorio: ${TARGET_NAME}-build\n"
+            return 1
+        fi
+    fi
+    
+    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DBUILD_EXT=ON -DBUILD_SAMPLES=OFF -DDRSTATS_DEMO=OFF -DBUILD_DOCS=OFF -DDEBUG=OFF -DNOT_DYNAMORIO_CORE_PROP=ON -DSTANDALONE_DECODER=ON "../${TARGET_NAME}" ) >> "$LOG_FILE" 2>&1
+    check_error $? || return 1
+
+    # build and install
+    printf " > Building ${TARGET_NAME}...\n"
+    ( cd "${TARGET_NAME}-build" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1 
+    check_error $? || return 1
+    
+    printf " > Installing...\n"
+    ( cd "${TARGET_NAME}-build" && make install ) >> "$LOG_FILE" 2>&1
+    check_error $? || return 1
+
+    # cleanup and remove sources and build directories   
+	printf " > Remove build directories ...\n"
+    if [ ! -d "${TARGET_NAME}" ] ; then
+        rm -rf ${TARGET_NAME}*
+    fi
+
+    return 0
+}
+
 
 function InstallCMakeModules
 {
