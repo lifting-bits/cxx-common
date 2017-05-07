@@ -4,7 +4,7 @@ TEMPLATE_DESCRIPTOR_LIST=(
     "remill:llvm39,xed,gtest,glog,gflags,protobuf"
     "mcsema:llvm38,protobuf,drdecode"
     "remill-experimental:llvm39,clang,gflags,glog,gtest"
-    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,drdecode"
+    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,drdecode,capstone"
 )
 
 LIBRARY_LIST=(
@@ -16,6 +16,7 @@ LIBRARY_LIST=(
     "protobuf"
     "glog"
     "drdecode"
+    "capstone"
 )
 
 DEFAULT_LLVM_VERSION=39
@@ -91,6 +92,9 @@ function main
             
         elif [[ "$target_name" == "drdecode" ]] ; then
             InstallDynamorioDecoder "${root_install_directory}/$target_name" || return 1
+
+        elif [[ "$target_name" == "capstone" ]] ; then
+            InstallCapstone "${root_install_directory}/$target_name" || return 1
 
         elif [[ "$target_name" == "llvm" ]] ; then
             if [ -z "$llvm_version" ] ; then
@@ -804,7 +808,7 @@ function InstallDynamorioDecoder
         fi
     fi
     
-    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DBUILD_EXT=ON -DBUILD_SAMPLES=OFF -DDRSTATS_DEMO=OFF -DBUILD_DOCS=OFF -DDEBUG=OFF -DNOT_DYNAMORIO_CORE_PROP=ON -DSTANDALONE_DECODER=ON "../${TARGET_NAME}" ) >> "$LOG_FILE" 2>&1
+    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DBUILD_EXT=ON -DBUILD_SAMPLES=OFF -DDRSTATS_DEMO=OFF -DBUILD_DOCS=OFF -DDEBUG=OFF -DNOT_DYNAMORIO_CORE_PROP=ON -DSTANDALONE_DECODER=ON "../${TARGET_NAME}" ) >> "$LOG_FILE" 2>&1
     check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
 
     # build and install
@@ -821,6 +825,73 @@ function InstallDynamorioDecoder
     if [ -d "${TARGET_NAME}" ] ; then
         rm -rf ${TARGET_NAME}*
     fi
+
+    return 0
+}
+
+function InstallCapstone
+{
+    if [ $# -ne 1 ]; then
+        printf "Usage:\n"
+        printf "\tInstallCapstone /path/to/libraries"
+    fi
+    
+    printf "\nInstall capstone modules...\n"
+
+    local TAG_VER=tags/3.0.4
+    local BUILD_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local INSTALL_PATH="$1"
+    local TARGET_NAME=$(basename "${INSTALL_PATH}")
+    
+    printf " > Install directory: ${INSTALL_PATH}\n"
+
+    function check_error
+    {
+        local ERR_CODE="$1"
+        if [ $ERR_CODE -ne 0 ]; then
+            ShowLog
+            return 1
+        fi
+        return 0
+    }
+    
+    # get the source code of capstone with correct tag version
+    rm "$LOG_FILE" 2> /dev/null
+    if [ ! -d "$TARGET_NAME" ] ; then
+        printf " > Acquiring the source code...\n"
+        git clone "https://github.com/aquynh/capstone.git" "$TARGET_NAME" >> "$LOG_FILE" 2>&1
+        ( cd $TARGET_NAME && git checkout $TAG_VER >> "$LOG_FILE" 2>&1 )
+    fi
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1)
+    
+    # configure capstone
+    printf " > Configuring ${TARGET_NAME} ...\n"
+
+    if [ ! -d "${TARGET_NAME}-build" ] ; then
+        mkdir "${TARGET_NAME}-build" 2> /dev/null
+        if [ $? -ne 0 ] ; then
+            printf "Failed to create the build directory for dynamorio: ${TARGET_NAME}-build\n"
+            return 1
+        fi
+    fi
+    
+    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DCMAKE_EXE_LINKER_FLAGS=-g -DCMAKE_C_FLAGS=-g -DCAPSTONE_ARM_SUPPORT=1 -DCAPSTONE_ARM64_SUPPORT=1 -DCAPSTONE_BUILD_SHARED=OFF -DCAPSTONE_BUILD_TESTS=OFF ../${TARGET_NAME} ) >> "$LOG_FILE" 2>&1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
+
+    # build and install
+    printf " > Building ${TARGET_NAME}...\n"
+    ( cd "${TARGET_NAME}-build" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1 
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
+    
+    printf " > Installing...\n"
+    ( cd "${TARGET_NAME}-build" && make install ) >> "$LOG_FILE" 2>&1
+    check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
+
+    # cleanup and remove sources and build directories   
+    printf " > Remove build directories ...\n"
+    #if [ -d "${TARGET_NAME}" ] ; then
+    #    rm -rf ${TARGET_NAME}*
+    #fi
 
     return 0
 }

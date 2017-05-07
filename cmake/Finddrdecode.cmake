@@ -5,7 +5,6 @@ set(DRDECODE_INCLUDE_DIRS "${LIBRARY_ROOT}/include")
 
 set(DRDECODE_LIBRARIES
     ${LIBRARY_ROOT}/lib64/release/libdrdecode.a
-    ${LIBRARY_ROOT}/lib64/release/libdynamorio_static.a
     ${LIBRARY_ROOT}/lib64/libdrhelper.a
 )
 
