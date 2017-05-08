@@ -889,9 +889,9 @@ function InstallCapstone
 
     # cleanup and remove sources and build directories   
     printf " > Remove build directories ...\n"
-    #if [ -d "${TARGET_NAME}" ] ; then
-    #    rm -rf ${TARGET_NAME}*
-    #fi
+    if [ -d "${TARGET_NAME}" ] ; then
+        rm -rf ${TARGET_NAME}*
+    fi
 
     return 0
 }
