@@ -16,4 +16,6 @@ mbuild
 xed
 
 protobuf
+cmake-v*
+CMake-*
 

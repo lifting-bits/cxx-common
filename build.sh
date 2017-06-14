@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 TEMPLATE_DESCRIPTOR_LIST=(
-    "remill:llvm39,xed,gtest,glog,gflags,protobuf"
-    "mcsema:llvm38,protobuf,drdecode"
-    "remill-experimental:llvm39,clang,gflags,glog,gtest"
-    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,drdecode,capstone"
+    "remill:llvm39,xed,gtest,glog,gflags,protobuf,cmake"
+    "mcsema:llvm38,protobuf,drdecode,cmake"
+    "remill-experimental:llvm39,clang,gflags,glog,gtest,cmake"
+    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,drdecode,capstone,cmake"
 )
 
 LIBRARY_LIST=(
@@ -17,6 +17,7 @@ LIBRARY_LIST=(
     "glog"
     "drdecode"
     "capstone"
+    "cmake"
 )
 
 DEFAULT_LLVM_VERSION=39
@@ -95,6 +96,9 @@ function main
 
         elif [[ "$target_name" == "capstone" ]] ; then
             InstallCapstone "${root_install_directory}/$target_name" || return 1
+
+        elif [[ "$target_name" == "cmake" ]] ; then
+            InstallCMake "${root_install_directory}/$target_name" || return 1
 
         elif [[ "$target_name" == "llvm" ]] ; then
             if [ -z "$llvm_version" ] ; then
@@ -834,6 +838,8 @@ function InstallCapstone
     if [ $# -ne 1 ]; then
         printf "Usage:\n"
         printf "\tInstallCapstone /path/to/libraries"
+
+        return 1
     fi
     
     printf "\nInstall capstone modules...\n"
@@ -896,6 +902,86 @@ function InstallCapstone
     return 0
 }
 
+function InstallCMake
+{
+    local cmake_version="3.8.2"
+
+    if [ $# -ne 1 ]; then
+        printf "Usage:\n"
+        printf "\tInstallCMake /path/to/libraries"
+
+        return 1
+    fi
+
+    printf "\nCMake\n"
+
+    local install_directory="$1"
+    printf " > Install directory: ${install_directory}\n"
+
+    # acquire the source code
+    local source_tarball_name="cmake-v${cmake_version}.tar.gz"
+
+    if [ ! -f "${source_tarball_name}" ] ; then
+        printf " > Acquiring the source tarball...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        wget "https://github.com/Kitware/CMake/archive/v${cmake_version}.tar.gz" -O "${source_tarball_name}" >> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm "${source_tarball_name}" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
+    fi
+
+    # extract the source
+    local source_folder_name="CMake-${cmake_version}"
+
+    if [ ! -d "${source_folder_name}" ] ; then
+        printf " > Extracting the CMake source code...\n"
+
+        rm "$LOG_FILE" 2> /dev/null
+        tar xzf "${source_tarball_name}" >> "$LOG_FILE" 2>&1
+        if [ $? -ne 0 ] ; then
+            rm -rf "${source_folder_name}" 2> /dev/null
+            rm "${source_tarball_name}" 2> /dev/null
+
+            ShowLog
+            return 1
+        fi
+    fi
+
+    # configure
+    printf " > Configuring...\n"
+
+    rm "$LOG_FILE" 2> /dev/null
+    ( cd "${source_folder_name}" && ./configure "--prefix=${install_directory}" ) >> "$LOG_FILE" 2>&1
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
+    fi
+
+    # build and install
+    printf " > Building...\n"
+
+    rm "$LOG_FILE" 2> /dev/null
+    ( cd "${source_folder_name}" && make -j "$PROCESSOR_COUNT" ) >> "$LOG_FILE" 2>&1
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
+    fi
+
+    printf " > Installing...\n"
+
+    rm "$LOG_FILE" 2> /dev/null
+    ( cd "${source_folder_name}" && make install ) >> "$LOG_FILE" 2>&1
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
+    fi
+
+    return 0
+}
 
 function InstallCMakeModules
 {
