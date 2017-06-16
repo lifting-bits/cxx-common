@@ -637,7 +637,7 @@ function InstallGoogleProtocolBuffers
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf-${protobuf_version}" && ./configure "--prefix=${install_directory}" --enable-shared --enable-static ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && ./configure "--prefix=${install_directory}" --disable-shared --enable-static ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
