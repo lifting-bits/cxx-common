@@ -63,6 +63,9 @@ function main
     printf "Checking dependencies...\n"
     CheckDependencies || return 1
 
+    printf "Checking C++ ABI...\n"
+    ChooseCXXABI
+
     # notice the 'sort -u' command! it's important because we expect to find the 'clang''
     # before the 'llvm' in order to set the 'install_clang' flag before we call InstallLLVM!
     echo "$target_list" | tr ',' '\n' | sort -u | while read target_name ; do
@@ -129,6 +132,19 @@ function main
     printf "  include(\"\${LIBRARY_REPOSITORY_ROOT}/cmake/repository.cmake\")\n"
 
     printf "\nYou can clean up this folder using git clean -ffdx!\n"
+    return 0
+}
+
+function ChooseCXXABI
+{
+    source /etc/lsb-release
+
+    if [[ "${DISTRIB_CODENAME}" == "trusty" ]] ; then
+        printf "Using old GNU C++11 ABI\n"
+    else
+        printf "Using GNU 5.1 C++11 ABI\n"
+        export CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=1 ${CXXFLAGS}"
+    fi
     return 0
 }
 
@@ -930,7 +946,7 @@ function InstallCMakeModules
 
     printf " > Copying...\n"
     rm "$LOG_FILE" 2> /dev/null
-    cp -rp "$build_sh_directory/cmake" "$install_directory" >> "$LOG_FILE" 2>&1
+    cp -arp "$build_sh_directory/cmake/." "$install_directory" >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
