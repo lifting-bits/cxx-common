@@ -19,7 +19,7 @@ LIBRARY_LIST=(
     "cmake"
 )
 
-DEFAULT_LLVM_VERSION=39
+DEFAULT_LLVM_VERSION=40
 
 function main
 {
@@ -392,7 +392,7 @@ function InstallLLVM
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86;ARM" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
+    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
