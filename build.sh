@@ -65,22 +65,23 @@ function main
   local root_build_directory=`pwd`
 
   # First, build LLVM using the system compiler.
-  InstallLLVM "$llvm_version" "llvm_system" || return 1
+  InstallLLVM "$llvm_version" "${root_build_directory}/llvm-system" || return 1
 
-  export CC="${root_build_directory}/llvm_system/bin/clang"
-  export CXX="${root_build_directory}/llvm_system/bin/clang++"
+  export CC="${root_build_directory}/llvm-system/bin/clang"
+  export CXX="${root_build_directory}/llvm-system/bin/clang++"
 
-  DownloadLibCXX "$llvm_version" || return 1
+  # Kill the old LLVM build dir.
+  rm -rf "${root_build_directory}/llvm-build"
 
-  # Self-host LLVM.
+  # Recompile LLVM, self-hosting it.
   InstallLLVM "$llvm_version" "${root_install_directory}/llvm" || return 1
   
   # Use the self-hosted LLVM to build the rest of the stuff.
   export CC="${root_install_directory}/llvm/bin/clang"
   export CXX="${root_install_directory}/llvm/bin/clang++"
 
-  InstallCMake "${root_install_directory}/$target_name" || return 1
-  InstallCapstone "${root_install_directory}/$target_name" || return 1
+  InstallCMake "${root_install_directory}/cmake" || return 1
+  InstallCapstone "${root_install_directory}/capstone" || return 1
   InstallGoogleGlog "${root_install_directory}/glog" || return 1
   InstallGoogleGflags "${root_install_directory}/gflags" || return 1
   InstallGoogleTest "${root_install_directory}/googletest" || return 1
@@ -192,42 +193,6 @@ function InstallXED
     return 0
 }
 
-function DownloadLibCXX
-{
-  if [ $# -ne 1 ] ; then
-    printf "Usage:\n"
-    printf "\tDownloadLibCXX <version>\n\n"
-    printf "version: the major and minor release without separators (i.e.: 38, 39)\n"
-    return 1
-  fi
-
-  local version="$1"
-
-  pushd llvm/projects
-
-  # acquire or update the source code
-  rm "$LOG_FILE" 2> /dev/null
-  if [ ! -d "llvm" ] ; then
-    printf " > Acquiring the source code for libc++...\n"
-    git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxx.git" llvm >> "$LOG_FILE" 2>&1
-  else
-    printf " > Updating the source code for libc++...\n"
-    ( cd "libcxx" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
-  fi
-
-  # acquire or update the source code
-  rm "$LOG_FILE" 2> /dev/null
-  if [ ! -d "llvm" ] ; then
-    printf " > Acquiring the source code for libc++ ABI...\n"
-    git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxxabi.git" llvm >> "$LOG_FILE" 2>&1
-  else
-    printf " > Updating the source code for libc++ ABI...\n"
-    ( cd "libcxxabi" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
-  fi
-
-  popd
-}
-
 function InstallLLVM
 {
     if [ $# -ne 2 ] ; then
@@ -244,6 +209,9 @@ function InstallLLVM
 
     printf " > Version: ${version}\n"
     printf " > Install directory: ${install_directory}\n"
+
+    # Make the install directory.
+    mkdir -p "${install_directory}"
 
     # acquire or update the source code
     rm "$LOG_FILE" 2> /dev/null
@@ -269,6 +237,26 @@ function InstallLLVM
         ( cd "llvm/tools/clang" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
     fi
 
+    # acquire or update the source code
+    rm "$LOG_FILE" 2> /dev/null
+    if [ ! -d "llvm/projects/libcxx" ] ; then
+        printf " > Acquiring the source code for libc++...\n"
+        git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxx.git" llvm/projects/libcxx >> "$LOG_FILE" 2>&1
+    else
+        printf " > Updating the source code for libc++...\n"
+        ( cd "llvm/projects/libcxx" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
+    fi
+
+    # acquire or update the source code
+    rm "$LOG_FILE" 2> /dev/null
+    if [ ! -d "llvm/projects/libcxxabi" ] ; then
+        printf " > Acquiring the source code for libc++ ABI...\n"
+        git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxxabi.git" llvm/projects/libcxxabi >> "$LOG_FILE" 2>&1
+    else
+        printf " > Updating the source code for libc++ ABI...\n"
+        ( cd "llvm/projects/libcxxabi" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
+    fi
+
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -285,8 +273,30 @@ function InstallLLVM
         fi
     fi
 
+    local compiler_flags=""
+    if [ ! -z "${CC}" ] ; then
+      printf " > CC = ${CC}\n"
+      compiler_flags="${compiler_flags} -DCMAKE_C_COMPILER=${CC}"
+    fi
+
+    if [ ! -z "${CXX}" ] ; then
+      printf " > CXX = ${CC}\n"
+      compiler_flags="${compiler_flags} -DCMAKE_CXX_COMPILER=${CXX}"
+    fi
+
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF "../llvm" ) >> "$LOG_FILE" 2>&1
+    ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
+                               -DCMAKE_CXX_STANDARD=11 \
+                               -DCMAKE_BUILD_TYPE="Release" \
+                               -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+                               -DLLVM_INCLUDE_EXAMPLES=OFF \
+                               -DLLVM_INCLUDE_TESTS=OFF \
+                               -DLIBCXX_ENABLE_STATIC=YES \
+                               -DLIBCXX_ENABLE_SHARED=YES \
+                               -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO \
+                               -LIBCXX_INCLUDE_BENCHMARKS=NO \
+                               "${compiler_flags}" \
+                               "../llvm" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -310,6 +320,8 @@ function InstallLLVM
         ShowLog
         return 1
     fi
+
+    printf " > Done\n"
 
     return 0
 }
@@ -355,7 +367,14 @@ function InstallGoogleGflags
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DGFLAGS_BUILD_TESTING=OFF -DGFLAGS_BUILD_SHARED_LIBS=OFF -DGFLAGS_BUILD_STATIC_LIBS=ON -DGFLAGS_NAMESPACE="google" -DWITH_GFLAGS=OFF "../gflags" ) >> "$LOG_FILE" 2>&1
+    ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
+                                 -DCMAKE_CXX_STANDARD=11 \
+                                 -DCMAKE_BUILD_TYPE="Release" \
+                                 -DGFLAGS_BUILD_TESTING=OFF \
+                                 -DGFLAGS_BUILD_SHARED_LIBS=OFF \
+                                 -DGFLAGS_BUILD_STATIC_LIBS=ON \
+                                 -DGFLAGS_NAMESPACE="google" \
+                                 "../gflags" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -644,7 +663,12 @@ function InstallGoogleGlog
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" -DBUILD_TESTING=OFF -DWITH_GFLAGS=OFF "../glog" ) >> "$LOG_FILE" 2>&1
+    ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
+                               -DCMAKE_CXX_STANDARD=11 \
+                               -DCMAKE_BUILD_TYPE="Release" \
+                               -DBUILD_TESTING=OFF \
+                               -DWITH_GFLAGS=OFF \
+                               "../glog" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -720,7 +744,15 @@ function InstallCapstone
         fi
     fi
     
-    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" -DCMAKE_EXE_LINKER_FLAGS=-g -DCMAKE_C_FLAGS=-g -DCAPSTONE_ARM_SUPPORT=1 -DCAPSTONE_ARM64_SUPPORT=1 -DCAPSTONE_BUILD_SHARED=OFF -DCAPSTONE_BUILD_TESTS=OFF ../${TARGET_NAME} ) >> "$LOG_FILE" 2>&1
+    ( cd "${TARGET_NAME}-build" && cmake "-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" \
+                                         -DCMAKE_EXE_LINKER_FLAGS=-g \
+                                         -DCMAKE_C_FLAGS=-g \
+                                         -DCAPSTONE_ARM_SUPPORT=1 \
+                                         -DCAPSTONE_ARM64_SUPPORT=1 \
+                                         -DCAPSTONE_BUILD_SHARED=OFF \
+                                         -DCAPSTONE_BUILD_TESTS=OFF \
+                                         ../${TARGET_NAME} ) >> "$LOG_FILE" 2>&1
+
     check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
 
     # build and install
