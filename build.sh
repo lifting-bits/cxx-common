@@ -1,228 +1,114 @@
 #!/usr/bin/env bash
 
-TEMPLATE_DESCRIPTOR_LIST=(
-    "remill:llvm39,xed,gtest,glog,gflags,protobuf,capstone,cmake"
-    "mcsema:llvm39,protobuf,cmake"
-    "remill-experimental:llvm39,clang,gflags,glog,gtest,cmake"
-    "everything:xed,llvm,clang,gflags,gtest,protobuf,glog,capstone,cmake"
-)
-
-LIBRARY_LIST=(
-    "xed"
-    "llvm"
-    "clang"
-    "gflags"
-    "gtest"
-    "protobuf"
-    "glog"
-    "capstone"
-    "cmake"
-)
-
 DEFAULT_LLVM_VERSION=40
 
 function main
 {
-    local target_list=`GetTargetListFromCommandLine $@`
-    if [ -z "$target_list" ] ; then
-        ShowUsage
+  local llvm_version="${DEFAULT_LLVM_VERSION}"
 
-        if [ $# -eq 1 ] && [ "$1" == "--help" ] ; then
-            return 0
-        fi
+  while [[ $# -gt 0 ]] ; do
+    key="$1"
 
-        printf "===\n\nInvalid parameter!\n"
+    case $key in
+
+      # Change the default installation prefix.
+      --prefix)
+        local root_install_directory=$(python -c \
+            "import os; import sys; sys.stdout.write(os.path.abspath('${2}'))")
+        shift # past argument
+      ;;
+
+      # Change the default LLVM version.
+      --llvm-version)
+        llvm_version="${2//./}"
+        shift
+      ;;
+
+      *)
+        # unknown option
+        printf "Unknown option: ${key}\n"
         return 1
-    fi
+      ;;
+    esac
 
-    printf "Target list: ${target_list}\n"
+    shift # past argument or value
+  done
 
-    local root_install_directory="$3"
-    printf "Root install directory: ${root_install_directory}\n"
+  if [ -z "$root_install_directory" ] ; then
+    printf "Please enter a full path to the install directory using --prefix.\n"
+    return 1
+  fi
 
-    local install_folder_name=`basename "$root_install_directory"`
-    if [[ "$install_folder_name" != "libraries" ]] ; then
-        printf "Please enter the full path of a folder named 'libraries'\n"
-        return 1
-    fi
+  local install_folder_name=`basename "$root_install_directory"`
+  if [[ "$install_folder_name" != "libraries" ]] ; then
+    printf "Please enter the full path of a folder named 'libraries'\n"
+    return 1
+  fi
 
-    if [ -d "$root_install_directory" ] ; then
-        rm -rf "$root_install_directory" 2> /dev/null
-        if [ $? -ne 0 ] ; then
-            printf "Failed to erase the following folder: ${root_install_directory}\n"
-            return 1
-        fi
-    fi
-
-    mkdir -p "$root_install_directory" 2> /dev/null
+  if [ -d "$root_install_directory" ] ; then
+    rm -rf "$root_install_directory" 2> /dev/null
     if [ $? -ne 0 ] ; then
-        printf "Failed to create the install directory\n"
-        return 1
+      printf "Failed to erase the following folder: ${root_install_directory}\n"
+      return 1
     fi
+  fi
 
-    printf "Checking dependencies...\n"
-    CheckDependencies || return 1
+  mkdir -p "$root_install_directory" 2> /dev/null
+  if [ $? -ne 0 ] ; then
+    printf "Failed to create the install directory\n"
+    return 1
+  fi
 
-    # notice the 'sort -u' command! it's important because we expect to find the 'clang''
-    # before the 'llvm' in order to set the 'install_clang' flag before we call InstallLLVM!
-    echo "$target_list" | tr ',' '\n' | sort -u | while read target_name ; do
-        if [[ "$target_name" == "clang" ]] ; then
-            local install_clang=1
-            continue
+  printf "Checking dependencies...\n"
+  CheckDependencies || return 1
 
-        elif [[ "$target_name" == "llvm"* ]] ; then
-            local llvm_version="${target_name:4}"
-            target_name="llvm"
-        fi
+  local root_build_directory=`pwd`
 
-        if [[ "$target_name" == "xed" ]] ; then
-            InstallXED "${root_install_directory}/xed" || return 1
+  # First, build LLVM using the system compiler.
+  InstallLLVM "$llvm_version" "llvm_system" || return 1
 
-        elif [[ "$target_name" == "gflags" ]] ; then
-            InstallGoogleGflags "${root_install_directory}/gflags" || return 1
+  export CC="${root_build_directory}/llvm_system/bin/clang"
+  export CXX="${root_build_directory}/llvm_system/bin/clang++"
 
-        elif [[ "$target_name" == "gtest" ]] ; then
-            InstallGoogleTest "${root_install_directory}/googletest" || return 1
+  # Self-host LLVM.
+  InstallLLVM "$llvm_version" "${root_install_directory}/llvm" || return 1
+  
+  # Use the self-hosted LLVM to build the rest of the stuff.
+  export CC="${root_install_directory}/llvm/bin/clang"
+  export CXX="${root_install_directory}/llvm/bin/clang++"
 
-        elif [[ "$target_name" == "protobuf" ]] ; then
-            InstallGoogleProtocolBuffers "${root_install_directory}/protobuf" || return 1
+  InstallCMake "${root_install_directory}/$target_name" || return 1
+  InstallCapstone "${root_install_directory}/$target_name" || return 1
+  InstallGoogleGlog "${root_install_directory}/glog" || return 1
+  InstallGoogleGflags "${root_install_directory}/gflags" || return 1
+  InstallGoogleTest "${root_install_directory}/googletest" || return 1
+  InstallGoogleProtocolBuffers "${root_install_directory}/protobuf" || return 1
+  InstallXED "${root_install_directory}/xed" || return 1
 
-        elif [[ "$target_name" == "glog" ]] ; then
-            InstallGoogleGlog "${root_install_directory}/glog" || return 1
+  if [ $? -eq 1 ] ; then
+      return 1
+  fi
 
-        elif [[ "$target_name" == "capstone" ]] ; then
-            InstallCapstone "${root_install_directory}/$target_name" || return 1
+  InstallCMakeModules "${root_install_directory}/cmake" || return 1
 
-        elif [[ "$target_name" == "cmake" ]] ; then
-            InstallCMake "${root_install_directory}/$target_name" || return 1
+  rm "$LOG_FILE" 2> /dev/null
 
-        elif [[ "$target_name" == "llvm" ]] ; then
-            if [ -z "$llvm_version" ] ; then
-                llvm_version="${DEFAULT_LLVM_VERSION}"
-            fi
+  printf "\nAdd the following lines to your .bashrc/.zshenv file:\n"
+  printf "  export TRAILOFBITS_LIBRARIES=${root_install_directory}\n"
 
-            if [ -z "$install_clang" ] ; then
-                local install_clang=0
-            fi
+  printf "\nAdd the following to your CMakeLists.txt file:\n"
+  printf "  set(LIBRARY_REPOSITORY_ROOT \$ENV{TRAILOFBITS_LIBRARIES})\n"
+  printf "  include(\"\${LIBRARY_REPOSITORY_ROOT}/cmake/repository.cmake\")\n"
 
-            InstallLLVM "$llvm_version" "$install_clang" "${root_install_directory}/llvm" || return 1
-
-        else
-            printf "Unknown target $target_name!\n"
-            return 1
-        fi
-    done
-
-    if [ $? -eq 1 ] ; then
-        return 1
-    fi
-
-    InstallCMakeModules "${root_install_directory}/cmake" || return 1
-
-    rm "$LOG_FILE" 2> /dev/null
-
-    printf "\nAdd the following lines to your .bashrc/.zshenv file:\n"
-    printf "  export TRAILOFBITS_LIBRARIES=${root_install_directory}\n"
-
-    printf "\nAdd the following to your CMakeLists.txt file:\n"
-    printf "  set(LIBRARY_REPOSITORY_ROOT \$ENV{TRAILOFBITS_LIBRARIES})\n"
-    printf "  include(\"\${LIBRARY_REPOSITORY_ROOT}/cmake/repository.cmake\")\n"
-
-    printf "\nYou can clean up this folder using git clean -ffdx!\n"
-    return 0
-}
-
-function GetTargetListFromCommandLine
-{
-    if [ $# -ne 3 ] ; then
-        return 0
-    fi
-
-    local command="$1"
-    local parameters="$2"
-
-    if [[ "$command" == "--template" ]] ; then
-        for template_descriptor in ${TEMPLATE_DESCRIPTOR_LIST[@]} ; do
-            local template_name=`echo "$template_descriptor" | cut -d ':' -f 1`
-            local target_list=`echo "$template_descriptor" | cut -d ':' -f 2`
-
-            if [[ "$template_name" == "$parameters" ]] ; then
-                printf "$target_list"
-                return 0
-            fi
-        done
-
-    elif [[ "$command" == "--targets" ]] ; then
-        echo "$parameters" | tr ',' '\n' | sort -u | while read selected_library_name ; do
-            local selected_library_valid=0
-
-            for available_library_name in ${LIBRARY_LIST[@]} ; do
-                if [[ "$selected_library_name" == "llvm"* ]] ; then
-                    selected_library_name="llvm"
-                fi
-
-                if [[ "$selected_library_name" == "$available_library_name" ]] ; then
-                    selected_library_valid=1
-                    break
-                fi
-            done
-
-            if [ "$selected_library_valid" -eq 0 ] ; then
-                echo "error"
-                return 1
-            else
-                return 0
-            fi
-        done
-
-        if [ $? -ne 0 ] ; then
-            return 0
-        fi
-
-        printf "$parameters"
-        return 0
-
-    else
-        return 0
-    fi
-
-    return 0
+  printf "\nYou can clean up this folder using git clean -ffdx!\n"
+  return 0
 }
 
 function ShowUsage
 {
     printf "Usage:\n"
-    printf "\tbuild.sh --template <name> /path/to/libraries\n"
-    printf "\tbuild.sh --targets <lib1,..> /path/to/libraries\n"
+    printf "\tbuild.sh [--llvm-version MAJOR.MINOR] /path/to/libraries\n"
     printf "\tbuild.sh --help\n\n"
-
-    printf "Templates:\n"
-
-    for template_descriptor in ${TEMPLATE_DESCRIPTOR_LIST[@]} ; do
-        local template_name=`echo "$template_descriptor" | cut -d ':' -f 1`
-        local target_list=`echo "$template_descriptor" | cut -d ':' -f 2 | tr ',' ' '`
-
-        printf "\t${template_name}: ($target_list)\n"
-    done
-
-    printf "\n"
-
-    printf "Targets:\n"
-    printf "\txed\n"
-    printf "\tllvm\n"
-    printf "\tgflags\n"
-    printf "\tgtest\n"
-    printf "\tprotobuf\n"
-    printf "\tglog\n"
-    printf "\tcapstone\n"
-    printf "\tclang\n\n"
-
-    printf "The LLVM and clang version can be selected by appending the version\n"
-    printf "number to the llvm target name. Example: llvm39, llvm38\n\n"
-
-    printf "To install clang, you also have to add llvm to the target list (it is\n"
-    printf "ignored otherwise).\n\n"
-
     return 0
 }
 
@@ -306,9 +192,9 @@ function InstallXED
 
 function InstallLLVM
 {
-    if [ $# -ne 3 ] ; then
+    if [ $# -ne 2 ] ; then
         printf "Usage:\n"
-        printf "\tInstallLLVM <version> <install_clang> /path/to/libraries\n\n"
+        printf "\tInstallLLVM <version> /path/to/libraries\n\n"
         printf "version: the major and minor release without separators (i.e.: 38, 39)\n"
         printf "install_clang: pass 1 to install clang or 0 to skip it\n"
 
@@ -318,19 +204,9 @@ function InstallLLVM
     printf "\nLLVM\n"
 
     local version="$1"
-    local install_clang="$2"
-    local install_directory="$3"
+    local install_directory="$2"
 
     printf " > Version: ${version}\n"
-
-    printf " > Installing Clang: "
-    if [ "$install_clang" -eq 1 ] ; then
-        printf "yes"
-    else
-        printf "no"
-    fi
-    printf "\n"
-
     printf " > Install directory: ${install_directory}\n"
 
     # acquire or update the source code
@@ -348,20 +224,18 @@ function InstallLLVM
         return 1
     fi
 
-    if [ "$install_clang" -eq 1 ] ; then
-        rm "$LOG_FILE" 2> /dev/null
-        if [ ! -d "llvm/tools/clang" ] ; then
-            printf " > Acquiring the source code for Clang...\n"
-            git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/clang.git" llvm/tools/clang >> "$LOG_FILE" 2>&1
-        else
-            printf " > Updating the source code for Clang...\n"
-            ( cd "llvm/tools/clang" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
-        fi
+    rm "$LOG_FILE" 2> /dev/null
+    if [ ! -d "llvm/tools/clang" ] ; then
+        printf " > Acquiring the source code for Clang...\n"
+        git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/clang.git" llvm/tools/clang >> "$LOG_FILE" 2>&1
+    else
+        printf " > Updating the source code for Clang...\n"
+        ( cd "llvm/tools/clang" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
+    fi
 
-        if [ $? -ne 0 ] ; then
-            ShowLog
-            return 1
-        fi
+    if [ $? -ne 0 ] ; then
+        ShowLog
+        return 1
     fi
 
     # run cmake
