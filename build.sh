@@ -70,6 +70,8 @@ function main
   export CC="${root_build_directory}/llvm_system/bin/clang"
   export CXX="${root_build_directory}/llvm_system/bin/clang++"
 
+  DownloadLibCXX "$llvm_version" || return 1
+
   # Self-host LLVM.
   InstallLLVM "$llvm_version" "${root_install_directory}/llvm" || return 1
   
@@ -190,14 +192,48 @@ function InstallXED
     return 0
 }
 
+function DownloadLibCXX
+{
+  if [ $# -ne 1 ] ; then
+    printf "Usage:\n"
+    printf "\tDownloadLibCXX <version>\n\n"
+    printf "version: the major and minor release without separators (i.e.: 38, 39)\n"
+    return 1
+  fi
+
+  local version="$1"
+
+  pushd llvm/projects
+
+  # acquire or update the source code
+  rm "$LOG_FILE" 2> /dev/null
+  if [ ! -d "llvm" ] ; then
+    printf " > Acquiring the source code for libc++...\n"
+    git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxx.git" llvm >> "$LOG_FILE" 2>&1
+  else
+    printf " > Updating the source code for libc++...\n"
+    ( cd "libcxx" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
+  fi
+
+  # acquire or update the source code
+  rm "$LOG_FILE" 2> /dev/null
+  if [ ! -d "llvm" ] ; then
+    printf " > Acquiring the source code for libc++ ABI...\n"
+    git clone --depth 1 -b "release_${version}" "https://github.com/llvm-mirror/libcxxabi.git" llvm >> "$LOG_FILE" 2>&1
+  else
+    printf " > Updating the source code for libc++ ABI...\n"
+    ( cd "libcxxabi" && git pull origin "release_${version}" ) >> "$LOG_FILE" 2>&1
+  fi
+
+  popd
+}
+
 function InstallLLVM
 {
     if [ $# -ne 2 ] ; then
         printf "Usage:\n"
         printf "\tInstallLLVM <version> /path/to/libraries\n\n"
         printf "version: the major and minor release without separators (i.e.: 38, 39)\n"
-        printf "install_clang: pass 1 to install clang or 0 to skip it\n"
-
         return 1
     fi
 
