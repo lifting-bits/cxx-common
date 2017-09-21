@@ -295,6 +295,7 @@ function InstallLLVM
                                -DLIBCXX_ENABLE_SHARED=YES \
                                -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO \
                                -LIBCXX_INCLUDE_BENCHMARKS=NO \
+                               -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                                "${compiler_flags}" \
                                "../llvm" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
@@ -367,6 +368,7 @@ function InstallGoogleGflags
     fi
 
     rm "$LOG_FILE" 2> /dev/null
+
     ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
                                  -DCMAKE_CXX_STANDARD=11 \
                                  -DCMAKE_BUILD_TYPE="Release" \
@@ -374,6 +376,7 @@ function InstallGoogleGflags
                                  -DGFLAGS_BUILD_SHARED_LIBS=OFF \
                                  -DGFLAGS_BUILD_STATIC_LIBS=ON \
                                  -DGFLAGS_NAMESPACE="google" \
+                                 -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                                  "../gflags" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
@@ -443,7 +446,11 @@ function InstallGoogleTest
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" -DCMAKE_CXX_STANDARD=11 -DCMAKE_BUILD_TYPE="Release" "../googletest" ) >> "$LOG_FILE" 2>&1
+    ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
+                                     -DCMAKE_CXX_STANDARD=11 \
+                                     -DCMAKE_BUILD_TYPE="Release" \
+                                     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+                                     "../googletest" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -562,7 +569,10 @@ function InstallGoogleProtocolBuffers
     fi
 
     rm "$LOG_FILE" 2> /dev/null
-    ( cd "protobuf-${protobuf_version}" && ./configure "--prefix=${install_directory}" --disable-shared --enable-static ) >> "$LOG_FILE" 2>&1
+    ( cd "protobuf-${protobuf_version}" && \
+      CXXFLAGS="-fPIC" CFLAGS="-fPIC" ./configure "--prefix=${install_directory}" \
+                                                  --disable-shared \
+                                                  --enable-static ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
         return 1
@@ -668,6 +678,7 @@ function InstallGoogleGlog
                                -DCMAKE_BUILD_TYPE="Release" \
                                -DBUILD_TESTING=OFF \
                                -DWITH_GFLAGS=OFF \
+                               -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                                "../glog" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
         ShowLog
@@ -751,6 +762,7 @@ function InstallCapstone
                                          -DCAPSTONE_ARM64_SUPPORT=1 \
                                          -DCAPSTONE_BUILD_SHARED=OFF \
                                          -DCAPSTONE_BUILD_TESTS=OFF \
+                                         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                                          ../${TARGET_NAME} ) >> "$LOG_FILE" 2>&1
 
     check_error $? || ( rm -rf ${TARGET_NAME}* ; return 1 )
