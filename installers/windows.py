@@ -12,5 +12,7 @@ def windows_installer_cmake(repository_path):
   if not extract_archive(zip_path, "build"):
     return False
 
-  binary_folder = "cmake-" + version + "-win64-x64"
-  return install_folder(binary_folder, repository_path)
+  binary_folder = os.path.join("build", "cmake-" + version + "-win64-x64")
+  destination_path = os.path.join(repository_path, "cmake")
+
+  return install_folder(binary_folder, destination_path)

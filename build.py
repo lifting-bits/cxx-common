@@ -111,7 +111,7 @@ def get_package_installer(package_name):
     return None
 
   function_name = system_name + "_installer_" + package_name
-  function = get_function(package_name)
+  function = get_function(function_name)
   if function is not None:
     return function
 
