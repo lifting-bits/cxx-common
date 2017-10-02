@@ -19,3 +19,8 @@ protobuf
 cmake-v*
 CMake-*
 
+.vscode
+sources
+build
+temp
+*.pyc

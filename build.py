@@ -3,6 +3,9 @@
 import argparse
 import sys
 import platform
+import os
+
+from installers import common, windows
 
 target_list = ["xed", "llvm", "clang", "gflags", "gtest", "protobuf", "glog", "capstone", "cmake"]
 
@@ -74,23 +77,35 @@ def main():
   else:
     print("(supported)")
 
-  print("Target list: " + str(targets_to_install))
+  print("Target list: " + str(targets_to_install) + "\n")
 
   # build each target
-  print("\nInstalling...")
-  for target in targets_to_install:
-    print(" > " + target)
+  if not os.path.exists("sources"):
+    os.makedirs("sources")
 
-    function = get_package_installer(target)
-    if function is None:
+  if not os.path.exists("temp"):
+    os.makedirs("temp")
+
+  if not os.path.exists("build"):
+    os.makedirs("build")
+
+  for target in targets_to_install:
+    print(target)
+
+    package_installer = get_package_installer(target)
+    if package_installer is None:
       print(" x The package installer procedure is missing")
       continue
 
-    function()
+    package_installer(args.repository_path)
 
   return True
 
 def get_package_installer(package_name):
+  """
+  Returns the specified package installer
+  """
+
   system_name = get_system_name()
   if system_name == None:
     return None
