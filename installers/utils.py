@@ -1,5 +1,6 @@
 import urllib
 import os
+import sys
 import tarfile
 import zipfile
 import shutil
@@ -14,10 +15,14 @@ def download_to_file(url, destination):
   except:
     return False
 
-def download_file(url, folder):
+def download_file(url, folder, output_file=None):
   print(" > Downloading file: '" + url + "'")
 
-  destination = os.path.join(folder, url.split("/")[-1])
+  if output_file is not None:
+    destination = os.path.join(folder, output_file)
+  else:
+    destination = os.path.join(folder, url.split("/")[-1])
+
   if os.path.isfile(destination) :
     return destination
 
@@ -56,7 +61,7 @@ def extract_archive(path, folder):
   elif ".zip" in path:
     succeeded = extract_zip(path, folder)
   else:
-    print("WARNING: Unsupported archive type")
+    print(" x Unsupported archive type")
     return False
 
   if not succeeded:

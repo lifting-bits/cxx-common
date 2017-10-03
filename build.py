@@ -2,17 +2,16 @@
 
 import argparse
 import sys
-import platform
 import os
+import platform
 
-from installers import common, windows
+from installers import utils, common, windows
 
-target_list = ["xed", "llvm", "clang", "gflags", "gtest", "protobuf", "glog", "capstone", "cmake"]
+target_list = ["xed", "llvm", "gflags", "gtest", "protobuf", "glog", "capstone", "cmake"]
 
 template_list = dict()
 template_list["mcsema2"] = set()
 template_list["mcsema2"].add("llvm")
-template_list["mcsema2"].add("clang")
 template_list["mcsema2"].add("xed")
 template_list["mcsema2"].add("gtest")
 template_list["mcsema2"].add("glog")
@@ -24,7 +23,7 @@ template_list["mcsema2"].add("cmake")
 def main():
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
-  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 380, 390, ...)", default=400)
+  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default="/opt/trailofbits/libraries")
 
   target_group = arg_parser.add_mutually_exclusive_group(required=True)
@@ -54,25 +53,21 @@ def main():
       print("Invalid target: " + target)
       return False
 
-  # clang also requires llvm
-  if "clang" in targets_to_install:
-    if "llvm" not in targets_to_install:
-      print("Adding LLVM because clang depends on it...")
-      targets_to_install.append("llvm")
-
   # get the llvm version
   llvm_version = str(args.llvm_version)
-  if len(llvm_version) != 3:
+  if len(llvm_version) != 2:
     print("Invalid LLVM version: " + str(llvm_version))
     return False
 
-  llvm_version = llvm_version[0] + "." + llvm_version[1] + "." + llvm_version[2]
+  properties = dict()
+  properties["llvm_version"] = llvm_version
+  properties["repository_path"] = args.repository_path
 
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
 
   print("LLVM version: " + llvm_version),
-  if args.llvm_version < 360 or args.llvm_version >= 500:
+  if args.llvm_version < 36 or args.llvm_version >= 50:
     print("(unsupported)")
   else:
     print("(supported)")
@@ -97,7 +92,7 @@ def main():
       print(" x The package installer procedure is missing")
       continue
 
-    package_installer(args.repository_path)
+    package_installer(properties)
 
   return True
 
@@ -190,6 +185,12 @@ def get_platform_type():
 
   else:
     return None
+
+  name = distribution_info[0]
+  if not name:
+    return None
+
+  return name
 
 if __name__ == "__main__":
   if not main():

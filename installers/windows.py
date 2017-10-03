@@ -1,7 +1,9 @@
 import shutil
 from utils import *
 
-def windows_installer_cmake(repository_path):
+def windows_installer_cmake(properties):
+  repository_path = properties["repository_path"]
+
   version = "3.9.3"
   url = "https://cmake.org/files/v3.9/cmake-" + version + "-win64-x64.zip"
 
