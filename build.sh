@@ -5,7 +5,7 @@ DEFAULT_LLVM_VERSION=40
 function main
 {
   local llvm_version="${DEFAULT_LLVM_VERSION}"
-
+  local build_type="Release"
   while [[ $# -gt 0 ]] ; do
     key="$1"
 
@@ -21,6 +21,12 @@ function main
       # Change the default LLVM version.
       --llvm-version)
         llvm_version="${2//./}"
+        shift
+      ;;
+
+      # Change the build type.
+      --build-type)
+        build_type="$2"
         shift
       ;;
 
@@ -64,6 +70,8 @@ function main
 
   local root_build_directory=`pwd`
 
+  export BUILD_TYPE="Release"
+
   # First, build LLVM using the system compiler.
   InstallLLVM "$llvm_version" "${root_build_directory}/llvm-system" || return 1
 
@@ -73,6 +81,7 @@ function main
   # Kill the old LLVM build dir.
   rm -rf "${root_build_directory}/llvm-build"
 
+  export BUILD_TYPE="${build_type}"
   # Recompile LLVM, self-hosting it.
   InstallLLVM "$llvm_version" "${root_install_directory}/llvm" || return 1
   
@@ -287,7 +296,7 @@ function InstallLLVM
     rm "$LOG_FILE" 2> /dev/null
     ( cd "llvm-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
                                -DCMAKE_CXX_STANDARD=11 \
-                               -DCMAKE_BUILD_TYPE="Release" \
+                               -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
                                -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
                                -DLLVM_INCLUDE_EXAMPLES=OFF \
                                -DLLVM_INCLUDE_TESTS=OFF \
@@ -371,7 +380,7 @@ function InstallGoogleGflags
 
     ( cd "gflags-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
                                  -DCMAKE_CXX_STANDARD=11 \
-                                 -DCMAKE_BUILD_TYPE="Release" \
+                                 -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
                                  -DGFLAGS_BUILD_TESTING=OFF \
                                  -DGFLAGS_BUILD_SHARED_LIBS=OFF \
                                  -DGFLAGS_BUILD_STATIC_LIBS=ON \
@@ -448,7 +457,7 @@ function InstallGoogleTest
     rm "$LOG_FILE" 2> /dev/null
     ( cd "googletest-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
                                      -DCMAKE_CXX_STANDARD=11 \
-                                     -DCMAKE_BUILD_TYPE="Release" \
+                                     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
                                      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                                      "../googletest" ) >> "$LOG_FILE" 2>&1
     if [ $? -ne 0 ] ; then
@@ -675,7 +684,7 @@ function InstallGoogleGlog
     rm "$LOG_FILE" 2> /dev/null
     ( cd "glog-build" && cmake "-DCMAKE_INSTALL_PREFIX=${install_directory}" \
                                -DCMAKE_CXX_STANDARD=11 \
-                               -DCMAKE_BUILD_TYPE="Release" \
+                               -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
                                -DBUILD_TESTING=OFF \
                                -DWITH_GFLAGS=OFF \
                                -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
