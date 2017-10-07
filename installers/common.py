@@ -28,9 +28,6 @@ def common_installer_cmake(properties):
   if not run_program("Installing...", ["make", "install"], source_folder):
     return False
 
-  print(" > Updating the environment: The next builds will use this cmake...")
-  os.environ["PATH"] += ":" + os.path.join(repository_path, "cmake", "bin")
-
   return True
 
 def common_installer_llvm(properties):
@@ -161,10 +158,5 @@ def common_installer_llvm(properties):
 
   if not run_program("Installing...", ["make", "install"], llvm_build_path):
     return False
-
-  print(" > Updating the environment: The next builds will use this compiler...")
-  os.environ["CC"] = os.path.join(repository_path, "llvm", "bin", "clang")
-  os.environ["CXX"] = os.path.join(repository_path, "llvm", "bin", "clang++")
-  os.environ["PATH"] += ":" + os.path.join(repository_path, "llvm", "bin")
 
   return True
