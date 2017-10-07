@@ -4,50 +4,27 @@ import argparse
 import sys
 import os
 import platform
+import types
+import inspect
 
 from installers import utils, common, windows
 
-target_list = ["xed", "llvm", "gflags", "gtest", "protobuf", "glog", "capstone", "cmake"]
-
-template_list = dict()
-template_list["mcsema2"] = set()
-template_list["mcsema2"].add("llvm")
-template_list["mcsema2"].add("xed")
-template_list["mcsema2"].add("gtest")
-template_list["mcsema2"].add("glog")
-template_list["mcsema2"].add("gflags")
-template_list["mcsema2"].add("protobuf")
-template_list["mcsema2"].add("capstone")
-template_list["mcsema2"].add("cmake")
-
 def main():
+  target_list = get_package_list()
+
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default="/opt/trailofbits/libraries")
 
-  target_group = arg_parser.add_mutually_exclusive_group(required=True)
-
   target_list_description = "The targets to build, separated by commas. Available targets: " + str(target_list)
-  target_group.add_argument("--targets", type=str, help=target_list_description)
-
-  template_list_description = "The template to build. Available templates: " + str(template_list.keys())
-  target_group.add_argument("--template", type=str, help=template_list_description)
+  arg_parser.add_argument("--targets", type=str, help=target_list_description, required=True)
 
   args = arg_parser.parse_args()
 
   # acquire the targets
-  if args.template is not None:
-    if args.template not in template_list:
-      print("Invalid template name: " + args.template)
-      return False
+  targets_to_install = args.targets.split(",")
 
-    targets_to_install = template_list[args.template]
-
-  else:
-    targets_to_install = args.targets.split(",")
-
-  # validate the targets
   for target in targets_to_install:
     if target not in target_list:
       print("Invalid target: " + target)
@@ -95,6 +72,28 @@ def main():
     package_installer(properties)
 
   return True
+
+def get_package_list():
+  """
+  Returns the available package list, depending on the current system
+  """
+
+  target_list = []
+
+  module_list = [windows, common]
+  prefix_list = ["common_installer_", get_system_name() + "_installer_"]
+
+  for module in module_list:
+    module_functions = inspect.getmembers(module, inspect.isfunction)
+    for function in module_functions:
+      function_name = function[0]
+
+      for prefix in prefix_list:
+        if function_name.startswith(prefix):
+          target_list.append(function_name[len(prefix):])
+          break
+
+  return target_list
 
 def get_package_installer(package_name):
   """
