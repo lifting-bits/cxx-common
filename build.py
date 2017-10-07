@@ -10,24 +10,24 @@ import inspect
 from installers import utils, common, windows
 
 def main():
-  target_list = get_package_list()
+  package_list = get_package_list()
 
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default="/opt/trailofbits/libraries")
 
-  target_list_description = "The targets to build, separated by commas. Available targets: " + str(target_list)
-  arg_parser.add_argument("--targets", type=str, help=target_list_description, required=True)
+  package_list_description = "The packages to build, separated by commas. Available packages: " + str(package_list)
+  arg_parser.add_argument("--packages", type=str, help=package_list_description, required=True)
 
   args = arg_parser.parse_args()
 
-  # acquire the targets
-  targets_to_install = args.targets.split(",")
+  # acquire the package list
+  packages_to_install = args.packages.split(",")
 
-  for target in targets_to_install:
-    if target not in target_list:
-      print("Invalid target: " + target)
+  for package in packages_to_install:
+    if package not in package_list:
+      print("Invalid package: " + package)
       return False
 
   # get the llvm version
@@ -49,9 +49,9 @@ def main():
   else:
     print("(supported)")
 
-  print("Target list: " + str(targets_to_install) + "\n")
+  print("Package list: " + str(packages_to_install) + "\n")
 
-  # build each target
+  # build each package
   if not os.path.exists("sources"):
     os.makedirs("sources")
 
@@ -61,10 +61,10 @@ def main():
   if not os.path.exists("build"):
     os.makedirs("build")
 
-  for target in targets_to_install:
-    print(target)
+  for package in packages_to_install:
+    print(package)
 
-    package_installer = get_package_installer(target)
+    package_installer = get_package_installer(package)
     if package_installer is None:
       print(" x The package installer procedure is missing")
       continue
@@ -78,7 +78,7 @@ def get_package_list():
   Returns the available package list, depending on the current system
   """
 
-  target_list = []
+  package_list = []
 
   module_list = [windows, common]
   prefix_list = ["common_installer_", get_system_name() + "_installer_"]
@@ -90,10 +90,10 @@ def get_package_list():
 
       for prefix in prefix_list:
         if function_name.startswith(prefix):
-          target_list.append(function_name[len(prefix):])
+          package_list.append(function_name[len(prefix):])
           break
 
-  return target_list
+  return package_list
 
 def get_package_installer(package_name):
   """
