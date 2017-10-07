@@ -6,8 +6,12 @@ import os
 import platform
 import types
 import inspect
+import importlib
 
-from installers import utils, linux, windows
+installer_modules = []
+for module_name in ["linux", "windows"]:
+  module = importlib.import_module("pkgman.installers." + module_name)
+  installer_modules.append(module)
 
 def main():
   package_list = get_package_list()
@@ -80,19 +84,26 @@ def get_package_list():
 
   package_list = []
 
-  module_list = [windows, linux]
+  for module in installer_modules:
+    packages = get_module_package_list(module)
+    package_list += packages
+
+  return package_list
+
+def get_module_package_list(module):
+  package_list = []
   package_installer_prefix = get_platform_type() + "_installer_"
 
-  for module in module_list:
-    module_functions = inspect.getmembers(module, inspect.isfunction)
-    for function in module_functions:
-      function_name = function[0]
+  module_functions = inspect.getmembers(module, inspect.isfunction)
+  for function in module_functions:
+    function_name = function[0]
 
-      if function_name.startswith(package_installer_prefix):
-        package_name = function_name[len(package_installer_prefix):]
-        if package_name not in package_list:
-          package_list.append(package_name)
-          break
+    if not function_name.startswith(package_installer_prefix):
+      continue
+
+    package_name = function_name[len(package_installer_prefix):]
+    if package_name not in package_list:
+      package_list.append(package_name)
 
   return package_list
 
@@ -106,28 +117,13 @@ def get_package_installer(package_name):
     return None
 
   function_name = system_name + "_installer_" + package_name
-  function = get_function(function_name)
-  return function
 
-def get_function(function_name):
-  """
-  Returns the specified function
-  """
+  for module in installer_modules:
+    function = getattr(module, function_name)
+    if function is not None:
+      return function
 
-  module_list = globals().copy()
-  module_list.update(locals())
-
-  function = None
-  for module_name in module_list:
-    try:
-      function = getattr(module_list[module_name], function_name)
-      if function is not None:
-        break
-
-    except Exception:
-      pass
-
-  return function
+  return None
 
 def get_platform_type():
   """

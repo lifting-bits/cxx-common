@@ -1,6 +1,5 @@
 import os
 import multiprocessing
-
 from utils import *
 
 def linux_installer_cmake(properties):
