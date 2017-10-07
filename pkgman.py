@@ -7,7 +7,7 @@ import platform
 import types
 import inspect
 
-from installers import utils, common, windows
+from installers import utils, linux, windows
 
 def main():
   package_list = get_package_list()
@@ -80,17 +80,18 @@ def get_package_list():
 
   package_list = []
 
-  module_list = [windows, common]
-  prefix_list = ["common_installer_", get_system_name() + "_installer_"]
+  module_list = [windows, linux]
+  package_installer_prefix = get_platform_type() + "_installer_"
 
   for module in module_list:
     module_functions = inspect.getmembers(module, inspect.isfunction)
     for function in module_functions:
       function_name = function[0]
 
-      for prefix in prefix_list:
-        if function_name.startswith(prefix):
-          package_list.append(function_name[len(prefix):])
+      if function_name.startswith(package_installer_prefix):
+        package_name = function_name[len(package_installer_prefix):]
+        if package_name not in package_list:
+          package_list.append(package_name)
           break
 
   return package_list
@@ -100,21 +101,13 @@ def get_package_installer(package_name):
   Returns the specified package installer
   """
 
-  system_name = get_system_name()
+  system_name = get_platform_type()
   if system_name == None:
     return None
 
   function_name = system_name + "_installer_" + package_name
   function = get_function(function_name)
-  if function is not None:
-    return function
-
-  function_name = "common_installer_" + package_name
-  function = get_function(function_name)
-  if function is not None:
-    return function
-
-  return None
+  return function
 
 def get_function(function_name):
   """
@@ -126,47 +119,15 @@ def get_function(function_name):
 
   function = None
   for module_name in module_list:
-      try:
-          function = getattr(module_list[module_name], function_name)
-          if function is not None:
-              break
+    try:
+      function = getattr(module_list[module_name], function_name)
+      if function is not None:
+        break
 
-      except Exception:
-          pass
+    except Exception:
+      pass
 
   return function
-
-def get_system_name():
-  """
-  Returns the system name (windows, macos, linux-distroname)
-  """
-
-  name = get_platform_type()
-  if name == None:
-    return None
-
-  if name == "linux":
-    distribution_name = get_linux_distribution_name()
-    if distribution_name == None:
-      return None
-
-    name = name + "-" + distribution_name
-
-  return name
-
-def get_linux_distribution_name():
-  """
-  Returns the distribution name.
-  """
-
-  distribution_info = platform.linux_distribution(
-                      supported_dists=platform._supported_dists + ('arch',))
-
-  name = distribution_info[0]
-  if not name:
-    return None
-
-  return name
 
 def get_platform_type():
   """

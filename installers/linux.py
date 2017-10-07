@@ -3,7 +3,7 @@ import multiprocessing
 
 from utils import *
 
-def common_installer_cmake(properties):
+def linux_installer_cmake(properties):
   repository_path = properties["repository_path"]
 
   version = "3.9.3"
@@ -30,7 +30,7 @@ def common_installer_cmake(properties):
 
   return True
 
-def common_installer_llvm(properties):
+def linux_installer_llvm(properties):
   repository_path = properties["repository_path"]
   llvm_version = properties["llvm_version"]
 
