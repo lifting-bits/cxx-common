@@ -33,7 +33,7 @@ def linux_installer_llvm(properties):
   repository_path = properties["repository_path"]
   llvm_version = properties["llvm_version"]
 
-  # downlaod all source tarballs
+  # download all source tarballs
   llvm_tarball_path = download_file("https://codeload.github.com/llvm-mirror/llvm/tar.gz/release_" + llvm_version, "sources", "llvm.tar.gz")
   if llvm_tarball_path is None:
     return False

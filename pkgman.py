@@ -119,9 +119,12 @@ def get_package_installer(package_name):
   function_name = system_name + "_installer_" + package_name
 
   for module in installer_modules:
-    function = getattr(module, function_name)
-    if function is not None:
+    try:
+      function = getattr(module, function_name)
       return function
+
+    except:
+      pass
 
   return None
 
