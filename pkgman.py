@@ -9,7 +9,7 @@ import inspect
 import importlib
 
 installer_modules = []
-for module_name in ["linux", "windows"]:
+for module_name in ["linux", "windows", "common"]:
   module = importlib.import_module("pkgman.installers." + module_name)
   installer_modules.append(module)
 
@@ -19,7 +19,14 @@ def main():
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
-  arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default="/opt/trailofbits/libraries")
+
+  default_repository_path = ""
+  if get_platform_type() == "windows":
+    default_repository_path = "C:\\TrailOfBits\\libraries"
+  else:
+    default_repository_path = os.path.join("/opt/trailofbits/libraries")
+
+  arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default=default_repository_path)
 
   package_list_description = "The packages to build, separated by commas. Available packages: " + str(package_list)
   arg_parser.add_argument("--packages", type=str, help=package_list_description, required=True)
@@ -92,18 +99,25 @@ def get_package_list():
 
 def get_module_package_list(module):
   package_list = []
-  package_installer_prefix = get_platform_type() + "_installer_"
+  package_installer_prefixes = [get_platform_type() + "_installer_", "common_installer_"]
 
   module_functions = inspect.getmembers(module, inspect.isfunction)
   for function in module_functions:
     function_name = function[0]
 
-    if not function_name.startswith(package_installer_prefix):
+    package_name = ""
+    for prefix in package_installer_prefixes:
+      if function_name.startswith(prefix):
+        package_name = function_name[len(prefix):]
+
+    if not package_name:
       continue
 
-    package_name = function_name[len(package_installer_prefix):]
-    if package_name not in package_list:
-      package_list.append(package_name)
+    if package_name in package_list:
+      print("ERROR: The following package has more than one installer: " + package_name)
+      sys.exit(1)
+
+    package_list.append(package_name)
 
   return package_list
 
@@ -116,15 +130,17 @@ def get_package_installer(package_name):
   if system_name == None:
     return None
 
-  function_name = system_name + "_installer_" + package_name
+  prefixes = [system_name, "common"]
+  for prefix in prefixes:
+    function_name = prefix + "_installer_" + package_name
 
-  for module in installer_modules:
-    try:
-      function = getattr(module, function_name)
-      return function
+    for module in installer_modules:
+      try:
+        function = getattr(module, function_name)
+        return function
 
-    except:
-      pass
+      except:
+        pass
 
   return None
 
