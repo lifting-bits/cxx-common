@@ -32,6 +32,44 @@ def download_file(url, folder, output_file=None):
 
   return destination
 
+def download_github_source_archive(organization, repository, format="tar.gz", branch="master"):
+  url = "https://codeload.github.com/" + organization + "/" + repository + "/" + format + "/" + branch
+
+  base_file_name = repository + "-" + branch
+  tarball_path = os.path.join("sources", base_file_name + "." + format)
+
+  if not os.path.isfile(tarball_path):
+    temp_path = download_file(url, "sources")
+    if temp_path is None:
+      return None
+
+    try:
+      print(" > Renaming the tarball file...")
+      shutil.move(temp_path, tarball_path)
+
+    except:
+      print(" > Failed to rename the tarball file")
+      return None
+
+  else:
+    print(" > " + organization + "/" + repository + " has already been downloaded")
+
+  source_folder = os.path.realpath(os.path.join("sources", repository))
+  if not os.path.isdir(source_folder):
+    if not extract_archive(tarball_path, "sources"):
+      return None
+
+    try:
+      shutil.move(os.path.join("sources", base_file_name), source_folder)
+    except:
+      print(" x Failed to rename the " + base_file_name + " folder")
+      return None
+
+  else:
+    print(" > The source folder for " + repository + " already exists")
+
+  return os.path.realpath(source_folder)
+
 def extract_tarball(path, folder):
   try:
     tarball = tarfile.open(path)

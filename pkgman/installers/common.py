@@ -3,39 +3,10 @@ from utils import *
 
 def common_installer_glog(properties):
   repository_path = properties["repository_path"]
-  url = "https://codeload.github.com/google/glog/tar.gz/master"
 
-  glog_tarball_path = os.path.join("sources", "glog-master.tar.gz")
-
-  if not os.path.isfile(glog_tarball_path):
-    tarball_path = download_file(url, "sources")
-    if tarball_path is None:
-      return False
-
-    try:
-      print(" > Renaming the tarball file...")
-      shutil.move(tarball_path, glog_tarball_path)
-
-    except:
-      print(" > Failed to rename the tarball file")
-      return False
-
-  else:
-    print(" > Google glog already downloaded")
-
-  source_folder = os.path.realpath(os.path.join("sources", "glog"))
-  if not os.path.isdir(source_folder):
-    if not extract_archive(glog_tarball_path, "sources"):
-      return False
-
-    try:
-      shutil.move(os.path.join("sources", "glog-master"), os.path.join("sources", "glog"))
-    except:
-      print(" x Failed to rename the Google glog folder")
-      return False
-
-  else:
-    print(" > The source folder for Google glog already exists")
+  source_folder = download_github_source_archive("google", "glog")
+  if source_folder is None:
+    return False
 
   build_folder = os.path.join("build", "glog")
   if not os.path.isdir(build_folder):
