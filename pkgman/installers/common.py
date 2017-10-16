@@ -1,5 +1,23 @@
 import shutil
+
 from utils import *
+from distutils import spawn
+
+def get_python_path(version):
+  # some distributions have choosen to set python 3 as the default version
+  # always request the exact executable name first
+  if version != 2 and version != 3:
+    return None
+
+  path = spawn.find_executable("python" + str(version))
+  if path is not None:
+    return path
+
+  path = spawn.find_executable("python")
+  if path is not None:
+    return path
+
+  return None
 
 def common_installer_glog(properties):
   repository_path = properties["repository_path"]
@@ -91,8 +109,12 @@ def common_installer_xed(properties):
   mbuild_source_folder = download_github_source_archive("intelxed", "mbuild")
   if mbuild_source_folder is None:
     return False
+
+  python_executable = get_python_path(2)
+  if python_executable is None:
+    return False
   
-  mbuild_script = ["python", "mfile.py",
+  mbuild_script = [python_executable, "mfile.py",
                    "--prefix=" + os.path.join(repository_path, "xed")]
 
   if not run_program("Building and installing...", mbuild_script, xed_source_folder):
