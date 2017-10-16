@@ -42,39 +42,10 @@ def common_installer_glog(properties):
 
 def common_installer_capstone(properties):
   repository_path = properties["repository_path"]
-  url = "https://codeload.github.com/aquynh/capstone/tar.gz/master"
 
-  capstone_tarball_path = os.path.join("sources", "capstone-master.tar.gz")
-
-  if not os.path.isfile(capstone_tarball_path):
-    tarball_path = download_file(url, "sources")
-    if tarball_path is None:
-      return False
-
-    try:
-      print(" > Renaming the tarball file...")
-      shutil.move(tarball_path, capstone_tarball_path)
-
-    except:
-      print(" > Failed to rename the tarball file")
-      return False
-
-  else:
-    print(" > Capstone already downloaded")
-
-  source_folder = os.path.realpath(os.path.join("sources", "capstone"))
-  if not os.path.isdir(source_folder):
-    if not extract_archive(capstone_tarball_path, "sources"):
-      return False
-
-    try:
-      shutil.move(os.path.join("sources", "capstone-master"), os.path.join("sources", "capstone"))
-    except:
-      print(" x Failed to rename the Capstone folder")
-      return False
-
-  else:
-    print(" > The source folder for Capstone already exists")
+  source_folder = download_github_source_archive("aquynh", "capstone")
+  if source_folder is None:
+    return False
 
   build_folder = os.path.join("build", "capstone")
   if not os.path.isdir(build_folder):
