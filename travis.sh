@@ -39,7 +39,7 @@ linux_initialize() {
   fi
 
   printf " > Installing the required packages...\n"
-  sudo apt-get install -qqy cmake python2.7 build-essential
+  sudo apt-get install -qqy cmake python2.7 build-essential realpath
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1

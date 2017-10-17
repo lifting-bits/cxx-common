@@ -80,7 +80,11 @@ def main():
       print(" x The package installer procedure is missing")
       continue
 
-    package_installer(properties)
+    if not package_installer(properties):
+      print(" x Exiting due to failure")
+      return False
+
+    print(" > Done!\n")
 
   return True
 
