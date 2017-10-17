@@ -39,7 +39,7 @@ linux_initialize() {
   fi
 
   printf " > Installing the required packages...\n"
-  sudo apt-get install -qqy cmake python2.7 build-essential realpath
+  sudo apt-get install -qqy python2.7 build-essential realpath
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
@@ -68,11 +68,37 @@ linux_build() {
     fi
   fi
 
-  printf " > Launching the build script...\n"
+  printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py "--repository_path=${repository_path}" "--packages=cmake,llvm,capstone,gflags,glog,googletest,xed"
+  python2 pkgman.py "--repository_path=${repository_path}" "--packages=cmake"
+  local pkgman_error=$?
+  printf "===\n\n"
+
+  if [ "$pkgman_error" -ne 0 ] ; then
+    printf " x Build failed\n"
+    return 1
+  fi
+
+  printf " > Launching the build script for LLVM...\n"  
+
+  printf "\n===\n"
+  local repository_path=`realpath repository`
+  python2 pkgman.py "--additional_paths=${repository_path}/cmake/bin" "--repository_path=${repository_path}" "--packages=llvm"
+  local pkgman_error=$?
+  printf "===\n\n"
+
+  if [ "$pkgman_error" -ne 0 ] ; then
+    printf " x Build failed\n"
+    return 1
+  fi
+
+  printf " > Launching the build script for the remaining packages...\n"  
+
+  printf "\n===\n"
+  local repository_path=`realpath repository`
+  python2 pkgman.py "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed"
   local pkgman_error=$?
   printf "===\n\n"
 

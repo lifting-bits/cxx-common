@@ -19,6 +19,7 @@ def main():
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
+  arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands")
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -32,6 +33,13 @@ def main():
   arg_parser.add_argument("--packages", type=str, help=package_list_description, required=True)
 
   args = arg_parser.parse_args()
+
+  # update the PATH environment variable; this is done here to work around a Travis issue
+  if args.additional_paths is not None:
+    print("Updating the PATH environment...")
+
+    for path in args.additional_paths.split(","):
+      os.environ["PATH"] = path + ":" + os.environ["PATH"]
 
   # acquire the package list
   packages_to_install = args.packages.split(",")
