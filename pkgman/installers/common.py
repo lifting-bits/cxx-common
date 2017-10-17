@@ -121,3 +121,43 @@ def common_installer_xed(properties):
     return False
 
   return True
+
+def common_installer_gflags(properties):
+  repository_path = properties["repository_path"]
+
+  source_folder = download_github_source_archive("gflags", "gflags")
+  if source_folder is None:
+    return False
+
+  build_folder = os.path.join("build", "gflags")
+  if not os.path.isdir(build_folder):
+    try:
+      os.mkdir(build_folder)
+
+    except:
+      print(" x Failed to create the build folder")
+      return False
+
+
+  cmake_command = ["cmake",
+                   "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
+                   "-DCMAKE_CXX_STANDARD=11",
+                   "-DCMAKE_BUILD_TYPE=Release",
+                   "-DGFLAGS_BUILD_TESTING=OFF",
+                   "-DGFLAGS_BUILD_SHARED_LIBS=OFF",
+                   "-DGFLAGS_BUILD_STATIC_LIBS=ON",
+                   "-DGFLAGS_NAMESPACE=google",
+                   source_folder]
+
+  if not run_program("Configuring...", cmake_command, build_folder):
+    return False
+
+  cmake_command = ["cmake", "--build", "."]
+  if not run_program("Building...", cmake_command, build_folder):
+    return False
+
+  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  if not run_program("Installing...", cmake_command, build_folder):
+    return False
+
+  return True
