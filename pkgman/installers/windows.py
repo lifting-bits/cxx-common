@@ -3,6 +3,7 @@ from utils import *
 
 def windows_installer_cmake(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   version = "3.9.3"
   url = "https://cmake.org/files/v3.9/cmake-" + version + "-win64-x64.zip"
@@ -21,6 +22,7 @@ def windows_installer_cmake(properties):
 
 def windows_installer_llvm(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
   llvm_version = ""
 
   program_files_folder = os.environ["ProgramFiles(x86)"]
@@ -33,7 +35,7 @@ def windows_installer_llvm(properties):
       print(" x Could not find the LLVM uninstaller!")
       return False
 
-    if not run_program("Uninstalling the existing LLVM installation...", [llvm_uninstaller_path, "/S"], llvm_install_folder):
+    if not run_program("Uninstalling the existing LLVM installation...", [llvm_uninstaller_path, "/S"], llvm_install_folder, verbose=verbose_output):
       return False
 
   short_llvm_vers = str(properties["llvm_version"])
@@ -55,7 +57,7 @@ def windows_installer_llvm(properties):
   if installer_path is None:
     return False
 
-  if not run_program("Installing...", [installer_path, "/S"], "temp"):
+  if not run_program("Installing...", [installer_path, "/S"], "temp", verbose=verbose_output):
     return False
 
   return False

@@ -21,6 +21,7 @@ def get_python_path(version):
 
 def common_installer_glog(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   source_folder = download_github_source_archive("google", "glog")
   if source_folder is None:
@@ -45,21 +46,22 @@ def common_installer_glog(properties):
                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "glog"),
                    source_folder]
 
-  if not run_program("Configuring...", cmake_command, build_folder):
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."]
-  if not run_program("Building...", cmake_command, build_folder):
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", ".", "--target", "install"]
-  if not run_program("Installing...", cmake_command, build_folder):
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   return True
 
 def common_installer_capstone(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   source_folder = download_github_source_archive("aquynh", "capstone")
   if source_folder is None:
@@ -84,21 +86,22 @@ def common_installer_capstone(properties):
                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "capstone"),
                    source_folder]
 
-  if not run_program("Configuring...", cmake_command, build_folder):
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."]
-  if not run_program("Building...", cmake_command, build_folder):
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", ".", "--target", "install"]
-  if not run_program("Installing...", cmake_command, build_folder):
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   return True
 
 def common_installer_xed(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   # out of source builds are not supported, so we'll have to build
   # inside the source directory
@@ -117,13 +120,14 @@ def common_installer_xed(properties):
   mbuild_script = [python_executable, "mfile.py",
                    "--prefix=" + os.path.join(repository_path, "xed")]
 
-  if not run_program("Building and installing...", mbuild_script, xed_source_folder):
+  if not run_program("Building and installing...", mbuild_script, xed_source_folder, verbose=verbose_output):
     return False
 
   return True
 
 def common_installer_gflags(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   source_folder = download_github_source_archive("gflags", "gflags")
   if source_folder is None:
@@ -149,21 +153,22 @@ def common_installer_gflags(properties):
                    "-DGFLAGS_NAMESPACE=google",
                    source_folder]
 
-  if not run_program("Configuring...", cmake_command, build_folder):
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."]
-  if not run_program("Building...", cmake_command, build_folder):
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", ".", "--target", "install"]
-  if not run_program("Installing...", cmake_command, build_folder):
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   return True
 
 def common_installer_googletest(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   source_folder = download_github_source_archive("google", "googletest")
   if source_folder is None:
@@ -184,15 +189,15 @@ def common_installer_googletest(properties):
                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "googletest"),
                    source_folder]
 
-  if not run_program("Configuring...", cmake_command, build_folder):
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."]
-  if not run_program("Building...", cmake_command, build_folder):
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", ".", "--target", "install"]
-  if not run_program("Installing...", cmake_command, build_folder):
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   return True

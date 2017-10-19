@@ -72,7 +72,7 @@ linux_build() {
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py "--repository_path=${repository_path}" "--packages=cmake"
+  python2 pkgman.py --verbose "--repository_path=${repository_path}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -85,7 +85,7 @@ linux_build() {
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py "--additional_paths=${repository_path}/cmake/bin" "--repository_path=${repository_path}" "--packages=llvm"
+  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin" "--repository_path=${repository_path}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -98,7 +98,7 @@ linux_build() {
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed"
+  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed"
   local pkgman_error=$?
   printf "===\n\n"
 

@@ -18,8 +18,9 @@ def main():
 
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
-  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...)", default=40)
-  arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands")
+  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...).", default=40)
+  arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands.")
+  arg_parser.add_argument('--verbose', help="True if the script should print to stdout the compilation output. Useful to prevent Travis from timing out due to inactivity.", action='store_true')
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -58,6 +59,7 @@ def main():
   properties = dict()
   properties["llvm_version"] = llvm_version
   properties["repository_path"] = args.repository_path
+  properties["verbose"] = args.verbose
 
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)

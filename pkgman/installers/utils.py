@@ -120,11 +120,15 @@ def install_folder(path, destination):
     print(" x Installation has failed")
     return False
 
-def run_program(description, command, working_directory):
+def run_program(description, command, working_directory, verbose=False):
   print(" > " + description)
 
   try:
-    log_file = tempfile.NamedTemporaryFile(delete=True)
+    if verbose:
+      log_file = sys.__stdout__
+    else:
+      log_file = tempfile.NamedTemporaryFile(delete=True)
+
     exit_code = subprocess.call(command, cwd=working_directory, stdout=log_file, stderr=subprocess.STDOUT)
     log_file.flush()
 

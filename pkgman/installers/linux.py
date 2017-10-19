@@ -4,6 +4,7 @@ from utils import *
 
 def linux_installer_cmake(properties):
   repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
 
   version = "3.9.3"
   url = "https://github.com/Kitware/CMake/archive/v" + version + ".tar.gz"
@@ -18,13 +19,13 @@ def linux_installer_cmake(properties):
   source_folder = os.path.join("build", "CMake-" + version)
   destination_path = os.path.join(repository_path, "cmake")
 
-  if not run_program("Running the bootstrap script...", ["./bootstrap", "--prefix=" + destination_path], source_folder):
+  if not run_program("Running the bootstrap script...", ["./bootstrap", "--prefix=" + destination_path], source_folder, verbose=verbose_output):
     return False
 
-  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], source_folder):
+  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], source_folder, verbose=verbose_output):
     return False
 
-  if not run_program("Installing...", ["make", "install"], source_folder):
+  if not run_program("Installing...", ["make", "install"], source_folder, verbose=verbose_output):
     return False
 
   return True
@@ -32,6 +33,7 @@ def linux_installer_cmake(properties):
 def linux_installer_llvm(properties):
   repository_path = properties["repository_path"]
   llvm_version = properties["llvm_version"]
+  verbose_output = properties["verbose"]
 
   # download all source tarballs
   llvm_tarball_path = download_file("https://codeload.github.com/llvm-mirror/llvm/tar.gz/release_" + llvm_version, "sources", "llvm.tar.gz")
@@ -149,13 +151,13 @@ def linux_installer_llvm(properties):
                            "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
                            "-LIBCXX_INCLUDE_BENCHMARKS=NO", source_path]
 
-  if not run_program("Configuring...", configuration_command, llvm_build_path):
+  if not run_program("Configuring...", configuration_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], llvm_build_path):
+  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], llvm_build_path, verbose=verbose_output):
     return False
 
-  if not run_program("Installing...", ["make", "install"], llvm_build_path):
+  if not run_program("Installing...", ["make", "install"], llvm_build_path, verbose=verbose_output):
     return False
 
   return True
