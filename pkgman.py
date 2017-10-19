@@ -16,6 +16,14 @@ for module_name in ["linux", "windows", "common"]:
   installer_modules.append(module)
 
 def main():
+  if "CC" not in os.environ:
+    print("Please define the CC environment variable!")
+    return False
+
+  if "CXX" not in os.environ:
+    print("Please define the CXX environment variable!")
+    return False
+
   package_list = get_package_list()
 
   # parse the command line

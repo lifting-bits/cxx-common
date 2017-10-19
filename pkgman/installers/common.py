@@ -38,6 +38,8 @@ def common_installer_glog(properties):
       return False
 
   cmake_command = ["cmake",
+                   "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                   "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                    "-DCMAKE_CXX_STANDARD=11",
                    "-DCMAKE_BUILD_TYPE=Release",
                    "-DBUILD_TESTING=OFF",
@@ -78,6 +80,8 @@ def common_installer_capstone(properties):
       return False
 
   cmake_command = ["cmake",
+                   "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                   "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                    "-DCMAKE_EXE_LINKER_FLAGS=-g",
                    "-DCMAKE_C_FLAGS=-g",
                    "-DCAPSTONE_ARM_SUPPORT=1",
@@ -145,6 +149,8 @@ def common_installer_gflags(properties):
 
 
   cmake_command = ["cmake",
+                   "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                   "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
                    "-DCMAKE_CXX_STANDARD=11",
                    "-DCMAKE_BUILD_TYPE=Release",
@@ -185,6 +191,8 @@ def common_installer_googletest(properties):
       return False
 
   cmake_command = ["cmake",
+                   "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                   "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                    "-DCMAKE_CXX_STANDARD=11",
                    "-DCMAKE_BUILD_TYPE=Release",
                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "googletest"),
@@ -224,6 +232,8 @@ def common_installer_protobuf(properties):
       return False
 
   cmake_command = ["cmake",
+                   "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                   "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                    "-DCMAKE_BUILD_TYPE=Release",
                    "-DBUILD_SHARED_LIBS=False",
                    "-Dprotobuf_BUILD_TESTS=False",

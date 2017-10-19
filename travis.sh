@@ -94,11 +94,41 @@ linux_build() {
     return 1
   fi
 
+  # REALLY make sure that everyone will use clang
+  export CC="${repository_path}/llvm/bin/clang"
+  export CXX="${repository_path}/llvm/bin/clang++"
+
+  if [ ! -d "temp/bin" ] ; then
+    mkdir "temp/bin"
+    if [ $? -ne 0 ] ; then
+      printf "Failed to create the temporary bin folder"
+      return 1
+    fi
+  fi
+
+  if [ ! -f "temp/bin/gcc" ] ; then
+    ln -s "${repository_path}/llvm/bin/clang" "temp/bin/gcc"
+    if [ $? -ne 0 ] ; then
+      printf "Failed to create the clang symbolic link"
+      return 1
+    fi
+  fi
+
+  if [ ! -f "temp/bin/g++" ] ; then
+    ln -s "${repository_path}/llvm/bin/clang++" "temp/bin/g++"
+    if [ $? -ne 0 ] ; then
+      printf "Failed to create the clang++ symbolic link"
+      return 1
+    fi
+  fi
+
+  custom_bin_path=`realpath "temp/bin"`
+
   printf " > Launching the build script for the remaining packages...\n"  
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed,protobuf"
+  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin:${custom_bin_path}" "--repository_path=${repository_path}" "--packages=llvm,capstone,gflags,glog,googletest,xed,protobuf"
   local pkgman_error=$?
   printf "===\n\n"
 

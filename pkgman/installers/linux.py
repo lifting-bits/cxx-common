@@ -143,6 +143,8 @@ def linux_installer_llvm(properties):
     configuration_command.append("-DCMAKE_CXX_COMPILER=" + os.environ["CXX"])
 
   configuration_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
+                           "-DCMAKE_C_COMPILER=" + os.environ["CC"],
+                           "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
                            "-DCMAKE_CXX_STANDARD=11", "-DCMAKE_BUILD_TYPE=Release",
                            "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
                            "-DLLVM_INCLUDE_EXAMPLES=OFF",
