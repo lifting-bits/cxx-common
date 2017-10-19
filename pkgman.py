@@ -8,6 +8,8 @@ import types
 import inspect
 import importlib
 
+from distutils.dir_util import copy_tree
+
 installer_modules = []
 for module_name in ["linux", "windows", "common"]:
   module = importlib.import_module("pkgman.installers." + module_name)
@@ -95,6 +97,16 @@ def main():
       return False
 
     print(" > Done!\n")
+
+  cmake_modules_folder = os.path.join(properties["repository_path"], "cmake")
+  if not os.path.isdir(cmake_modules_folder):
+    try:
+      print("Installing the CMake modules...")
+      copy_tree("cmake", properties["repository_path"])
+
+    except:
+      print(" x Failed to copy the CMake modules")
+      return False
 
   return True
 
