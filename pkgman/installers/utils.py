@@ -6,6 +6,15 @@ import zipfile
 import shutil
 import subprocess
 import tempfile
+import multiprocessing
+
+def get_parallel_build_options():
+  processor_count = str(multiprocessing.cpu_count())
+
+  if sys.platform == "win32":
+    return "/m:" + processor_count
+
+  return "-j" + processor_count
 
 def download_to_file(url, destination):
   try:

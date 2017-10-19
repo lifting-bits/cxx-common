@@ -98,7 +98,7 @@ linux_build() {
 
   printf "\n===\n"
   local repository_path=`realpath repository`
-  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed"
+  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin" "--repository_path=${repository_path}" "--packages=capstone,gflags,glog,googletest,xed,protobuf"
   local pkgman_error=$?
   printf "===\n\n"
 

@@ -154,7 +154,7 @@ def linux_installer_llvm(properties):
   if not run_program("Configuring...", configuration_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], llvm_build_path, verbose=verbose_output):
+  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count() + 1)], llvm_build_path, verbose=verbose_output):
     return False
 
   if not run_program("Installing...", ["make", "install"], llvm_build_path, verbose=verbose_output):

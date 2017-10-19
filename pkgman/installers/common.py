@@ -2,6 +2,7 @@ import shutil
 
 from utils import *
 from distutils import spawn
+from distutils.dir_util import copy_tree
 
 def get_python_path(version):
   # some distributions have choosen to set python 3 as the default version
@@ -49,7 +50,7 @@ def common_installer_glog(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."]
+  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -89,7 +90,7 @@ def common_installer_capstone(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."]
+  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -156,7 +157,7 @@ def common_installer_gflags(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."]
+  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -192,7 +193,48 @@ def common_installer_googletest(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."]
+  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  return True
+
+def common_installer_protobuf(properties):
+  repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
+
+  source_folder = download_github_source_archive("google", "protobuf")
+  if source_folder is None:
+    return False
+
+  source_folder = os.path.realpath(os.path.join(source_folder, "cmake"))
+
+  # protobuf does not support out of source builds!
+  build_folder = os.path.join("sources", "protobuf", "cmake", "build", "release")
+  if not os.path.isdir(build_folder):
+    try:
+      os.makedirs(build_folder)
+
+    except:
+      print(" x Failed to create the build folder")
+      return False
+
+  cmake_command = ["cmake",
+                   "-DCMAKE_BUILD_TYPE=Release",
+                   "-DBUILD_SHARED_LIBS=False",
+                   "-Dprotobuf_BUILD_TESTS=False",
+                   "-Dprotobuf_WITH_ZLIB=False",
+                   "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "protobuf"),
+                   source_folder]
+
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
