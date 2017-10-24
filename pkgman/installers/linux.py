@@ -135,25 +135,17 @@ def linux_installer_llvm(properties):
   source_path = os.path.realpath(os.path.join("sources", "llvm"))
   destination_path = os.path.join(repository_path, "llvm")
 
-  configuration_command = ["cmake"]
-  if "CC" in os.environ:
-    configuration_command.append("-DCMAKE_C_COMPILER=" + os.environ["CC"])
+  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
+                    "-DCMAKE_CXX_STANDARD=11", "-DCMAKE_BUILD_TYPE=Release",
+                    "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
+                    "-DLLVM_INCLUDE_EXAMPLES=OFF",
+                    "-DLLVM_INCLUDE_TESTS=OFF", "-DLIBCXX_ENABLE_STATIC=YES",
+                    "-DLIBCXX_ENABLE_SHARED=YES",
+                    "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
+                    "-LIBCXX_INCLUDE_BENCHMARKS=NO", source_path]
 
-  if "CXX" in os.environ:
-    configuration_command.append("-DCMAKE_CXX_COMPILER=" + os.environ["CXX"])
-
-  configuration_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
-                           "-DCMAKE_C_COMPILER=" + os.environ["CC"],
-                           "-DCMAKE_CXX_COMPILER=" + os.environ["CXX"],
-                           "-DCMAKE_CXX_STANDARD=11", "-DCMAKE_BUILD_TYPE=Release",
-                           "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
-                           "-DLLVM_INCLUDE_EXAMPLES=OFF",
-                           "-DLLVM_INCLUDE_TESTS=OFF", "-DLIBCXX_ENABLE_STATIC=YES",
-                           "-DLIBCXX_ENABLE_SHARED=YES",
-                           "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
-                           "-LIBCXX_INCLUDE_BENCHMARKS=NO", source_path]
-
-  if not run_program("Configuring...", configuration_command, llvm_build_path, verbose=verbose_output):
+  if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count() + 1)], llvm_build_path, verbose=verbose_output):
@@ -163,3 +155,4 @@ def linux_installer_llvm(properties):
     return False
 
   return True
+  

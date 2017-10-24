@@ -16,14 +16,6 @@ for module_name in ["linux", "windows", "common"]:
   installer_modules.append(module)
 
 def main():
-  if "CC" not in os.environ:
-    print("Please define the CC environment variable!")
-    return False
-
-  if "CXX" not in os.environ:
-    print("Please define the CXX environment variable!")
-    return False
-
   package_list = get_package_list()
 
   # parse the command line
@@ -31,6 +23,9 @@ def main():
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...).", default=40)
   arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands.")
   arg_parser.add_argument('--verbose', help="True if the script should print to stdout the compilation output. Useful to prevent Travis from timing out due to inactivity.", action='store_true')
+
+  arg_parser.add_argument("--cxx_compiler", type=str, help="The C++ compiler to use.")
+  arg_parser.add_argument('--c_compiler', type=str, help="The C compiler to use.")
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -51,7 +46,16 @@ def main():
 
     for path in args.additional_paths.split(","):
       os.environ["PATH"] = path + ":" + os.environ["PATH"]
+  
+  # set the compilers
+  if args.c_compiler is not None:
+    print("Setting the C compiler: " + args.c_compiler)
+    os.environ["CMAKE_C_COMPILER"] = args.c_compiler
 
+  if args.cxx_compiler is not None:
+    print("Setting the C++ compiler: " + args.cxx_compiler)
+    os.environ["CMAKE_CXX_COMPILER"] = args.cxx_compiler
+  
   # acquire the package list
   packages_to_install = args.packages.split(",")
 
