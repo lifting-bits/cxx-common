@@ -5,6 +5,10 @@ from utils import *
 def linux_installer_cmake(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  if debug:
+    print(" ! Debug mode is not supported")
 
   version = "3.9.3"
   url = "https://github.com/Kitware/CMake/archive/v" + version + ".tar.gz"
@@ -40,6 +44,7 @@ def linux_installer_llvm(properties):
   repository_path = properties["repository_path"]
   llvm_version = properties["llvm_version"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   # download all source tarballs
   llvm_tarball_path = download_file("https://codeload.github.com/llvm-mirror/llvm/tar.gz/release_" + llvm_version, "sources", "llvm.tar.gz")
@@ -141,9 +146,9 @@ def linux_installer_llvm(properties):
   source_path = os.path.realpath(os.path.join("sources", "llvm"))
   destination_path = os.path.join(repository_path, "llvm")
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
   cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
-                    "-DCMAKE_CXX_STANDARD=11", "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_CXX_STANDARD=11",
                     "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
                     "-DLLVM_INCLUDE_EXAMPLES=OFF",
                     "-DLLVM_INCLUDE_TESTS=OFF", "-DLIBCXX_ENABLE_STATIC=YES",
@@ -154,10 +159,12 @@ def linux_installer_llvm(properties):
   if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count() + 1)], llvm_build_path, verbose=verbose_output):
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
+  if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  if not run_program("Installing...", ["make", "install"], llvm_build_path, verbose=verbose_output):
+  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   return True

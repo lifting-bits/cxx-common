@@ -23,6 +23,7 @@ def get_python_path(version):
 def common_installer_glog(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   source_folder = download_github_source_archive("google", "glog")
   if source_folder is None:
@@ -37,9 +38,8 @@ def common_installer_glog(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
-                    "-DCMAKE_BUILD_TYPE=Release",
                     "-DBUILD_TESTING=OFF",
                     "-DWITH_GFLAGS=OFF",
                     "-DCMAKE_EXE_LINKER_FLAGS=-g",
@@ -50,7 +50,7 @@ def common_installer_glog(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -63,6 +63,7 @@ def common_installer_glog(properties):
 def common_installer_capstone(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   source_folder = download_github_source_archive("aquynh", "capstone")
   if source_folder is None:
@@ -77,7 +78,7 @@ def common_installer_capstone(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
   cmake_command += ["-DCMAKE_EXE_LINKER_FLAGS=-g",
                     "-DCMAKE_C_FLAGS=-g",
                     "-DCAPSTONE_ARM_SUPPORT=1",
@@ -90,7 +91,7 @@ def common_installer_capstone(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -103,6 +104,7 @@ def common_installer_capstone(properties):
 def common_installer_xed(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   # out of source builds are not supported, so we'll have to build
   # inside the source directory
@@ -120,6 +122,8 @@ def common_installer_xed(properties):
   
   mbuild_script = [python_executable, "mfile.py",
                    "--prefix=" + os.path.join(repository_path, "xed")]
+  if debug:
+    mbuild_script.append("--debug")
 
   if not run_program("Building and installing...", mbuild_script, xed_source_folder, verbose=verbose_output):
     return False
@@ -129,6 +133,7 @@ def common_installer_xed(properties):
 def common_installer_gflags(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   source_folder = download_github_source_archive("gflags", "gflags")
   if source_folder is None:
@@ -144,10 +149,9 @@ def common_installer_gflags(properties):
       return False
 
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
   cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
                     "-DCMAKE_CXX_STANDARD=11",
-                    "-DCMAKE_BUILD_TYPE=Release",
                     "-DGFLAGS_BUILD_TESTING=OFF",
                     "-DGFLAGS_BUILD_SHARED_LIBS=OFF",
                     "-DGFLAGS_BUILD_STATIC_LIBS=ON",
@@ -157,7 +161,7 @@ def common_installer_gflags(properties):
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -170,6 +174,7 @@ def common_installer_gflags(properties):
 def common_installer_googletest(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   source_folder = download_github_source_archive("google", "googletest")
   if source_folder is None:
@@ -184,16 +189,15 @@ def common_installer_googletest(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
-                    "-DCMAKE_BUILD_TYPE=Release",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "googletest"),
                     source_folder]
 
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -206,6 +210,7 @@ def common_installer_googletest(properties):
 def common_installer_protobuf(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
 
   source_folder = download_github_source_archive("google", "protobuf")
   if source_folder is None:
@@ -223,20 +228,17 @@ def common_installer_protobuf(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings()
-  cmake_command += ["-DCMAKE_BUILD_TYPE=Release",
-                    "-DBUILD_SHARED_LIBS=False",
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command += ["-DBUILD_SHARED_LIBS=False",
                     "-Dprotobuf_BUILD_TESTS=False",
                     "-Dprotobuf_WITH_ZLIB=False",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "protobuf"),
                     source_folder]
 
-  print(str(cmake_command))
-
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--", get_parallel_build_options()]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 

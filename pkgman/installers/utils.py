@@ -26,6 +26,26 @@ def get_parallel_build_options():
 
   return "-j" + processor_count
 
+def get_cmake_build_type(debug):
+  build_type = []
+
+  if debug:
+    build_type.append("-DCMAKE_BUILD_TYPE=Debug")
+  else:
+    build_type.append("-DCMAKE_BUILD_TYPE=Release")
+
+  return build_type
+
+def get_cmake_build_configuration(debug):
+  build_configuration = ["--config"]
+
+  if debug:
+    build_configuration.append("Debug")
+  else:
+    build_configuration.append("Release")
+
+  return build_configuration
+
 def download_to_file(url, destination):
   try:
     urllib.urlretrieve(url, destination)

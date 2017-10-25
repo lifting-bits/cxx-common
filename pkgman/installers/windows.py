@@ -4,6 +4,10 @@ from utils import *
 def windows_installer_cmake(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  if debug:
+    print(" ! Debug build not supported on Windows")
 
   version = "3.9.3"
   url = "https://cmake.org/files/v3.9/cmake-" + version + "-win64-x64.zip"
@@ -23,7 +27,11 @@ def windows_installer_cmake(properties):
 def windows_installer_llvm(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
+  debug = properties["debug"]
   llvm_version = ""
+
+  if debug:
+    print(" ! Debug build not supported on Windows")
 
   program_files_folder = os.environ["ProgramFiles(x86)"]
   llvm_install_folder = os.path.join(program_files_folder, "LLVM")

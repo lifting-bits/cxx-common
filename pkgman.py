@@ -23,6 +23,7 @@ def main():
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...).", default=40)
   arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands.")
   arg_parser.add_argument('--verbose', help="True if the script should print to stdout the compilation output. Useful to prevent Travis from timing out due to inactivity.", action='store_true')
+  arg_parser.add_argument('--debug', help="Build debug versions.", action='store_true')
 
   arg_parser.add_argument("--cxx_compiler", type=str, help="The C++ compiler to use.")
   arg_parser.add_argument('--c_compiler', type=str, help="The C compiler to use.")
@@ -39,6 +40,12 @@ def main():
   arg_parser.add_argument("--packages", type=str, help=package_list_description, required=True)
 
   args = arg_parser.parse_args()
+
+  print("Build type:"),
+  if args.debug:
+    print("Debug")
+  else:
+    print("Release")
 
   # update the PATH environment variable; this is done here to work around a Travis issue
   if args.additional_paths is not None:
@@ -74,6 +81,7 @@ def main():
   properties["llvm_version"] = llvm_version
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
+  properties["debug"] = args.debug
 
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
