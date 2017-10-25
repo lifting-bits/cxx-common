@@ -59,9 +59,20 @@ osx_initialize() {
 linux_build() {
   printf "Building platform: linux\n"
 
-  printf " > Creating the repository folder...\n"
-  if [ ! -d "repository" ] ; then
-    mkdir "repository"
+  local bootstrap_repository="/opt/trailofbits/bootstrap"
+  local library_repository="/opt/trailofbits/libraries"
+
+  printf " > Creating the repository folders...\n"
+  if [ ! -d "${bootstrap_repository}" ] ; then
+    mkdir -p "${bootstrap_repository}"
+    if [ $? -ne 0 ] ; then
+      printf " x Failed to create the folder\n"
+      return 1
+    fi
+  fi
+
+  if [ ! -d "${library_repository}" ] ; then
+    mkdir -p "${library_repository}"
     if [ $? -ne 0 ] ; then
       printf " x Failed to create the folder\n"
       return 1
@@ -71,8 +82,7 @@ linux_build() {
   printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
-  local repository_path=`realpath repository`
-  python2 pkgman.py --verbose "--repository_path=${repository_path}" "--packages=cmake"
+  python2 pkgman.py --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -84,8 +94,7 @@ linux_build() {
   printf " > Launching the build script for LLVM...\n"  
 
   printf "\n===\n"
-  local repository_path=`realpath repository`
-  python2 pkgman.py --verbose "--additional_paths=${repository_path}/cmake/bin" "--repository_path=${repository_path}" "--packages=llvm"
+  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -104,7 +113,7 @@ linux_build() {
   fi
 
   if [ ! -f "temp/bin/gcc" ] ; then
-    ln -s "${repository_path}/llvm/bin/clang" "temp/bin/gcc"
+    ln -s "${bootstrap_repository}/llvm/bin/clang" "temp/bin/gcc"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang symbolic link"
       return 1
@@ -112,7 +121,7 @@ linux_build() {
   fi
 
   if [ ! -f "temp/bin/g++" ] ; then
-    ln -s "${repository_path}/llvm/bin/clang++" "temp/bin/g++"
+    ln -s "${bootstrap_repository}/llvm/bin/clang++" "temp/bin/g++"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang++ symbolic link"
       return 1
@@ -121,11 +130,14 @@ linux_build() {
 
   custom_bin_path=`realpath "temp/bin"`
 
-  printf " > Launching the build script for the remaining packages...\n"  
+  printf " > Erasing the LLVM and CMake build folders...\n"
+  rm -rf "build/llvm"
+  rm -rf "build/CMake*"
+
+  printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  local repository_path=`realpath repository`
-  python2 pkgman.py "--cxx_compiler=${repository_path}/llvm/bin/clang" "--c_compiler=${repository_path}/llvm/bin/clang++" --verbose "--additional_paths=${repository_path}/cmake/bin:${repository_path}/llvm/bin:${custom_bin_path}" "--repository_path=${repository_path}" "--packages=llvm,capstone,gflags,glog,googletest,xed,protobuf"
+  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang" "--c_compiler=${bootstrap_repository}/llvm/bin/clang++" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,gflags,glog,googletest,xed,protobuf"
   local pkgman_error=$?
   printf "===\n\n"
 
