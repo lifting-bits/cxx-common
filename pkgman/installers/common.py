@@ -263,10 +263,17 @@ def common_installer_protobuf(properties):
     return False
 
   if sys.platform == "win32" or sys.platform == "cygwin":
+    module_folder = "lib"
     os.environ["PATH"] = os.path.join(repository_path, "protobuf", "lib") + ":" + os.environ["PATH"]
+
   else:
     os.environ["LIBRARY_PATH"] = os.path.join(repository_path, "protobuf", "lib")
     os.environ["LD_LIBRARY_PATH"] = os.environ["LIBRARY_PATH"]
+
+    if sys.platform == "linux":
+      module_folder = "lib.linux-x86_64-2.7"
+    else:
+      module_folder = "lib"
 
   os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", "protoc"))
   python_command = [get_python_path(2), "setup.py", "build"]
@@ -275,11 +282,11 @@ def common_installer_protobuf(properties):
 
   try:
     print(" > Copying the Python module...")
-    python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", "lib.linux-x86_64-2.7", "google"))
+    python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", module_folder, "google"))
     copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
 
   except:
-    print(" x Failed to copy the install module")
+    print(" x Failed to copy the Python module")
     return False
 
   return True
