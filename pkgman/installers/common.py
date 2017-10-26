@@ -212,14 +212,29 @@ def common_installer_protobuf(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("google", "protobuf")
-  if source_folder is None:
+  version = "2.6.1"
+  url = "https://github.com/google/protobuf/archive/v" + version + ".tar.gz"
+
+  source_tarball_path = download_file(url, "sources")
+  if source_tarball_path is None:
     return False
 
-  source_folder = os.path.realpath(os.path.join(source_folder, "cmake"))
+  if not extract_archive(source_tarball_path, "sources"):
+    return False
 
-  # protobuf does not support out of source builds!
-  build_folder = os.path.join("sources", "protobuf", "cmake", "build", "release")
+  source_folder = os.path.realpath(os.path.join("sources", "protobuf-" + version))
+
+  # this version is too old and doesn't support cmake out of the box
+  # so we need to use an external project
+  try:
+    copy_tree(os.path.join("cmake", "protobuf_project"), os.path.join(source_folder, "cmake"))
+    print(" > Copying the CMake project...")
+
+  except:
+    print(" x Failed to copy the CMake project")
+    return False
+
+  build_folder = os.path.join("build", "protobuf")
   if not os.path.isdir(build_folder):
     try:
       os.makedirs(build_folder)
@@ -229,11 +244,12 @@ def common_installer_protobuf(properties):
       return False
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
-  cmake_command += ["-DBUILD_SHARED_LIBS=False",
+  cmake_command += ["-DPROTOBUF_ROOT=" + source_folder,
+                    "-DBUILD_SHARED_LIBS=False",
                     "-Dprotobuf_BUILD_TESTS=False",
                     "-Dprotobuf_WITH_ZLIB=False",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "protobuf"),
-                    source_folder]
+                    os.path.join(source_folder, "cmake")]
 
   if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
     return False
@@ -244,6 +260,26 @@ def common_installer_protobuf(properties):
 
   cmake_command = ["cmake", "--build", ".", "--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  if sys.platform == "win32" or sys.platform == "cygwin":
+    os.environ["PATH"] = os.path.join(repository_path, "protobuf", "lib") + ":" + os.environ["PATH"]
+  else:
+    os.environ["LIBRARY_PATH"] = os.path.join(repository_path, "protobuf", "lib")
+    os.environ["LD_LIBRARY_PATH"] = os.environ["LIBRARY_PATH"]
+
+  os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", "protoc"))
+  python_command = [get_python_path(2), "setup.py", "build"]
+  if not run_program("Building the Python module...", python_command, os.path.join(source_folder, "python"), verbose=verbose_output):
+    return False
+
+  try:
+    print(" > Copying the Python module...")
+    python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", "lib.linux-x86_64-2.7", "google"))
+    copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
+
+  except:
+    print(" x Failed to copy the install module")
     return False
 
   return True

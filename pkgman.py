@@ -122,7 +122,7 @@ def main():
   if not os.path.isdir(cmake_modules_folder):
     try:
       print("Installing the CMake modules...")
-      copy_tree("cmake", properties["repository_path"])
+      copy_tree("cmake_modules", os.path.join(properties["repository_path"], "cmake"))
 
     except:
       print(" x Failed to copy the CMake modules")
