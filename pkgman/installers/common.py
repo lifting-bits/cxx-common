@@ -1,4 +1,5 @@
 import shutil
+import time
 
 from utils import *
 from distutils import spawn
@@ -120,12 +121,36 @@ def common_installer_xed(properties):
   if python_executable is None:
     return False
   
-  mbuild_script = [python_executable, "mfile.py",
-                   "--prefix=" + os.path.join(repository_path, "xed")]
+  mbuild_script = [python_executable, "mfile.py", "install"]
   if debug:
     mbuild_script.append("--debug")
 
-  if not run_program("Building and installing...", mbuild_script, xed_source_folder, verbose=verbose_output):
+  if not run_program("Building...", mbuild_script, xed_source_folder, verbose=verbose_output):
+    return False
+
+  print(" > Installing...")
+  kit_folder_name = "xed-install-base-" + time.strftime("%Y-%m-%d") + "-"
+
+  if sys.platform == "linux" or sys.platform == "linux2":
+    kit_folder_name += "lin"
+
+  elif sys.platform == "darwin":
+    kit_folder_name += "osx"
+
+  elif sys.platform == "win32" or sys.platform == "cygwin":
+    kit_folder_name += "win"
+
+  else:
+    print(" x Failed to determine the kit name")
+    return False
+
+  kit_folder_name += "-x86-64"
+  kit_folder_path = os.path.realpath(os.path.join("sources", "xed", "kits", kit_folder_name))
+
+  try:
+    copy_tree(kit_folder_path, os.path.join(repository_path, "xed"))
+  except:
+    print(" x Failed to install the XED library")
     return False
 
   return True
