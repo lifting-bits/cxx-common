@@ -2,7 +2,7 @@ import os
 import multiprocessing
 from utils import *
 
-def linux_installer_cmake(properties):
+def unix_installer_cmake(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -40,7 +40,7 @@ def linux_installer_cmake(properties):
 
   return True
 
-def linux_installer_llvm(properties):
+def unix_installer_llvm(properties):
   repository_path = properties["repository_path"]
   llvm_version = properties["llvm_version"]
   verbose_output = properties["verbose"]
@@ -168,4 +168,15 @@ def linux_installer_llvm(properties):
     return False
 
   return True
-  
+
+def macos_installer_cmake(properties):
+  return unix_installer_cmake(properties)
+
+def linux_installer_cmake(properties):
+  return unix_installer_cmake(properties)
+
+def macos_installer_llvm(properties):
+  return unix_installer_llvm(properties)
+
+def linux_installer_llvm(properties):
+  return unix_installer_llvm(properties)

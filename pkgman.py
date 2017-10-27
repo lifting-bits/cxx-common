@@ -11,7 +11,7 @@ import importlib
 from distutils.dir_util import copy_tree
 
 installer_modules = []
-for module_name in ["linux", "windows", "common"]:
+for module_name in ["unix", "windows", "common"]:
   module = importlib.import_module("pkgman.installers." + module_name)
   installer_modules.append(module)
 
@@ -32,7 +32,7 @@ def main():
   if get_platform_type() == "windows":
     default_repository_path = "C:\\TrailOfBits\\libraries"
   else:
-    default_repository_path = os.path.join("/opt/trailofbits/libraries")
+    default_repository_path = "/usr/local/lib/trailofbits";
 
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default=default_repository_path)
 
@@ -46,6 +46,9 @@ def main():
     print("Debug")
   else:
     print("Release")
+
+  print("Platform type:"),
+  print(get_platform_type())
 
   # update the PATH environment variable; this is done here to work around a Travis issue
   if args.additional_paths is not None:
@@ -206,12 +209,6 @@ def get_platform_type():
 
   else:
     return None
-
-  name = distribution_info[0]
-  if not name:
-    return None
-
-  return name
 
 if __name__ == "__main__":
   if not main():
