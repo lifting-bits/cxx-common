@@ -263,6 +263,7 @@ def common_installer_protobuf(properties):
     return False
 
   if sys.platform == "win32" or sys.platform == "cygwin":
+    protoc_executable = "protoc.exe"
     module_folder = "lib"
     os.environ["PATH"] = os.path.join(repository_path, "protobuf", "lib") + ":" + os.environ["PATH"]
 
@@ -270,12 +271,13 @@ def common_installer_protobuf(properties):
     os.environ["LIBRARY_PATH"] = os.path.join(repository_path, "protobuf", "lib")
     os.environ["LD_LIBRARY_PATH"] = os.environ["LIBRARY_PATH"]
 
+    protoc_executable = "protoc"
     if sys.platform == "linux":
       module_folder = "lib.linux-x86_64-2.7"
     else:
       module_folder = "lib"
 
-  os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", "protoc"))
+  os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", protoc_executable))
   python_command = [get_python_path(2), "setup.py", "build"]
   if not run_program("Building the Python module...", python_command, os.path.join(source_folder, "python"), verbose=verbose_output):
     return False
