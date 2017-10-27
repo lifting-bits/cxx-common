@@ -120,7 +120,7 @@ def common_installer_xed(properties):
   python_executable = get_python_path(2)
   if python_executable is None:
     return False
-  
+
   mbuild_script = [python_executable, "mfile.py", "install"]
   if debug:
     mbuild_script.append("--debug")
@@ -135,7 +135,7 @@ def common_installer_xed(properties):
     kit_folder_name += "lin"
 
   elif sys.platform == "darwin":
-    kit_folder_name += "osx"
+    kit_folder_name += "mac"
 
   elif sys.platform == "win32" or sys.platform == "cygwin":
     kit_folder_name += "win"
