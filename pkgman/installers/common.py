@@ -297,7 +297,7 @@ def common_installer_protobuf(properties):
     os.environ["LD_LIBRARY_PATH"] = os.environ["LIBRARY_PATH"]
 
     protoc_executable = "protoc"
-    if sys.platform == "linux":
+    if sys.platform == "linux" or sys.platform == "linux2":
       module_folder = "lib.linux-x86_64-2.7"
     else:
       module_folder = "lib"
