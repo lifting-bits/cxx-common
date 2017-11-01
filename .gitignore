@@ -1,21 +1,7 @@
-installer.log
-
-gflags
-gflags-build
-
-glog
-glog-build
-
-googletest
-googletest-build
-
-llvm
-llvm-build
-
-mbuild
-xed
-
-protobuf
-cmake-v*
-CMake-*
+build
+repository
+sources
+temp
+*.pyc
+.vscode
 
