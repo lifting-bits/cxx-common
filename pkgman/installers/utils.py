@@ -7,7 +7,17 @@ import shutil
 import subprocess
 import tempfile
 import multiprocessing
-from backports import lzma
+
+try:
+  from backports import lzma
+
+except:
+  try:
+    import lzma
+
+  except:
+    print("ERROR: The LZMA module for Python 2 could not be found!")
+    sys.exit(1)
 
 def get_env_compiler_settings():
   cmake_compiler_settings = []
@@ -123,7 +133,7 @@ def extract_gz_tarball(path, folder):
 
 def extract_xz_tarball(path, folder):
   try:
-    f = lzma.open(path)
+    f = lzma.LZMAFile(path)
 
     tarball = tarfile.open(fileobj=f)
     tarball.extractall(path=folder)
