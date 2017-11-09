@@ -20,7 +20,7 @@ def main():
 
   # parse the command line
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
-  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 38, 39, 40, ...).", default=40)
+  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=401)
   arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands.")
   arg_parser.add_argument('--verbose', help="True if the script should print to stdout the compilation output. Useful to prevent Travis from timing out due to inactivity.", action='store_true')
   arg_parser.add_argument('--debug', help="Build debug versions.", action='store_true')
@@ -76,12 +76,13 @@ def main():
 
   # get the llvm version
   llvm_version = str(args.llvm_version)
-  if len(llvm_version) != 2:
+  if len(llvm_version) != 3:
     print("Invalid LLVM version: " + str(llvm_version))
     return False
 
   properties = dict()
   properties["llvm_version"] = llvm_version
+  properties["long_llvm_version"] = llvm_version[0] + "." + llvm_version[1] + "." + llvm_version[2]
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
@@ -89,8 +90,9 @@ def main():
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
 
+  supported_llvm_version_list = [352, 362, 371, 381, 390, 401]
   print("LLVM version: " + llvm_version),
-  if args.llvm_version < 36 or args.llvm_version >= 50:
+  if args.llvm_version not in supported_llvm_version_list:
     print("(unsupported)")
   else:
     print("(supported)")

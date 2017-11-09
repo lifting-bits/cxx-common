@@ -42,119 +42,98 @@ def unix_installer_cmake(properties):
 
 def unix_installer_llvm(properties):
   repository_path = properties["repository_path"]
-  llvm_version = properties["llvm_version"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  # download all source tarballs
-  llvm_tarball_path = download_file("https://codeload.github.com/llvm-mirror/llvm/tar.gz/release_" + llvm_version, "sources", "llvm.tar.gz")
+  llvm_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/llvm-" + properties["long_llvm_version"] + ".src.tar.xz"
+  llvm_tarball_name = "llvm-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
+  clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
+  libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  libcxxabi_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxxabi-" + properties["long_llvm_version"] + ".src.tar.xz"
+  libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  # download everything we need
+  llvm_tarball_path = download_file(llvm_tarball_url, "sources", llvm_tarball_name)
   if llvm_tarball_path is None:
     return False
 
-  clang_tarball_path = download_file("https://codeload.github.com/llvm-mirror/clang/tar.gz/release_" + llvm_version, "sources", "clang.tar.gz")
+  clang_tarball_path = download_file(clang_tarball_url, "sources", clang_tarball_name)
   if clang_tarball_path is None:
     return False
 
-  libcxx_tarball_path = download_file("https://codeload.github.com/llvm-mirror/libcxx/tar.gz/release_" + llvm_version, "sources", "libcxx.tar.gz")
+  libcxx_tarball_path = download_file(libcxx_tarball_url, "sources", libcxx_tarball_name)
   if libcxx_tarball_path is None:
     return False
 
-  libcxxabi_tarball_path = download_file("https://codeload.github.com/llvm-mirror/libcxxabi/tar.gz/release_" + llvm_version, "sources", "libcxxabi.tar.gz")
+  libcxxabi_tarball_path = download_file(libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
   if libcxxabi_tarball_path is None:
     return False
 
-  # extract the root llvm source folder
-  if not os.path.isdir(os.path.join("sources", "llvm")):
-    if not extract_archive(llvm_tarball_path, "sources"):
-      return False
-
-    try:
-      shutil.move(os.path.join("sources", "llvm-release_40"), os.path.join("sources", "llvm"))
-    except:
-      print(" x Failed to rename the llvm source folder")
-      return False
-
-  else:
-    print(" > llvm source folder already exists")
-
-  # create the necessary subdirectories
-  llvm_tools_folder = os.path.join("sources", "llvm", "tools")
-  llvm_projects_folder = os.path.join("sources", "llvm", "projects")
-
-  try:
-    if not os.path.isdir(llvm_tools_folder):
-      os.makedirs(llvm_tools_folder)
-    
-    if not os.path.isdir(llvm_projects_folder):
-      os.makedirs(llvm_projects_folder)
-
-  except:
-    print(" x Failed to create the required folders")
+  # extract everything in the correct folders
+  if not extract_archive(llvm_tarball_path, "sources"):
     return False
 
-  # extract and rename clang
-  if not os.path.isdir(os.path.join(llvm_tools_folder, "clang")):
-    if not extract_archive(clang_tarball_path, llvm_tools_folder):
-      return False
+  if not extract_archive(clang_tarball_path, "sources"):
+    return False
 
-    try:
-      shutil.move(os.path.join(llvm_tools_folder, "clang-release_40"), os.path.join(llvm_tools_folder, "clang"))
-    except:
-      print(" x Failed to rename the clang source folder")
-      return False
+  if not extract_archive(libcxx_tarball_path, "sources"):
+    return False
 
-  else:
-    print(" > clang source folder already exists")
+  if not extract_archive(libcxxabi_tarball_path, "sources"):
+    return False
 
-  # extract and rename libcxx
-  if not os.path.isdir(os.path.join(llvm_projects_folder, "libcxx")):
-    if not extract_archive(libcxx_tarball_path, llvm_projects_folder):
-      return False
+  llvm_root_folder = os.path.realpath(os.path.join("sources", "llvm-" + str(properties["long_llvm_version"] + ".src")))
 
-    try:
-      shutil.move(os.path.join(llvm_projects_folder, "libcxx-release_40"), os.path.join(llvm_projects_folder, "libcxx"))
-    except:
-      print(" x Failed to rename the libcxx source folder")
-      return False
+  try:
+    print(" > Moving the project folders in the LLVM source tree...")
 
-  else:
-    print(" > libcxx source folder already exists")
+    libcxx_destination = os.path.join(llvm_root_folder, "projects", "libcxx")
+    if not os.path.isdir(libcxx_destination):
+      shutil.move(os.path.join("sources", "libcxx-" + properties["long_llvm_version"] + ".src"), libcxx_destination)
 
-  # extract and rename libcxxabi
-  if not os.path.isdir(os.path.join(llvm_projects_folder, "libcxxabi")):
-    if not extract_archive(libcxxabi_tarball_path, llvm_projects_folder):
-      return False
+    libcxxabi_destination = os.path.join(llvm_root_folder, "projects", "libcxxabi")
+    if not os.path.isdir(libcxxabi_destination):
+      shutil.move(os.path.join("sources", "libcxxabi-" + properties["long_llvm_version"] + ".src"), libcxxabi_destination)
 
-    try:
-      shutil.move(os.path.join(llvm_projects_folder, "libcxxabi-release_40"), os.path.join(llvm_projects_folder, "libcxxabi"))
-    except:
-      print(" x Failed to rename the libcxxabi source folder")
-      return False
+    clang_destination = os.path.join(llvm_root_folder, "tools", "clang")
+    if not os.path.isdir(clang_destination):
+      shutil.move(os.path.join("sources", "cfe-" + properties["long_llvm_version"] + ".src"), clang_destination)
 
-  else:
-    print(" > libcxxabi source folder already exists")
+  except Exception as e:
+    print(" ! " + str(e))
+    print(" x Failed to build the source tree")
+    return False
 
   # create the build directory and compile the package
-  llvm_build_path = os.path.join("build", "llvm")
+  llvm_build_path = os.path.realpath(os.path.join("build", "llvm-" + str(properties["llvm_version"])))
   if not os.path.isdir(llvm_build_path):
     try:
       os.makedirs(llvm_build_path)
-    except:
+
+    except Exception as e:
+      print(" ! " + str(e))
       print(" x Failed to create the build folder")
       return False
 
-  source_path = os.path.realpath(os.path.join("sources", "llvm"))
   destination_path = os.path.join(repository_path, "llvm")
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
-  cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
-                    "-DCMAKE_CXX_STANDARD=11",
-                    "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
-                    "-DLLVM_INCLUDE_EXAMPLES=OFF",
-                    "-DLLVM_INCLUDE_TESTS=OFF", "-DLIBCXX_ENABLE_STATIC=YES",
-                    "-DLIBCXX_ENABLE_SHARED=YES",
-                    "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
-                    "-LIBCXX_INCLUDE_BENCHMARKS=NO", source_path]
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "llvm"),
+                                                                                           "-DCMAKE_CXX_STANDARD=11", "-DLLVM_TARGETS_TO_BUILD='X86;AArch64'",
+                                                                                           "-DLLVM_INCLUDE_EXAMPLES=OFF", "-DLLVM_INCLUDE_TESTS=OFF"]
+
+  if properties["llvm_version"] < 371:
+    cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
+  else:
+    cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
+                      "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
+                      "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
+
+  cmake_command += [llvm_root_folder]
 
   if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
