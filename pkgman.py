@@ -90,14 +90,15 @@ def main():
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
 
-  supported_llvm_version_list = [352, 362, 371, 381, 390, 401]
-  print("LLVM version: " + llvm_version),
-  if args.llvm_version not in supported_llvm_version_list:
-    print("(unsupported)")
-  else:
-    print("(supported)")
+  if "llvm" in packages_to_install:
+    supported_llvm_version_list = [352, 362, 371, 381, 390, 401]
+    print("LLVM version: " + llvm_version),
+    if args.llvm_version not in supported_llvm_version_list:
+      print("(unsupported)")
+    else:
+      print("(supported)")
 
-  print("Package list: " + str(packages_to_install) + "\n")
+    print("Package list: " + str(packages_to_install) + "\n")
 
   # build each package
   if not os.path.exists("sources"):
@@ -123,15 +124,14 @@ def main():
 
     print(" > Done!\n")
 
-  cmake_modules_folder = os.path.join(properties["repository_path"], "cmake")
-  if not os.path.isdir(cmake_modules_folder):
-    try:
-      print("Installing the CMake modules...")
-      copy_tree("cmake_modules", os.path.join(properties["repository_path"], "cmake"))
+  cmake_modules_folder = os.path.join(properties["repository_path"], "cmake_modules")
+  try:
+    print("Installing the CMake modules...")
+    copy_tree("cmake_modules", os.path.join(properties["repository_path"], "cmake_modules"))
 
-    except:
-      print(" x Failed to copy the CMake modules")
-      return False
+  except:
+    print(" x Failed to copy the CMake modules")
+    return False
 
   return True
 
