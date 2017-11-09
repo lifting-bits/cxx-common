@@ -28,7 +28,6 @@ def windows_installer_llvm(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
-  llvm_version = ""
 
   if debug:
     print(" ! Debug build not supported on Windows")
@@ -46,20 +45,8 @@ def windows_installer_llvm(properties):
     if not run_program("Uninstalling the existing LLVM installation...", [llvm_uninstaller_path, "/S"], llvm_install_folder, verbose=verbose_output):
       return False
 
-  short_llvm_vers = str(properties["llvm_version"])
-  if len(short_llvm_vers) != 2:
-    print(" x Invalid LLVM version")
-    return True
-
-  for char in short_llvm_vers:
-    if len(llvm_version) > 0:
-      llvm_version += "."
-
-    llvm_version += char
-
-  llvm_version += ".0"
-  installer_name = "LLVM-" + llvm_version + "-win32.exe"
-  url = "http://releases.llvm.org/" + llvm_version + "/" + installer_name
+  installer_name = "LLVM-" + properties["long_llvm_version"] + "-win32.exe"
+  url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/" + installer_name
 
   installer_path = download_file(url, "temp", installer_name)
   if installer_path is None:

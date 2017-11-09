@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import multiprocessing
+from backports import lzma
 
 def get_env_compiler_settings():
   cmake_compiler_settings = []
@@ -109,14 +110,28 @@ def download_github_source_archive(organization, repository, format="tar.gz", br
 
   return os.path.realpath(source_folder)
 
-def extract_tarball(path, folder):
+def extract_gz_tarball(path, folder):
   try:
     tarball = tarfile.open(path)
     tarball.extractall(path=folder)
     tarball.close()
     return True
 
-  except:
+  except Exception as e:
+    print(" ! " + str(e))
+    return False
+
+def extract_xz_tarball(path, folder):
+  try:
+    f = lzma.open(path)
+
+    tarball = tarfile.open(fileobj=f)
+    tarball.extractall(path=folder)
+
+    return True
+
+  except Exception as e:
+    print(" ! " + str(e))
     return False
 
 def extract_zip(path, folder):
@@ -126,7 +141,8 @@ def extract_zip(path, folder):
     zip_file.close()
     return True
 
-  except:
+  except Exception as e:
+    print(" ! " + str(e))
     return False
 
 def extract_archive(path, folder):
@@ -134,7 +150,9 @@ def extract_archive(path, folder):
 
   succeeded = False
   if ".tar.gz" in path:
-    succeeded = extract_tarball(path, folder)
+    succeeded = extract_gz_tarball(path, folder)
+  elif ".tar.xz" in path:
+    succeeded = extract_xz_tarball(path, folder)
   elif ".zip" in path:
     succeeded = extract_zip(path, folder)
   else:
@@ -155,7 +173,8 @@ def install_folder(path, destination):
     shutil.copytree(path, destination)
     return True
 
-  except:
+  except Exception as e:
+    print(" ! " + str(e))
     print(" x Installation has failed")
     return False
 
@@ -185,6 +204,7 @@ def run_program(description, command, working_directory, verbose=False):
 
     return False
 
-  except:
+  except Exception as e:
+    print(" ! " + str(e))
     print(" x Failed to start the command")
     return False
