@@ -91,7 +91,7 @@ def main():
   print("Repository path: " + args.repository_path)
 
   if "llvm" in packages_to_install:
-    supported_llvm_version_list = [352, 362, 371, 381, 390, 401]
+    supported_llvm_version_list = [352, 362, 371, 381, 391, 401]
     print("LLVM version: " + llvm_version),
     if args.llvm_version not in supported_llvm_version_list:
       print("(unsupported)")
