@@ -11,6 +11,8 @@ matrix:
       dist: trusty
       language: generic
       sudo: required
+    - os: osx
+      language: generic
 
 before_install:
   - ./travis.sh "$TRAVIS_OS_NAME" initialize

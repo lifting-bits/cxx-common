@@ -14,11 +14,13 @@ Errors are always printed but if you'd rather see the build output in real time,
 ## Building the llvm35 version
 
 ### Prerequisites
- * Ubuntu 14.04
- * Clang-3.5 from the package manager
- * Travis script dependencies (**./travis.sh linux initialize**)
+ * Ubuntu 14.04 or OS X with Homebrew
+ * Clang-3.5 or newer
+ * Travis script dependencies (**./travis.sh linux initialize** or **./travis.sh osx initialize**)
 
 ### Build steps
- * Build CMake: **./pkgman.py --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=cmake**
- * Update the PATH: **export PATH="/opt/TrailOfBits/libraries/cmake/bin:${PATH}"**
- * Build the remaining packages: **./pkgman.py --llvm_version=352 --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=llvm,capstone,gflags,glog,googletest,protobuf,xed**
+ * Run **./travis.sh** *<*linux *or* osx*>* **build**
+ * Or, manually:
+    * Build CMake: **./pkgman.py --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=cmake**
+    * Update the PATH: **export PATH="/opt/TrailOfBits/libraries/cmake/bin:${PATH}"**
+    * Build the remaining packages: **./pkgman.py --llvm_version=352 --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=llvm,capstone,gflags,glog,googletest,protobuf,xed**
