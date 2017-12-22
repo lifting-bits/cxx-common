@@ -1,5 +1,7 @@
 import shutil
 import time
+import platform
+import sys
 
 from utils import *
 from distutils import spawn
@@ -298,7 +300,7 @@ def common_installer_protobuf(properties):
 
     protoc_executable = "protoc"
     if sys.platform == "linux" or sys.platform == "linux2":
-      module_folder = "lib.linux-x86_64-2.7"
+      module_folder = "lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor)
     else:
       module_folder = "lib"
 
