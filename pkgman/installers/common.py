@@ -23,7 +23,7 @@ from distutils import spawn
 from distutils.dir_util import copy_tree
 from .. import unifieddiff
 
-PATCHES_DIR = os.path.join(os.path.dirname(__file__), "patches")
+PATCHES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "patches")
 
 def patch_file(file_path, patch_name):
   patch_path = os.path.join(PATCHES_DIR, "{}.patch".format(patch_name))
