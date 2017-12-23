@@ -1,0 +1,11 @@
+--- a/mbuild/env.py
++++ b/mbuild/env.py
+@@ -1210,7 +1210,7 @@ class env_t(object):
+         elif name[0:3] == 'x86':
+             return 'ia32'
+         else:
+-            die("Unknown cpu " + name)
++            return name  # die("Unknown cpu " + name)
+ 
+     def _normalize_os_name(self,name):
+         """Internal function. Standardize various O/S identifiers"""

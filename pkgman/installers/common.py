@@ -1,9 +1,40 @@
-import shutil
+# Copyright (c) 2017 Trail of Bits, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
+import os
+import platform
+import sys
+import shutil
 
 from utils import *
 from distutils import spawn
 from distutils.dir_util import copy_tree
+from .. import unifieddiff
+
+PATCHES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "patches")
+
+def patch_file(file_path, patch_name):
+  patch_path = os.path.join(PATCHES_DIR, "{}.patch".format(patch_name))
+  if not os.path.exists(patch_path):
+    print(" x Failed to find patch file {}".format(patch_name))
+    return False
+
+  run_program("Patching {}".format(file_path),
+              ["patch", file_path, patch_path],
+              os.getcwd())
+  return True
 
 def get_python_path(version):
   # some distributions have choosen to set python 3 as the default version
@@ -117,6 +148,9 @@ def common_installer_xed(properties):
   if mbuild_source_folder is None:
     return False
 
+  env_path = os.path.join("sources", "mbuild", "mbuild", "env.py")
+  patch_file(env_path, "mbuild")
+
   python_executable = get_python_path(2)
   if python_executable is None:
     return False
@@ -144,7 +178,7 @@ def common_installer_xed(properties):
     print(" x Failed to determine the kit name")
     return False
 
-  kit_folder_name += "-x86-64"
+  kit_folder_name += "-{}".format(platform.machine())
   kit_folder_path = os.path.realpath(os.path.join("sources", "xed", "kits", kit_folder_name))
 
   try:
@@ -298,7 +332,7 @@ def common_installer_protobuf(properties):
 
     protoc_executable = "protoc"
     if sys.platform == "linux" or sys.platform == "linux2":
-      module_folder = "lib.linux-x86_64-2.7"
+      module_folder = "lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor)
     else:
       module_folder = "lib"
 
