@@ -31,18 +31,10 @@ def patch_file(file_path, patch_name):
     print(" x Failed to find patch file {}".format(patch_name))
     return False
 
-  try:
-    with open(patch_path, "r") as p:
-      patch = p.read()
-
-    with open(file_path, "r") as f:
-      orig = f.read()
-
-    patched = unifieddiff.apply_patch(orig, patch)
-    with open(file_path, "w") as f:
-      f.write(patched)
-  except:
-    pass
+  run_program("Patching {}".format(file_path),
+              ["patch", file_path, patch_path],
+              os.getcwd())
+  return True
 
 def get_python_path(version):
   # some distributions have choosen to set python 3 as the default version
