@@ -21,7 +21,6 @@ import shutil
 from utils import *
 from distutils import spawn
 from distutils.dir_util import copy_tree
-from .. import unifieddiff
 
 PATCHES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "patches")
 
