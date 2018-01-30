@@ -317,3 +317,43 @@ def common_installer_protobuf(properties):
     return False
 
   return True
+
+def common_installer_capnproto(properties):
+  repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  source_folder = download_github_source_archive("capnproto", "capnproto")
+  if source_folder is None:
+    return False
+
+  build_folder = os.path.join("build", "capnproto")
+  if not os.path.isdir(build_folder):
+    try:
+      os.mkdir(build_folder)
+
+    except:
+      print(" x Failed to create the build folder")
+      return False
+
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command += ["-DCMAKE_CXX_STANDARD=11",
+                    "-DCMAKE_CXX_EXTENSIONS=ON",
+                    "-DBUILD_TESTING=OFF",
+                    "-DEXTERNAL_CAPNP=OFF",
+                    "-DCAPNP_LITE=OFF",
+                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "capnproto"),
+                    source_folder]
+
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  return True
