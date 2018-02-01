@@ -163,12 +163,14 @@ def common_installer_xed(properties):
 
   print(" > Installing...")
   kit_folder_name = "xed-install-base-" + time.strftime("%Y-%m-%d") + "-"
+  kit_machine = platform.machine()
 
   if sys.platform == "linux" or sys.platform == "linux2":
     kit_folder_name += "lin"
 
   elif sys.platform == "darwin":
     kit_folder_name += "mac"
+    kit_machine = kit_machine.replace("_", "-")
 
   elif sys.platform == "win32" or sys.platform == "cygwin":
     kit_folder_name += "win"
@@ -177,13 +179,13 @@ def common_installer_xed(properties):
     print(" x Failed to determine the kit name")
     return False
 
-  kit_folder_name += "-{}".format(platform.machine())
+  kit_folder_name += "-{}".format(kit_machine)
   kit_folder_path = os.path.realpath(os.path.join("sources", "xed", "kits", kit_folder_name))
 
   try:
     copy_tree(kit_folder_path, os.path.join(repository_path, "xed"))
-  except:
-    print(" x Failed to install the XED library")
+  except Exception as e:
+    print(" x Failed to install the XED library: {}".format(str(e)))
     return False
 
   return True
