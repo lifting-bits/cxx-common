@@ -16,7 +16,7 @@ import os
 import multiprocessing
 from utils import *
 
-def unix_installer_boost(properties):
+def unix_installer_boost(properties, default_toolset):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -39,9 +39,10 @@ def unix_installer_boost(properties):
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
     os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
 
-  toolset_name = os.environ["CC"]
-  if not toolset_name:
-    toolset_name = "cc"
+  if os.environ.get("CC") is not None:
+    toolset_name = os.environ["CC"]
+  else:
+    toolset_name = default_toolset
 
   configure_command = [source_folder + "/bootstrap.sh", "--prefix=" + os.path.join(repository_path, "boost"), "--with-toolset=" + toolset_name]
   if not run_program("Running the bootstrap script...", configure_command, source_folder, verbose=verbose_output):
@@ -219,7 +220,7 @@ def linux_installer_llvm(properties):
   return unix_installer_llvm(properties)
 
 def macos_installer_boost(properties):
-  return unix_installer_boost(properties)
+  return unix_installer_boost(properties, "clang")
 
 def linux_installer_boost(properties):
-  return unix_installer_boost(properties)
+  return unix_installer_boost(properties, "cc")
