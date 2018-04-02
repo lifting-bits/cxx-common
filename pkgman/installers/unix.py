@@ -16,6 +16,51 @@ import os
 import multiprocessing
 from utils import *
 
+def unix_installer_boost(properties, default_toolset):
+  repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  version = "1.66.0"
+  url = "https://dl.bintray.com/boostorg/release/" + version + "/source/boost_" + version.replace(".", "_") + ".tar.gz"
+
+  source_tarball_path = download_file(url, "sources")
+  if source_tarball_path is None:
+    return False
+
+  if not extract_archive(source_tarball_path, "build"):
+    return False
+
+  source_folder = os.path.realpath(os.path.join("build", "boost_" + version.replace(".", "_")))
+
+  if os.environ.get("CMAKE_C_COMPILER") is not None:
+    os.environ["CC"] = os.environ["CMAKE_C_COMPILER"]
+
+  if os.environ.get("CMAKE_CXX_COMPILER") is not None:
+    os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
+
+  if os.environ.get("CC") is not None:
+    toolset_name = os.environ["CC"]
+  else:
+    toolset_name = default_toolset
+
+  configure_command = [source_folder + "/bootstrap.sh", "--prefix=" + os.path.join(repository_path, "boost"), "--with-toolset=" + toolset_name]
+  if not run_program("Running the bootstrap script...", configure_command, source_folder, verbose=verbose_output):
+    return False
+
+  build_command = [source_folder + "/b2", "install", "-d2", "-j" + str(multiprocessing.cpu_count()), "--layout=tagged",
+                   "--disable-icu", "threading=multi", "link=static", "optimization=space", "toolset=" + toolset_name]
+
+  if debug:
+    build_command += ["--variant=debug"]
+  else:
+    build_command += ["--variant=release"]
+
+  if not run_program("Building and installing...", build_command, source_folder, verbose=verbose_output):
+    return False
+
+  return True
+
 def unix_installer_cmake(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
@@ -173,3 +218,9 @@ def macos_installer_llvm(properties):
 
 def linux_installer_llvm(properties):
   return unix_installer_llvm(properties)
+
+def macos_installer_boost(properties):
+  return unix_installer_boost(properties, "clang")
+
+def linux_installer_boost(properties):
+  return unix_installer_boost(properties, "cc")
