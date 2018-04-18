@@ -23,4 +23,4 @@ Errors are always printed but if you'd rather see the build output in real time,
  * Or, manually:
     * Build CMake: **./pkgman.py --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=cmake**
     * Update the PATH: **export PATH="/opt/TrailOfBits/libraries/cmake/bin:${PATH}"**
-    * Build the remaining packages: **./pkgman.py --llvm_version=352 --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=llvm,capstone,gflags,glog,googletest,protobuf,xed,capnproto**
+    * Build the remaining packages: **./pkgman.py --llvm_version=352 --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=llvm,capstone,google,xed,capnproto**

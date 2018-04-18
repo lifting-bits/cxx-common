@@ -51,7 +51,7 @@ def get_python_path(version):
 
   return None
 
-def common_installer_glog(properties):
+def google_installer_glog(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -189,7 +189,7 @@ def common_installer_xed(properties):
 
   return True
 
-def common_installer_gflags(properties):
+def google_installer_gflags(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -230,7 +230,7 @@ def common_installer_gflags(properties):
 
   return True
 
-def common_installer_googletest(properties):
+def google_installer_googletest(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -266,7 +266,19 @@ def common_installer_googletest(properties):
 
   return True
 
-def common_installer_protobuf(properties):
+def common_installer_google(properties):
+  if not google_installer_gflags(properties):
+    return False
+  if not google_installer_glog(properties):
+    return False
+  if not google_installer_googletest(properties):
+    return False
+  if not google_installer_protobuf(properties):
+    return False
+
+  return True
+
+def google_installer_protobuf(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
