@@ -11,6 +11,16 @@ Build and installation scripts for C and C++ libraries that are commonly used by
 
 Errors are always printed but if you'd rather see the build output in real time, the **--verbose** parameter can be passed to **pkgman.py**.
 
+## Windows support
+
+Note that only LLVM 5.0.1 is known to work right now; when running the script on Windows, the --llvm_version parameter defaults to 501.
+
+### Prerequisites
+1. Python 2.7 (x64): https://www.python.org/ftp/python/2.7.14/python-2.7.14.amd64.msi (add to PATH)
+2. Visual Studio 2017: https://www.visualstudio.com/thank-you-downloading-visual-studio/?sku=Community&rel=15
+3. LLVM 5.0.1 x64 for Visual Studio: http://releases.llvm.org/5.0.1/LLVM-5.0.1-win64.exe (do NOT add to PATH)
+4. 7-Zip (x64): https://www.7-zip.org/a/7z1805-x64.exe
+
 ## Building the llvm35 version
 
 ### Prerequisites

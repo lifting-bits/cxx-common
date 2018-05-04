@@ -19,8 +19,13 @@ def main():
   package_list = get_package_list()
 
   # parse the command line
+  if sys.platform == "win32":
+    default_llvm_version=501
+  else:
+    default_llvm_version=401
+
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
-  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=401)
+  arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=default_llvm_version)
   arg_parser.add_argument("--additional_paths", type=str, help="A list of (comma separated) paths to use when looking for commands.")
   arg_parser.add_argument('--verbose', help="True if the script should print to stdout the compilation output. Useful to prevent Travis from timing out due to inactivity.", action='store_true')
   arg_parser.add_argument('--debug', help="Build debug versions.", action='store_true')
@@ -91,7 +96,11 @@ def main():
   print("Repository path: " + args.repository_path)
 
   if "llvm" in packages_to_install:
-    supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600]
+    if sys.platform == "win32":
+      supported_llvm_version_list = [501]
+    else:
+      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600]
+
     print("LLVM version: " + llvm_version),
     if args.llvm_version not in supported_llvm_version_list:
       print("(unsupported)")

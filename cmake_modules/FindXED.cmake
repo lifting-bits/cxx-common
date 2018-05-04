@@ -3,12 +3,19 @@ set(LIBRARY_ROOT "${LIBRARY_REPOSITORY_ROOT}/xed")
 set(XED_FOUND TRUE)
 set(XED_INCLUDE_DIRS "${LIBRARY_ROOT}/include")
 
+if(DEFINED WIN32)
+  set(LIBRARY_PREFIX "")
+  set(LIBRARY_EXTENSION "lib")
+else()
+  set(LIBRARY_PREFIX "lib")
+  set(LIBRARY_EXTENSION "a")
+endif()
+
 set(XED_LIBRARIES
-    ${LIBRARY_ROOT}/lib/libxed.a
-    ${LIBRARY_ROOT}/lib/libxed-ild.a
+  ${LIBRARY_ROOT}/lib/${LIBRARY_PREFIX}xed.${LIBRARY_EXTENSION}
+  ${LIBRARY_ROOT}/lib/${LIBRARY_PREFIX}xed-ild.${LIBRARY_EXTENSION}
 )
 
 mark_as_advanced(FORCE XED_FOUND)
 mark_as_advanced(FORCE XED_INCLUDE_DIRS)
 mark_as_advanced(FORCE XED_LIBRARIES)
-
