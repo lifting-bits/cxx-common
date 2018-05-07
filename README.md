@@ -2,6 +2,10 @@
 
 Build and installation scripts for C and C++ libraries that are commonly used by Trail of Bits.
 
+## macOS/Linux prerequisites
+1. LZMA (liblzma-dev on Ubuntu)
+2. Python LZMA module (pip install backports.lzma)
+
 ## How to build the 'libraries' repository
 
  * Dependencies can be installed using Travis build script: **./travis.sh <linux|macos> initialize**
