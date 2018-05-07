@@ -22,17 +22,6 @@ import subprocess
 import tempfile
 import multiprocessing
 
-try:
-  from backports import lzma
-
-except:
-  try:
-    import lzma
-
-  except:
-    print("ERROR: The LZMA module for Python 2 could not be found!")
-    sys.exit(1)
-
 def get_env_compiler_settings():
   cmake_compiler_settings = []
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
@@ -60,6 +49,16 @@ def get_cmake_build_type(debug):
     build_type.append("-DCMAKE_BUILD_TYPE=Release")
 
   return build_type
+
+def get_cmake_generator(use_clang=True):
+  parameters = []
+
+  if sys.platform == "win32":
+    parameters = ["-G", "Visual Studio 15 2017 Win64"]
+    if use_clang:
+      parameters += ["-T", "LLVM-vs2014"]
+
+  return parameters
 
 def get_cmake_build_configuration(debug):
   build_configuration = ["--config"]
@@ -145,10 +144,47 @@ def extract_gz_tarball(path, folder):
     print(" ! " + str(e))
     return False
 
+# As of now, this is only used by the LLVM installer in unix.py
 def extract_xz_tarball(path, folder):
   try:
-    f = lzma.LZMAFile(path)
+    import lzma
+  except ImportError:
+    try:
+      from backports import lzma
+    except:
+      if sys.platform == "win32":
+        path = os.path.abspath(path)
+        folder = os.path.abspath(folder)
 
+        seven_zip_path = os.path.join(os.environ["ProgramFiles"], "7-Zip", "7z.exe")
+        if not os.path.exists(seven_zip_path):
+          print " x The 7z.exe executable could not be found"
+          print " i Install 7-zip x64 for Windows to solve this error"
+
+          return False
+
+        try:
+          dummy_output = open(os.devnull, 'w')
+
+          exit_code = subprocess.call([seven_zip_path, "x", "-y", path], cwd=folder, stdout=dummy_output, stderr=dummy_output)
+          if exit_code != 0:
+            raise ValueError("7z.exe exited with an error")
+
+          path = path[:-3]
+          exit_code = subprocess.call([seven_zip_path, "x", "-y", path], cwd=folder, stdout=dummy_output, stderr=dummy_output)
+          if exit_code != 0:
+            raise ValueError("7z.exe exited with an error")
+
+          return True
+        except:
+          return False
+
+      else:
+        print("Failed to import the LZMA module")
+        exit(1)
+
+  try:
+    f = lzma.LZMAFile(path)
     tarball = tarfile.open(fileobj=f)
     tarball.extractall(path=folder)
 

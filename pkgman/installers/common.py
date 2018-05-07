@@ -25,31 +25,53 @@ from distutils.dir_util import copy_tree
 PATCHES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "patches")
 
 def patch_file(file_path, patch_name):
+  if sys.platform == "win32":
+    patch_executable = spawn.find_executable("patch.exe")
+    if patch_executable is None:
+      patch_executable = os.path.join(os.environ["ProgramFiles"], "Git", "usr", "bin", "patch.exe")
+      if not os.path.exists(patch_executable):
+        print " x The patch.exe executable could not be found"
+        print " i Install Git for Windows to solve this error"
+
+        return False
+
+  else:
+    patch_executable = "patch"
+
   patch_path = os.path.join(PATCHES_DIR, "{}.patch".format(patch_name))
   if not os.path.exists(patch_path):
     print(" x Failed to find patch file {}".format(patch_name))
     return False
 
-  run_program("Patching {}".format(file_path),
-              ["patch", file_path, patch_path],
-              os.getcwd())
+  if not run_program("Patching {}".format(file_path), [patch_executable, file_path, patch_path], os.getcwd()):
+    return False
+
   return True
 
 def get_python_path(version):
   # some distributions have choosen to set python 3 as the default version
   # always request the exact executable name first
-  if version != 2 and version != 3:
+
+  if version == 2:
+    return sys.executable
+
+  elif version == 3:
+    extension = ""
+    if sys.platform == "win32":
+      extension = ".exe"
+
+    path = spawn.find_executable("python" + str(version) + extension)
+    if path is not None:
+      return path
+
+    path = spawn.find_executable("python" + extension)
+    if path is not None:
+      return path
+
     return None
 
-  path = spawn.find_executable("python" + str(version))
-  if path is not None:
-    return path
-
-  path = spawn.find_executable("python")
-  if path is not None:
-    return path
-
-  return None
+  else:
+    return None
 
 def google_installer_glog(properties):
   repository_path = properties["repository_path"]
@@ -69,7 +91,7 @@ def google_installer_glog(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
                     "-DBUILD_TESTING=OFF",
                     "-DWITH_GFLAGS=OFF",
@@ -85,7 +107,7 @@ def google_installer_glog(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -109,7 +131,7 @@ def common_installer_capstone(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_EXE_LINKER_FLAGS=-g",
                     "-DCMAKE_C_FLAGS=-g",
                     "-DCAPSTONE_ARM_SUPPORT=1",
@@ -126,7 +148,7 @@ def common_installer_capstone(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -136,6 +158,14 @@ def common_installer_xed(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
+
+  xed_source_folder = os.path.join("sources", "xed")
+  if os.path.isdir(xed_source_folder):
+    shutil.rmtree(xed_source_folder)
+
+  mbuild_source_folder = os.path.join("sources", "mbuild")
+  if os.path.isdir(mbuild_source_folder):
+    shutil.rmtree(mbuild_source_folder)
 
   # out of source builds are not supported, so we'll have to build
   # inside the source directory
@@ -147,8 +177,9 @@ def common_installer_xed(properties):
   if mbuild_source_folder is None:
     return False
 
-  env_path = os.path.join("sources", "mbuild", "mbuild", "env.py")
-  patch_file(env_path, "mbuild")
+  env_file_path = os.path.realpath(os.path.join("sources", "mbuild", "mbuild", "env.py"))
+  if not patch_file(env_file_path, "mbuild"):
+    return False
 
   python_executable = get_python_path(2)
   if python_executable is None:
@@ -163,8 +194,6 @@ def common_installer_xed(properties):
 
   print(" > Installing...")
   kit_folder_name = "xed-install-base-" + time.strftime("%Y-%m-%d") + "-"
-  kit_machine = platform.machine().replace("_", "-")
-
   if sys.platform == "linux" or sys.platform == "linux2":
     kit_folder_name += "lin"
 
@@ -178,7 +207,7 @@ def common_installer_xed(properties):
     print(" x Failed to determine the kit name")
     return False
 
-  kit_folder_name += "-{}".format(kit_machine)
+  kit_folder_name += "-{}".format("x86-64")
   kit_folder_path = os.path.realpath(os.path.join("sources", "xed", "kits", kit_folder_name))
 
   try:
@@ -208,7 +237,7 @@ def google_installer_gflags(properties):
       return False
 
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
                     "-DCMAKE_CXX_STANDARD=11",
                     "-DGFLAGS_BUILD_TESTING=OFF",
@@ -224,7 +253,7 @@ def google_installer_gflags(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -248,7 +277,7 @@ def google_installer_googletest(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator(False)
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "googletest"),
                     source_folder]
@@ -260,7 +289,7 @@ def google_installer_googletest(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -269,10 +298,16 @@ def google_installer_googletest(properties):
 def common_installer_google(properties):
   if not google_installer_gflags(properties):
     return False
+
+  print ""
   if not google_installer_glog(properties):
     return False
+
+  print ""
   if not google_installer_googletest(properties):
     return False
+
+  print ""
   if not google_installer_protobuf(properties):
     return False
 
@@ -309,12 +344,12 @@ def google_installer_protobuf(properties):
   if not os.path.isdir(build_folder):
     try:
       os.makedirs(build_folder)
-
+ 
     except:
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator(False)
   cmake_command += ["-DPROTOBUF_ROOT=" + source_folder,
                     "-DBUILD_SHARED_LIBS=False",
                     "-Dprotobuf_BUILD_TESTS=False",
@@ -329,7 +364,7 @@ def google_installer_protobuf(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
@@ -382,7 +417,7 @@ def common_installer_capnproto(properties):
       print(" x Failed to create the build folder")
       return False
 
-  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug)
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
                     "-DCMAKE_CXX_EXTENSIONS=ON",
                     "-DBUILD_TESTING=OFF",
@@ -398,8 +433,126 @@ def common_installer_capnproto(properties):
   if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", ".", "--target", "install"]
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  return True
+
+def common_installer_llvm(properties):
+  repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  llvm_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/llvm-" + properties["long_llvm_version"] + ".src.tar.xz"
+  llvm_tarball_name = "llvm-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
+  clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  if sys.platform != "win32":
+    libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
+    libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
+
+    libcxxabi_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxxabi-" + properties["long_llvm_version"] + ".src.tar.xz"
+    libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
+
+  # download everything we need
+  llvm_tarball_path = download_file(llvm_tarball_url, "sources", llvm_tarball_name)
+  if llvm_tarball_path is None:
+    return False
+
+  clang_tarball_path = download_file(clang_tarball_url, "sources", clang_tarball_name)
+  if clang_tarball_path is None:
+    return False
+
+  if sys.platform != "win32":
+    libcxx_tarball_path = download_file(libcxx_tarball_url, "sources", libcxx_tarball_name)
+    if libcxx_tarball_path is None:
+      return False
+
+    libcxxabi_tarball_path = download_file(libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
+    if libcxxabi_tarball_path is None:
+      return False
+
+  # extract everything in the correct folders
+  if not extract_archive(llvm_tarball_path, "sources"):
+    return False
+
+  if not extract_archive(clang_tarball_path, "sources"):
+    return False
+
+  if sys.platform != "win32":
+    if not extract_archive(libcxx_tarball_path, "sources"):
+      return False
+
+    if not extract_archive(libcxxabi_tarball_path, "sources"):
+      return False
+
+  llvm_root_folder = os.path.realpath(os.path.join("sources", "llvm-" + str(properties["long_llvm_version"] + ".src")))
+
+  try:
+    print(" > Moving the project folders in the LLVM source tree...")
+
+    if sys.platform != "win32":
+      libcxx_destination = os.path.join(llvm_root_folder, "projects", "libcxx")
+      if not os.path.isdir(libcxx_destination):
+        shutil.move(os.path.join("sources", "libcxx-" + properties["long_llvm_version"] + ".src"), libcxx_destination)
+
+      libcxxabi_destination = os.path.join(llvm_root_folder, "projects", "libcxxabi")
+      if not os.path.isdir(libcxxabi_destination):
+        shutil.move(os.path.join("sources", "libcxxabi-" + properties["long_llvm_version"] + ".src"), libcxxabi_destination)
+
+    clang_destination = os.path.join(llvm_root_folder, "tools", "clang")
+    if not os.path.isdir(clang_destination):
+      shutil.move(os.path.join("sources", "cfe-" + properties["long_llvm_version"] + ".src"), clang_destination)
+
+  except Exception as e:
+    print(" ! " + str(e))
+    print(" x Failed to build the source tree")
+    return False
+
+  # create the build directory and compile the package
+  llvm_build_path = os.path.realpath(os.path.join("build", "llvm-" + str(properties["llvm_version"])))
+  if not os.path.isdir(llvm_build_path):
+    try:
+      os.makedirs(llvm_build_path)
+
+    except Exception as e:
+      print(" ! " + str(e))
+      print(" x Failed to create the build folder")
+      return False
+
+  destination_path = os.path.join(repository_path, "llvm")
+
+  arch_list = "'X86"
+  if sys.platform != "win32":
+    arch_list += ";AArch64"
+  arch_list += "'"
+
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
+                                                                                           "-DCMAKE_CXX_STANDARD=11", "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
+                                                                                           "-DLLVM_INCLUDE_EXAMPLES=OFF", "-DLLVM_INCLUDE_TESTS=OFF"]
+
+  if sys.platform != "win32":
+    if properties["llvm_version"] < 371:
+      cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
+    else:
+      cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
+                        "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
+                        "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
+
+  cmake_command += [llvm_root_folder] + get_cmake_generator()
+
+  if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
+  if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
+  if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   return True
