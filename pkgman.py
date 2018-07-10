@@ -99,7 +99,7 @@ def main():
     if sys.platform == "win32":
       supported_llvm_version_list = [501]
     else:
-      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600]
+      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 601]
 
     print("LLVM version: " + llvm_version),
     if args.llvm_version not in supported_llvm_version_list:

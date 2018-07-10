@@ -457,6 +457,9 @@ def common_installer_llvm(properties):
     libcxxabi_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxxabi-" + properties["long_llvm_version"] + ".src.tar.xz"
     libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
 
+    compiler_rt_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/compiler-rt-" + properties["long_llvm_version"] + ".src.tar.xz"
+    compiler_rt_tarball_name = "compiler-rt-" + str(properties["llvm_version"]) + ".tar.xz"
+
   # download everything we need
   llvm_tarball_path = download_file(llvm_tarball_url, "sources", llvm_tarball_name)
   if llvm_tarball_path is None:
@@ -475,6 +478,10 @@ def common_installer_llvm(properties):
     if libcxxabi_tarball_path is None:
       return False
 
+    compiler_rt_tarball_path = download_file(compiler_rt_tarball_url, "sources", compiler_rt_tarball_name)
+    if compiler_rt_tarball_path is None:
+      return False
+
   # extract everything in the correct folders
   if not extract_archive(llvm_tarball_path, "sources"):
     return False
@@ -487,6 +494,9 @@ def common_installer_llvm(properties):
       return False
 
     if not extract_archive(libcxxabi_tarball_path, "sources"):
+      return False
+
+    if not extract_archive(compiler_rt_tarball_path, "sources"):
       return False
 
   llvm_root_folder = os.path.realpath(os.path.join("sources", "llvm-" + str(properties["long_llvm_version"] + ".src")))
@@ -544,15 +554,40 @@ def common_installer_llvm(properties):
 
   cmake_command += [llvm_root_folder] + get_cmake_generator()
 
-  if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
+  if not run_program("Configuring LLVM...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
-  if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
+  if not run_program("Building LLVM...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
-  if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
+  if not run_program("Installing LLVM...", cmake_command, llvm_build_path, verbose=verbose_output):
+    return False
+
+  if sys.platform == "win32":
+    return True
+
+  crt_build_path = os.path.realpath(os.path.join("build", "compiler-rt-" + str(properties["llvm_version"])))
+  if not os.path.isdir(crt_build_path):
+    try:
+      os.makedirs(crt_build_path)
+
+    except Exception as e:
+      print(" ! " + str(e))
+      print(" x Failed to create the build folder for Compiler RT")
+      return False
+
+  cmake_command = ["cmake", "-DLLVM_CONFIG_PATH={}".format(os.path.join(destination_path, "bin", "llvm-config"))]
+  if not run_program("Configuring Compiler RT...", cmake_command, crt_build_path, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
+  if not run_program("Building Compiler RT...", cmake_command, crt_build_path, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
+  if not run_program("Installing Compiler RT...", cmake_command, crt_build_path, verbose=verbose_output):
     return False
 
   return True
