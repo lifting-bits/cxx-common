@@ -578,7 +578,9 @@ def common_installer_llvm(properties):
       print(" x Failed to create the build folder for Compiler RT")
       return False
 
+  crt_root_folder = os.path.realpath(os.path.join("sources", "compiler-rt-" + str(properties["long_llvm_version"] + ".src")))
   cmake_command = ["cmake", "-DLLVM_CONFIG_PATH={}".format(os.path.join(destination_path, "bin", "llvm-config"))]
+  cmake_command += [crt_root_folder] + get_cmake_generator()
   if not run_program("Configuring Compiler RT...", cmake_command, crt_build_path, verbose=verbose_output):
     return False
 
