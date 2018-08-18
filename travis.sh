@@ -161,7 +161,7 @@ linux_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,protobuf"
+  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
