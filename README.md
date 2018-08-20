@@ -3,6 +3,9 @@
 Build and installation scripts for C and C++ libraries that are commonly used by Trail of Bits.
 
 ## macOS/Linux prerequisites
+
+When building LLVM < 5.x on Linux you will need the 'xlocale.h' include header from the **libc6-dev** package. This file was deprecated in Ubuntu > 16.04.x, so if you are building on a recent distribution, you should probably build version 5.0.1 or better.
+
 1. LZMA (liblzma-dev on Ubuntu)
 2. Python LZMA module (pip install backports.lzma)
 
