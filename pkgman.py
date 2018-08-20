@@ -101,6 +101,18 @@ def main():
     else:
       supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600]
 
+    if int(llvm_version) < 501:
+      if not os.path.isfile("/usr/include/xlocale.h"):
+        print "==="
+        print "The 'xlocale.h' include file is missing."
+        print "If you are using Ubuntu <= 16.04.5 LTS then you can install"
+        print "the libc6-dev package to fix the error. If you are on a more"
+        print "recent distribution, this include header has been deprecated."
+        print "Consider building LLVM >= 5.0.1 instead."
+        print "==="
+
+        raw_input("Press return to continue or CTRL-C to abort")
+
     print("LLVM version: " + llvm_version),
     if args.llvm_version not in supported_llvm_version_list:
       print("(unsupported)")
