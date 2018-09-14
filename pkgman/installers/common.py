@@ -95,6 +95,7 @@ def google_installer_glog(properties):
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
                     "-DBUILD_TESTING=OFF",
                     "-DWITH_GFLAGS=OFF",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=True",
                     "-DCMAKE_EXE_LINKER_FLAGS=-g",
                     "-DCMAKE_C_FLAGS=-g",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "glog"),
@@ -240,6 +241,7 @@ def google_installer_gflags(properties):
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
                     "-DCMAKE_CXX_STANDARD=11",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=True",
                     "-DGFLAGS_BUILD_TESTING=OFF",
                     "-DGFLAGS_BUILD_SHARED_LIBS=OFF",
                     "-DGFLAGS_BUILD_STATIC_LIBS=ON",
@@ -279,6 +281,7 @@ def google_installer_googletest(properties):
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator(False)
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=True",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "googletest"),
                     source_folder]
 
@@ -353,6 +356,7 @@ def google_installer_protobuf(properties):
   cmake_command += ["-DPROTOBUF_ROOT=" + source_folder,
                     "-DBUILD_SHARED_LIBS=False",
                     "-Dprotobuf_BUILD_TESTS=False",
+                    "-DCMAKE_POSITION_INDEPENDENT_CODE=True",
                     "-Dprotobuf_WITH_ZLIB=False",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "protobuf"),
                     os.path.join(source_folder, "cmake")]
