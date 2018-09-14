@@ -185,7 +185,7 @@ def common_installer_xed(properties):
   if python_executable is None:
     return False
 
-  mbuild_script = [python_executable, "mfile.py", "install"]
+  mbuild_script = [python_executable, "mfile.py", "install", "--extra-flags=-fpic"]
   if debug:
     mbuild_script.append("--debug")
 
