@@ -111,6 +111,7 @@ append_if_exist(INSTALL_FILES_LIST
     ${PROTOBUF_ROOT}/src/google/protobuf/stubs/common.h
     ${PROTOBUF_ROOT}/src/google/protobuf/stubs/once.h
     ${PROTOBUF_ROOT}/src/google/protobuf/stubs/platform_macros.h
+    ${PROTOBUF_ROOT}/src/google/protobuf/stubs/stl_util.h
     ${PROTOBUF_ROOT}/src/google/protobuf/stubs/template_util.h
     ${PROTOBUF_ROOT}/src/google/protobuf/stubs/type_traits.h
     ${PROTOBUF_ROOT}/src/google/protobuf/text_format.h
