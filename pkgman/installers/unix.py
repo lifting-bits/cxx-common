@@ -69,7 +69,7 @@ def unix_installer_cmake(properties):
   if debug:
     print(" ! Debug mode is not supported")
 
-  version = "v3.13.0-rc2"
+  version = "3.13.0-rc2"
   url = "https://github.com/Kitware/CMake/archive/v" + version + ".tar.gz"
 
   source_tarball_path = download_file(url, "sources")
