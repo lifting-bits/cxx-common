@@ -17,6 +17,8 @@ import os
 import platform
 import sys
 import shutil
+import glob
+import subprocess
 
 from utils import *
 from distutils import spawn
@@ -444,6 +446,13 @@ def common_installer_capnproto(properties):
   return True
 
 def common_installer_llvm(properties):
+  if sys.platform == "darwin":
+    if not os.path.exists("/usr/include/stdio.h"):
+      print(" ! Can't find /usr/include directory; please run the following command: ")
+      print(" !     xcode-select --install && sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /")
+      print(" x Compiling clang failed.")
+      return False
+
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
@@ -535,15 +544,29 @@ def common_installer_llvm(properties):
   arch_list += "'"
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
-                                                                                           "-DCMAKE_CXX_STANDARD=11", "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
-                                                                                           "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
-                                                                                           "-DLLVM_INCLUDE_TESTS=OFF"]
+                                                                                           "-DCMAKE_CXX_STANDARD=11",
+                                                                                           "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
+                                                                                           "-DLLVM_ENABLE_RTTI=ON",
+                                                                                           "-DLLVM_ENABLE_PIC=ON",
+                                                                                           "-DLLVM_ENABLE_THREADS=ON",
+                                                                                           "-DLLVM_BUILD_EXAMPLES=OFF",
+                                                                                           "-DLLVM_INCLUDE_EXAMPLES=OFF",
+                                                                                           "-DLLVM_BUILD_TESTS=OFF",
+                                                                                           "-DLLVM_INCLUDE_TESTS=OFF",
+                                                                                           "-DLLVM_OPTIMIZED_TABLEGEN=ON",
+                                                                                           "-DLLVM_BUILD_DOCS=OFF",
+                                                                                           "-DLLVM_ENABLE_DOXYGEN=OFF",
+                                                                                           "-DLLVM_DOXYGEN_SVG=OFF",
+                                                                                           "-DLLVM_ENABLE_SPHINX=OFF",
+                                                                                           "-DSPHINX_OUTPUT_HTML=OFF",
+                                                                                           "-DSPHINX_OUTPUT_MAN=OFF",]
 
   if sys.platform != "win32":
-    if properties["llvm_version"] < 371:
+    if int(properties["llvm_version"]) < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
-      cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
+      cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES",
+                        "-DLIBCXX_ENABLE_SHARED=YES",
                         "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
                         "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
 

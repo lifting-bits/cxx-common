@@ -22,7 +22,7 @@ def main():
   if sys.platform == "win32":
     default_llvm_version=501
   else:
-    default_llvm_version=401
+    default_llvm_version=700
 
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=default_llvm_version)
@@ -37,7 +37,7 @@ def main():
   if get_platform_type() == "windows":
     default_repository_path = "C:\\TrailOfBits\\libraries"
   else:
-    default_repository_path = "/usr/local/lib/trailofbits";
+    default_repository_path = "/usr/local/share/trailofbits/libraries";
 
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default=default_repository_path)
 
@@ -60,16 +60,22 @@ def main():
     print("Updating the PATH environment...")
 
     for path in args.additional_paths.split(","):
-      os.environ["PATH"] = path + ":" + os.environ["PATH"]
+      os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
   
+  properties = dict()
+
   # set the compilers
   if args.c_compiler is not None:
     print("Setting the C compiler: " + args.c_compiler)
     os.environ["CMAKE_C_COMPILER"] = args.c_compiler
+    os.environ["CC"] = args.c_compiler
+    properties["CC"] = args.c_compiler
 
   if args.cxx_compiler is not None:
     print("Setting the C++ compiler: " + args.cxx_compiler)
     os.environ["CMAKE_CXX_COMPILER"] = args.cxx_compiler
+    os.environ["CXX"] = args.cxx_compiler
+    properties["CXX"] = args.cxx_compiler
   
   # acquire the package list
   packages_to_install = args.packages.split(",")
@@ -85,9 +91,8 @@ def main():
     print("Invalid LLVM version: " + str(llvm_version))
     return False
 
-  properties = dict()
   properties["llvm_version"] = llvm_version
-  properties["long_llvm_version"] = llvm_version[0] + "." + llvm_version[1] + "." + llvm_version[2]
+  properties["long_llvm_version"] = llvm_version[:-2] + "." + llvm_version[-2] + "." + llvm_version[-1]
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
@@ -99,7 +104,7 @@ def main():
     if sys.platform == "win32":
       supported_llvm_version_list = [501]
     else:
-      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600]
+      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 700]
 
     if int(llvm_version) < 501:
       if not os.path.isfile("/usr/include/xlocale.h"):

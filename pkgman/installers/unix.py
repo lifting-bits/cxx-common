@@ -82,11 +82,13 @@ def unix_installer_cmake(properties):
   source_folder = os.path.join("build", "CMake-" + version)
   destination_path = os.path.join(repository_path, "cmake")
 
-  if os.environ.get("CMAKE_C_COMPILER") is not None:
-    os.environ["CC"] = os.environ["CMAKE_C_COMPILER"]
+  if properties.get("CC") is not None:
+    os.environ["CMAKE_C_COMPILER"] = properties.get("CC")
+    os.environ["CC"] = properties.get("CC")
 
-  if os.environ.get("CMAKE_CXX_COMPILER") is not None:
-    os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
+  if properties.get("CXX") is not None:
+    os.environ["CMAKE_CXX_COMPILER"] = properties.get("CXX")
+    os.environ["CXX"] = properties.get("CXX")
 
   if not run_program("Running the bootstrap script...", ["./bootstrap", "--parallel=" + str(multiprocessing.cpu_count()), "--prefix=" + destination_path], source_folder, verbose=verbose_output):
     return False

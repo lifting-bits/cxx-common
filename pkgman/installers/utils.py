@@ -247,7 +247,12 @@ def run_program(description, command, working_directory, verbose=False):
     else:
       log_file = tempfile.NamedTemporaryFile(delete=True)
 
-    exit_code = subprocess.call(command, cwd=working_directory, stdout=log_file, stderr=subprocess.STDOUT)
+    exit_code = subprocess.call(
+        command,
+        cwd=working_directory,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        env=os.environ)
     log_file.flush()
 
     if exit_code == 0:
