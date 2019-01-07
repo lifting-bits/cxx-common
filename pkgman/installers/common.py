@@ -544,7 +544,8 @@ def common_installer_llvm(properties):
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
       cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
-                        "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO",
+                        "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES",
+                        "-DLIBCXX_ENABLE_FILESYSTEM=YES",
                         "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
 
   cmake_command += [llvm_root_folder] + get_cmake_generator()
