@@ -21,7 +21,7 @@ def main():
   # parse the command line
   if sys.platform == "win32":
     default_llvm_version=501
-  elsif sys.platform == "darwin":
+  elif sys.platform == "darwin":
     default_llvm_version=700
   else:
     default_llvm_version=501
