@@ -39,11 +39,14 @@ linux_initialize() {
   fi
 
   printf " > Installing the required packages...\n"
-  sudo apt-get install -qqy python2.7 build-essential realpath python-setuptools python-lzma python-pip
+  sudo apt-get install -qqy python2.7 build-essential python-setuptools python-lzma python-pip
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
   fi
+  
+  # This may fail.
+  sudo apt-get install -qqy realpath
 
   printf " > Updating setuptools...\n"
   sudo pip install --upgrade setuptools > /dev/null 2>&1

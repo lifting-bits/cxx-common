@@ -21,8 +21,10 @@ def main():
   # parse the command line
   if sys.platform == "win32":
     default_llvm_version=501
-  else:
+  elsif sys.platform == "darwin":
     default_llvm_version=700
+  else:
+    default_llvm_version=501
 
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=default_llvm_version)
