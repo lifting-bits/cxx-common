@@ -11,8 +11,8 @@ When building LLVM < 5.x on Linux you will need the 'xlocale.h' include header f
 
 ## How to build the 'libraries' repository
 
- * Dependencies can be installed using Travis build script: **./travis.sh <linux|macos> initialize**
- * If you are building recent LLVM versions, you can probably just run **./travis.sh <linux|macos> build**
+ * Dependencies can be installed using Travis build script: **./travis.sh <linux|osx> initialize**
+ * If you are building recent LLVM versions, you can probably just run **./travis.sh <linux|osx> build**
  * If you are calling pkgman.py directly, always try to use the best compiler available, passing the --c_compiler and -cxx_compiler parameters.
  * When calling the **build** function of the Travis script, you can set your preferred compiler using the standard environment variables: CC and CXX.
 
