@@ -80,9 +80,8 @@ def unix_installer_cmake(properties):
     cmake_arch = "win64"
 
   cmake_version = "3.14.0-rc4"
-  url = "https://github.com/Kitware/CMake/releases/download/v" + cmake_version + \
-        "/cmake-" + cmake_version + "-" + cmake_os + "-" + cmake_arch + ".tar.gz"
-
+  url = "https://github.com/Kitware/CMake/archive/v" + cmake_version + ".tar.gz"
+  
   source_tarball_path = download_file(url, "sources")
   if source_tarball_path is None:
     return False
@@ -90,7 +89,7 @@ def unix_installer_cmake(properties):
   if not extract_archive(source_tarball_path, "build"):
     return False
 
-  source_folder = os.path.join("build", "cmake-" + cmake_version + "-" + cmake_os + "-" + cmake_arch)
+  source_folder = os.path.join("build", "CMake-" + cmake_version)
   destination_path = os.path.join(repository_path, "cmake")
 
   if os.environ.get("CMAKE_C_COMPILER") is not None:
