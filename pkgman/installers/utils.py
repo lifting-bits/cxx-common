@@ -23,7 +23,7 @@ import tempfile
 import multiprocessing
 
 def get_env_compiler_settings():
-  cmake_compiler_settings = []
+  cmake_compiler_settings = ["-DCMAKE_WARN_DEPRECATED:BOOL=FALSE"]
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
     cmake_compiler_settings.append("-DCMAKE_CXX_COMPILER=" + os.environ["CMAKE_CXX_COMPILER"])
 
