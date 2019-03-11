@@ -15,6 +15,7 @@
 import os
 import multiprocessing
 from utils import *
+import sys
 
 def unix_installer_boost(properties, default_toolset):
   repository_path = properties["repository_path"]
@@ -69,8 +70,20 @@ def unix_installer_cmake(properties):
   if debug:
     print(" ! Debug mode is not supported")
 
-  version = "3.13.0-rc2"
-  url = "https://github.com/Kitware/CMake/archive/v" + version + ".tar.gz"
+  cmake_os = "Linux"
+  cmake_arch = "x86_64"
+  cmake_ext = "sh"
+  
+  if sys.platform.lower() == "darwin":
+    cmake_os = "Darwin"
+  elif sys.platform.lower() == "win32":
+    cmake_os = "win32"
+    cmake_arch = "win64"
+    cmake_ext = "msi"
+
+  cmake_version = "3.14.0-rc4"
+  url = "https://github.com/Kitware/CMake/releases/download/v" + cmake_version + \
+        "/cmake-" + cmake_version + "-" + cmake_os + "-" + cmake_arch + "." + cmake_ext
 
   source_tarball_path = download_file(url, "sources")
   if source_tarball_path is None:
