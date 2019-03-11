@@ -90,7 +90,7 @@ def unix_installer_cmake(properties):
   if not extract_archive(source_tarball_path, "build"):
     return False
 
-  source_folder = os.path.join("build", "CMake-" + cmake_version)
+  source_folder = os.path.join("build", "CMake-" + cmake_version + "-" + cmake_os + "-" + cmake_arch)
   destination_path = os.path.join(repository_path, "cmake")
 
   if os.environ.get("CMAKE_C_COMPILER") is not None:
