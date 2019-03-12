@@ -453,8 +453,8 @@ def common_installer_llvm(properties):
 
   clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
   clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
-
-  if sys.platform != "win32":
+  use_libcxx = sys.platform != "win32" and "exclude_libcxx" not in properties
+  if use_libcxx:
     libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
     libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
 
@@ -470,7 +470,7 @@ def common_installer_llvm(properties):
   if clang_tarball_path is None:
     return False
 
-  if sys.platform != "win32":
+  if use_libcxx:
     libcxx_tarball_path = download_file(libcxx_tarball_url, "sources", libcxx_tarball_name)
     if libcxx_tarball_path is None:
       return False
@@ -486,7 +486,7 @@ def common_installer_llvm(properties):
   if not extract_archive(clang_tarball_path, "sources"):
     return False
 
-  if sys.platform != "win32":
+  if use_libcxx:
     if not extract_archive(libcxx_tarball_path, "sources"):
       return False
 
@@ -498,7 +498,7 @@ def common_installer_llvm(properties):
   try:
     print(" > Moving the project folders in the LLVM source tree...")
 
-    if sys.platform != "win32":
+    if use_libcxx:
       libcxx_destination = os.path.join(llvm_root_folder, "projects", "libcxx")
       if not os.path.isdir(libcxx_destination):
         shutil.move(os.path.join("sources", "libcxx-" + properties["long_llvm_version"] + ".src"), libcxx_destination)
@@ -539,7 +539,7 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
-  if sys.platform != "win32":
+  if use_libcxx:
     if properties["llvm_version"] < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
