@@ -31,7 +31,8 @@ def main():
   arg_parser.add_argument('--debug', help="Build debug versions.", action='store_true')
 
   arg_parser.add_argument("--cxx_compiler", type=str, help="The C++ compiler to use.")
-  arg_parser.add_argument('--c_compiler', type=str, help="The C compiler to use.")
+  arg_parser.add_argument("--c_compiler", type=str, help="The C compiler to use.")
+  arg_parser.add_argument("--exclude_libcxx", help="Exclude libc++ from the build", action='store_true')
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -91,6 +92,9 @@ def main():
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
+  
+  if args.exclude_libcxx:
+    properties["exclude_libcxx"] = True
 
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
