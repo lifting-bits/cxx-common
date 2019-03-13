@@ -515,6 +515,11 @@ def common_installer_llvm(properties):
     print(" ! " + str(e))
     print(" x Failed to build the source tree")
     return False
+  
+  # make sure to patch clang.
+  intrusive_cnt_ptr = os.path.realpath(os.path.join(llvm_root_folder, "include", "llvm", "ADT", "IntrusiveRefCntPtr.h"))
+  if not patch_file(intrusive_cnt_ptr, "llvm"):
+    return False
 
   # create the build directory and compile the package
   llvm_build_path = os.path.realpath(os.path.join("build", "llvm-" + str(properties["llvm_version"])))
