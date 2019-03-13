@@ -152,10 +152,10 @@ def extract_xz_tarball(path, folder):
     try:
       from backports import lzma
     except:
-      if sys.platform == "win32":
-        path = os.path.abspath(path)
-        folder = os.path.abspath(folder)
+      path = os.path.abspath(path)
+      folder = os.path.abspath(folder)
 
+      if sys.platform == "win32":
         seven_zip_path = os.path.join(os.environ["ProgramFiles"], "7-Zip", "7z.exe")
         if not os.path.exists(seven_zip_path):
           print " x The 7z.exe executable could not be found"
@@ -180,8 +180,16 @@ def extract_xz_tarball(path, folder):
           return False
 
       else:
-        print("Failed to import the LZMA module")
-        exit(1)
+        try:
+          dummy_output = open(os.devnull, 'w')
+          exit_code = subprocess.call(["tar", "-xJf", path], cwd=folder, stdout=dummy_output, stderr=dummy_output)
+          if exit_code != 0:
+            raise ValueError("tar exited with an error")
+
+          return True
+        except:
+          return False
+      
 
   try:
     f = lzma.LZMAFile(path)

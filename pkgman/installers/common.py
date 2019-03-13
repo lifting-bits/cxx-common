@@ -515,6 +515,11 @@ def common_installer_llvm(properties):
     print(" ! " + str(e))
     print(" x Failed to build the source tree")
     return False
+  
+  # make sure to patch clang.
+  intrusive_cnt_ptr = os.path.realpath(os.path.join(llvm_root_folder, "include", "llvm", "ADT", "IntrusiveRefCntPtr.h"))
+  if not patch_file(intrusive_cnt_ptr, "llvm"):
+    return False
 
   # create the build directory and compile the package
   llvm_build_path = os.path.realpath(os.path.join("build", "llvm-" + str(properties["llvm_version"])))
@@ -531,7 +536,7 @@ def common_installer_llvm(properties):
 
   arch_list = "'X86"
   if sys.platform != "win32":
-    arch_list += ";AArch64"
+    arch_list += ";AArch64;Sparc"
   arch_list += "'"
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
