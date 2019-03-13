@@ -135,8 +135,9 @@ def common_installer_capstone(properties):
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_EXE_LINKER_FLAGS=-g",
                     "-DCMAKE_C_FLAGS=-g",
-                    "-DCAPSTONE_ARM_SUPPORT=1",
-                    "-DCAPSTONE_ARM64_SUPPORT=1",
+                    "-DCAPSTONE_SPARC_SUPPORT=1",
+                    "-DCAPSTONE_BUILD_STATIC=ON",
+                    "-DCAPSTONE_BUILD_DIET=OFF",
                     "-DCAPSTONE_BUILD_SHARED=OFF",
                     "-DCAPSTONE_BUILD_TESTS=OFF",
                     "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "capstone"),
