@@ -531,7 +531,7 @@ def common_installer_llvm(properties):
 
   arch_list = "'X86"
   if sys.platform != "win32":
-    arch_list += ";AArch64"
+    arch_list += ";AArch64;Sparc;Sparcv9"
   arch_list += "'"
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
