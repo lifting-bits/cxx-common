@@ -33,7 +33,7 @@ def main():
   arg_parser.add_argument("--cxx_compiler", type=str, help="The C++ compiler to use.")
   arg_parser.add_argument("--c_compiler", type=str, help="The C compiler to use.")
   arg_parser.add_argument("--exclude_libcxx", help="Exclude libc++ from the build", action='store_true')
-  arg_parser.add_argument("--use_no_ssl_requests", help="Use the requests library to download files, and do so without SSL verification. If behind a firewall/proxy, this can help", action=store_true)
+  arg_parser.add_argument("--use_no_ssl_requests", help="Use the requests library to download files, and do so without SSL verification. If behind a firewall/proxy, this can help", action='store_true')
 
   default_repository_path = ""
   if get_platform_type() == "windows":
