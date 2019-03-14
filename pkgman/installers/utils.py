@@ -110,14 +110,14 @@ def download_file(properties, url, folder, output_file=None):
 
   return destination
 
-def download_github_source_archive(organization, repository, format="tar.gz", branch="master"):
+def download_github_source_archive(properties, organization, repository, format="tar.gz", branch="master"):
   url = "https://codeload.github.com/" + organization + "/" + repository + "/" + format + "/" + branch
 
   base_file_name = repository + "-" + branch
   tarball_path = os.path.join("sources", base_file_name + "." + format)
 
   if not os.path.isfile(tarball_path):
-    temp_path = download_file(url, "sources")
+    temp_path = download_file(properties, url, "sources")
     if temp_path is None:
       return None
 

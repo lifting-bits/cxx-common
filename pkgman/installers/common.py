@@ -78,7 +78,7 @@ def google_installer_glog(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("google", "glog")
+  source_folder = download_github_source_archive(properties, "google", "glog")
   if source_folder is None:
     return False
 
@@ -119,7 +119,7 @@ def common_installer_capstone(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("aquynh", "capstone")
+  source_folder = download_github_source_archive(properties, "aquynh", "capstone")
   if source_folder is None:
     return False
 
@@ -171,11 +171,11 @@ def common_installer_xed(properties):
 
   # out of source builds are not supported, so we'll have to build
   # inside the source directory
-  xed_source_folder = download_github_source_archive("intelxed", "xed")
+  xed_source_folder = download_github_source_archive(properties, "intelxed", "xed")
   if xed_source_folder is None:
     return False
 
-  mbuild_source_folder = download_github_source_archive("intelxed", "mbuild")
+  mbuild_source_folder = download_github_source_archive(properties, "intelxed", "mbuild")
   if mbuild_source_folder is None:
     return False
 
@@ -225,7 +225,7 @@ def google_installer_gflags(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("gflags", "gflags")
+  source_folder = download_github_source_archive(properties, "gflags", "gflags")
   if source_folder is None:
     return False
 
@@ -267,7 +267,7 @@ def google_installer_googletest(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("google", "googletest")
+  source_folder = download_github_source_archive(properties, "google", "googletest")
   if source_folder is None:
     return False
 
@@ -409,7 +409,7 @@ def common_installer_capnproto(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("capnproto", "capnproto")
+  source_folder = download_github_source_archive(properties, "capnproto", "capnproto")
   if source_folder is None:
     return False
 
