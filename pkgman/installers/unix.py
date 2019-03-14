@@ -25,7 +25,7 @@ def unix_installer_boost(properties, default_toolset):
   version = "1.66.0"
   url = "https://dl.bintray.com/boostorg/release/" + version + "/source/boost_" + version.replace(".", "_") + ".tar.gz"
 
-  source_tarball_path = download_file(url, "sources")
+  source_tarball_path = download_file(properties, url, "sources")
   if source_tarball_path is None:
     return False
 
@@ -82,7 +82,7 @@ def unix_installer_cmake(properties):
   cmake_version = "3.14.0-rc4"
   url = "https://github.com/Kitware/CMake/archive/v" + cmake_version + ".tar.gz"
   
-  source_tarball_path = download_file(url, "sources")
+  source_tarball_path = download_file(properties, url, "sources")
   if source_tarball_path is None:
     return False
 

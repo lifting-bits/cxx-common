@@ -325,7 +325,7 @@ def google_installer_protobuf(properties):
   version = "2.6.1"
   url = "https://github.com/google/protobuf/archive/v" + version + ".tar.gz"
 
-  source_tarball_path = download_file(url, "sources")
+  source_tarball_path = download_file(properties, url, "sources")
   if source_tarball_path is None:
     return False
 
@@ -454,7 +454,7 @@ def common_installer_llvm(properties):
 
   clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
   clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
-  use_libcxx = sys.platform != "win32" and "exclude_libcxx" not in properties
+  use_libcxx = sys.platform != "win32" and properties["include_libcxx"]
   if use_libcxx:
     libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
     libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
@@ -463,22 +463,24 @@ def common_installer_llvm(properties):
     libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
 
   # download everything we need
-  llvm_tarball_path = download_file(llvm_tarball_url, "sources", llvm_tarball_name)
+  llvm_tarball_path = download_file(properties, llvm_tarball_url, "sources", llvm_tarball_name)
   if llvm_tarball_path is None:
     return False
 
-  clang_tarball_path = download_file(clang_tarball_url, "sources", clang_tarball_name)
+  clang_tarball_path = download_file(properties, clang_tarball_url, "sources", clang_tarball_name)
   if clang_tarball_path is None:
     return False
 
   if use_libcxx:
-    libcxx_tarball_path = download_file(libcxx_tarball_url, "sources", libcxx_tarball_name)
+    libcxx_tarball_path = download_file(properties, libcxx_tarball_url, "sources", libcxx_tarball_name)
     if libcxx_tarball_path is None:
       return False
 
-    libcxxabi_tarball_path = download_file(libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
+    libcxxabi_tarball_path = download_file(properties, libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
     if libcxxabi_tarball_path is None:
       return False
+  else:
+    print(" i Excluding libc++")
 
   # extract everything in the correct folders
   if not extract_archive(llvm_tarball_path, "sources"):
@@ -519,8 +521,10 @@ def common_installer_llvm(properties):
   
   # make sure to patch clang.
   if properties["llvm_version"] < 401:
+    print(" i Patching LLVM")
     intrusive_cnt_ptr = os.path.realpath(os.path.join(llvm_root_folder, "include", "llvm", "ADT", "IntrusiveRefCntPtr.h"))
     if not patch_file(intrusive_cnt_ptr, "llvm"):
+      print(" x Failed to patch LLVM")
       return False
 
   # create the build directory and compile the package

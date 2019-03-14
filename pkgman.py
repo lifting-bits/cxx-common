@@ -33,6 +33,7 @@ def main():
   arg_parser.add_argument("--cxx_compiler", type=str, help="The C++ compiler to use.")
   arg_parser.add_argument("--c_compiler", type=str, help="The C compiler to use.")
   arg_parser.add_argument("--exclude_libcxx", help="Exclude libc++ from the build", action='store_true')
+  arg_parser.add_argument("--use_no_ssl_requests", help="Use the requests library to download files, and do so without SSL verification. If behind a firewall/proxy, this can help", action=store_true)
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -92,9 +93,19 @@ def main():
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
+
+  # Make sure that file downloading will work.
+  if args.use_no_ssl_requests:
+    properties["use_requests_for_downloading"] = True
+    try:
+      import requests
+    except ImportError:
+      print(" ! Unable to import `requests`; try `pip install requests`")
+      return False
+  else:
+    properties["use_requests_for_downloading"] = False
   
-  if args.exclude_libcxx:
-    properties["exclude_libcxx"] = True
+  properties["include_libcxx"] = not args.exclude_libcxx
 
   # print a summary of what we are about to do
   print("Repository path: " + args.repository_path)
@@ -106,14 +117,15 @@ def main():
       supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 700]
 
     if int(llvm_version) < 501:
-      if not os.path.isfile("/usr/include/xlocale.h"):
-        print "==="
-        print "The 'xlocale.h' include file is missing."
-        print "If you are using Ubuntu <= 16.04.5 LTS then you can install"
-        print "the libc6-dev package to fix the error. If you are on a more"
-        print "recent distribution, this include header has been deprecated."
-        print "Consider building LLVM >= 5.0.1 instead."
-        print "==="
+      if not os.path.isfile("/usr/include/xlocale.h") and not args.exclude_libcxx:        
+        print("===")
+        print("The 'xlocale.h' include file is missing.")
+        print("If you are using Ubuntu <= 16.04.5 LTS then you can install")
+        print("the libc6-dev package to fix the error. If you are on a more")
+        print("recent distribution, this include header has been deprecated.")
+        print("Consider building LLVM >= 5.0.1 instead. If your build doesn't")
+        print("work then consider also trying with --exclude_libcxx")
+        print("===")
 
         raw_input("Press return to continue or CTRL-C to abort")
 

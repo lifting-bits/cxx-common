@@ -30,7 +30,7 @@ def windows_installer_cmake(properties):
 
   url = "https://cmake.org/files/" + short_version + "/cmake-" + version + "-win64-x64.zip"
 
-  zip_path = download_file(url, "sources")
+  zip_path = download_file(properties, url, "sources")
   if zip_path is None:
     return False
 
