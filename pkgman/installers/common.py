@@ -373,9 +373,10 @@ def google_installer_protobuf(properties):
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
+  module_folders = ["lib"]
+
   if sys.platform == "win32" or sys.platform == "cygwin":
     protoc_executable = "protoc.exe"
-    module_folder = "lib"
     os.environ["PATH"] = os.path.join(repository_path, "protobuf", "lib") + ":" + os.environ["PATH"]
 
   else:
@@ -384,9 +385,7 @@ def google_installer_protobuf(properties):
 
     protoc_executable = "protoc"
     if sys.platform == "linux" or sys.platform == "linux2":
-      module_folder = "lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor)
-    else:
-      module_folder = "lib"
+      module_folders.append("lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor))
 
   os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", protoc_executable))
   python_command = [get_python_path(2), "setup.py", "build"]
@@ -395,8 +394,10 @@ def google_installer_protobuf(properties):
 
   try:
     print(" > Copying the Python module...")
-    python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", module_folder, "google"))
-    copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
+    for module_folder in module_folders:
+      python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", module_folder, "google"))
+      if os.path.isdir(python_package):
+        copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
 
   except:
     print(" x Failed to copy the Python module")
