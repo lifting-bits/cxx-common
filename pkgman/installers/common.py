@@ -520,7 +520,7 @@ def common_installer_llvm(properties):
     return False
   
   # make sure to patch clang.
-  if properties["llvm_version"] < 401:
+  if int(properties["llvm_version"]) < 401:
     print(" i Patching LLVM")
     intrusive_cnt_ptr = os.path.realpath(os.path.join(llvm_root_folder, "include", "llvm", "ADT", "IntrusiveRefCntPtr.h"))
     if not patch_file(intrusive_cnt_ptr, "llvm"):
@@ -551,7 +551,7 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
   if use_libcxx:
-    if properties["llvm_version"] < 371:
+    if int(properties["llvm_version"]) < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
       cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
