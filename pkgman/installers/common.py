@@ -78,7 +78,7 @@ def google_installer_glog(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("google", "glog")
+  source_folder = download_github_source_archive(properties, "google", "glog")
   if source_folder is None:
     return False
 
@@ -119,7 +119,7 @@ def common_installer_capstone(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("aquynh", "capstone")
+  source_folder = download_github_source_archive(properties, "aquynh", "capstone")
   if source_folder is None:
     return False
 
@@ -171,11 +171,11 @@ def common_installer_xed(properties):
 
   # out of source builds are not supported, so we'll have to build
   # inside the source directory
-  xed_source_folder = download_github_source_archive("intelxed", "xed")
+  xed_source_folder = download_github_source_archive(properties, "intelxed", "xed")
   if xed_source_folder is None:
     return False
 
-  mbuild_source_folder = download_github_source_archive("intelxed", "mbuild")
+  mbuild_source_folder = download_github_source_archive(properties, "intelxed", "mbuild")
   if mbuild_source_folder is None:
     return False
 
@@ -225,7 +225,7 @@ def google_installer_gflags(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("gflags", "gflags")
+  source_folder = download_github_source_archive(properties, "gflags", "gflags")
   if source_folder is None:
     return False
 
@@ -267,7 +267,7 @@ def google_installer_googletest(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("google", "googletest")
+  source_folder = download_github_source_archive(properties, "google", "googletest")
   if source_folder is None:
     return False
 
@@ -325,7 +325,7 @@ def google_installer_protobuf(properties):
   version = "2.6.1"
   url = "https://github.com/google/protobuf/archive/v" + version + ".tar.gz"
 
-  source_tarball_path = download_file(url, "sources")
+  source_tarball_path = download_file(properties, url, "sources")
   if source_tarball_path is None:
     return False
 
@@ -373,9 +373,10 @@ def google_installer_protobuf(properties):
   if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
+  module_folders = ["lib"]
+
   if sys.platform == "win32" or sys.platform == "cygwin":
     protoc_executable = "protoc.exe"
-    module_folder = "lib"
     os.environ["PATH"] = os.path.join(repository_path, "protobuf", "lib") + ":" + os.environ["PATH"]
 
   else:
@@ -384,9 +385,7 @@ def google_installer_protobuf(properties):
 
     protoc_executable = "protoc"
     if sys.platform == "linux" or sys.platform == "linux2":
-      module_folder = "lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor)
-    else:
-      module_folder = "lib"
+      module_folders.append("lib.linux-{}-{}.{}".format(platform.machine(), sys.version_info.major, sys.version_info.minor))
 
   os.environ["PROTOC"] = os.path.realpath(os.path.join(repository_path, "protobuf", "bin", protoc_executable))
   python_command = [get_python_path(2), "setup.py", "build"]
@@ -395,8 +394,10 @@ def google_installer_protobuf(properties):
 
   try:
     print(" > Copying the Python module...")
-    python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", module_folder, "google"))
-    copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
+    for module_folder in module_folders:
+      python_package = os.path.realpath(os.path.join("sources", "protobuf-" + version, "python", "build", module_folder, "google"))
+      if os.path.isdir(python_package):
+        copy_tree(python_package, os.path.join(repository_path, "protobuf", "python"))
 
   except:
     print(" x Failed to copy the Python module")
@@ -409,7 +410,7 @@ def common_installer_capnproto(properties):
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  source_folder = download_github_source_archive("capnproto", "capnproto")
+  source_folder = download_github_source_archive(properties, "capnproto", "capnproto")
   if source_folder is None:
     return False
 
@@ -454,7 +455,7 @@ def common_installer_llvm(properties):
 
   clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
   clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
-  use_libcxx = sys.platform != "win32" and "exclude_libcxx" not in properties
+  use_libcxx = sys.platform != "win32" and properties["include_libcxx"]
   if use_libcxx:
     libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
     libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
@@ -463,22 +464,24 @@ def common_installer_llvm(properties):
     libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
 
   # download everything we need
-  llvm_tarball_path = download_file(llvm_tarball_url, "sources", llvm_tarball_name)
+  llvm_tarball_path = download_file(properties, llvm_tarball_url, "sources", llvm_tarball_name)
   if llvm_tarball_path is None:
     return False
 
-  clang_tarball_path = download_file(clang_tarball_url, "sources", clang_tarball_name)
+  clang_tarball_path = download_file(properties, clang_tarball_url, "sources", clang_tarball_name)
   if clang_tarball_path is None:
     return False
 
   if use_libcxx:
-    libcxx_tarball_path = download_file(libcxx_tarball_url, "sources", libcxx_tarball_name)
+    libcxx_tarball_path = download_file(properties, libcxx_tarball_url, "sources", libcxx_tarball_name)
     if libcxx_tarball_path is None:
       return False
 
-    libcxxabi_tarball_path = download_file(libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
+    libcxxabi_tarball_path = download_file(properties, libcxxabi_tarball_url, "sources", libcxxabi_tarball_name)
     if libcxxabi_tarball_path is None:
       return False
+  else:
+    print(" i Excluding libc++")
 
   # extract everything in the correct folders
   if not extract_archive(llvm_tarball_path, "sources"):
@@ -518,9 +521,11 @@ def common_installer_llvm(properties):
     return False
   
   # make sure to patch clang.
-  if properties["llvm_version"] < 401:
+  if int(properties["llvm_version"]) < 401:
+    print(" i Patching LLVM")
     intrusive_cnt_ptr = os.path.realpath(os.path.join(llvm_root_folder, "include", "llvm", "ADT", "IntrusiveRefCntPtr.h"))
     if not patch_file(intrusive_cnt_ptr, "llvm"):
+      print(" x Failed to patch LLVM")
       return False
 
   # create the build directory and compile the package
@@ -547,7 +552,7 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
   if use_libcxx:
-    if properties["llvm_version"] < 371:
+    if int(properties["llvm_version"]) < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
       cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",

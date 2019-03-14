@@ -70,7 +70,7 @@ def get_cmake_build_configuration(debug):
 
   return build_configuration
 
-def download_to_file(url, destination):
+def download_to_file_urllib(url, destination):
   try:
     urllib.urlretrieve(url, destination)
     return True
@@ -78,7 +78,17 @@ def download_to_file(url, destination):
   except:
     return False
 
-def download_file(url, folder, output_file=None):
+def download_to_file_requests(url, destination):
+  try:
+    import requests
+    r = requests.get(url, allow_redirects=True, verify=False)
+    with open(destination, 'wb') as f:
+      f.write(r.content)
+    return True
+  except:
+    return False
+
+def download_file(properties, url, folder, output_file=None):
   print(" > Downloading file: '" + url + "'")
 
   if output_file is not None:
@@ -89,20 +99,25 @@ def download_file(url, folder, output_file=None):
   if os.path.isfile(destination) :
     return destination
 
-  if not download_to_file(url, destination):
-    print(" x Download failed")
-    return None
+  if properties["use_requests_for_downloading"]:
+    if not download_to_file_requests(url, destination):
+      print(" x Download failed")
+      return None
+  else:
+    if not download_to_file_urllib(url, destination):
+      print(" x Download failed")
+      return None
 
   return destination
 
-def download_github_source_archive(organization, repository, format="tar.gz", branch="master"):
+def download_github_source_archive(properties, organization, repository, format="tar.gz", branch="master"):
   url = "https://codeload.github.com/" + organization + "/" + repository + "/" + format + "/" + branch
 
   base_file_name = repository + "-" + branch
   tarball_path = os.path.join("sources", base_file_name + "." + format)
 
   if not os.path.isfile(tarball_path):
-    temp_path = download_file(url, "sources")
+    temp_path = download_file(properties, url, "sources")
     if temp_path is None:
       return None
 
@@ -158,8 +173,8 @@ def extract_xz_tarball(path, folder):
       if sys.platform == "win32":
         seven_zip_path = os.path.join(os.environ["ProgramFiles"], "7-Zip", "7z.exe")
         if not os.path.exists(seven_zip_path):
-          print " x The 7z.exe executable could not be found"
-          print " i Install 7-zip x64 for Windows to solve this error"
+          print(" x The 7z.exe executable could not be found")
+          print(" i Install 7-zip x64 for Windows to solve this error")
 
           return False
 
