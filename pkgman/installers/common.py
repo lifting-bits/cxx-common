@@ -183,7 +183,7 @@ def common_installer_xed(properties):
   if not patch_file(env_file_path, "mbuild"):
     return False
 
-  python_executable = get_python_path(2)
+  python_executable = get_python_path(3)
   if python_executable is None:
     return False
 
