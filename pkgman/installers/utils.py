@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib
+import multiprocessing
 import os
-import sys
-import tarfile
-import zipfile
 import shutil
 import subprocess
+import sys
+import tarfile
 import tempfile
-import multiprocessing
+import traceback
+import urllib
+import zipfile
 
 def get_env_compiler_settings():
-  cmake_compiler_settings = ["-DCMAKE_WARN_DEPRECATED:BOOL=FALSE"]
+  cmake_compiler_settings = []
+
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
     cmake_compiler_settings.append("-DCMAKE_CXX_COMPILER=" + os.environ["CMAKE_CXX_COMPILER"])
 
@@ -72,7 +74,11 @@ def get_cmake_build_configuration(debug):
 
 def download_to_file_urllib(url, destination):
   try:
-    urllib.urlretrieve(url, destination)
+    if sys.version_info[0] < 3:
+      urllib.urlretrieve(url, destination)
+    else:
+      import urllib.request
+      urllib.request.urlretrieve(url, destination)
     return True
 
   except:
@@ -96,19 +102,17 @@ def download_file(properties, url, folder, output_file=None):
   else:
     destination = os.path.join(folder, url.split("/")[-1])
 
-  if os.path.isfile(destination) :
+  if os.path.isfile(destination):
     return destination
 
-  if properties["use_requests_for_downloading"]:
-    if not download_to_file_requests(url, destination):
-      print(" x Download failed")
-      return None
-  else:
-    if not download_to_file_urllib(url, destination):
-      print(" x Download failed")
-      return None
+  if download_to_file_requests(url, destination):
+    return destination
 
-  return destination
+  if download_to_file_urllib(url, destination):
+    return destination
+
+  print(" x Download failed")
+  return None
 
 def download_github_source_archive(properties, organization, repository, format="tar.gz", branch="master"):
   url = "https://codeload.github.com/" + organization + "/" + repository + "/" + format + "/" + branch
@@ -291,3 +295,4 @@ def run_program(description, command, working_directory, verbose=False):
     print(" ! " + str(e))
     print(" x Failed to start the command")
     return False
+  

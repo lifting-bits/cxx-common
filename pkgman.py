@@ -22,7 +22,7 @@ def main():
   if sys.platform == "win32":
     default_llvm_version=501
   else:
-    default_llvm_version=501
+    default_llvm_version=900
 
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=default_llvm_version)
@@ -39,7 +39,7 @@ def main():
   if get_platform_type() == "windows":
     default_repository_path = "C:\\TrailOfBits\\libraries"
   else:
-    default_repository_path = "/usr/local/lib/trailofbits";
+    default_repository_path = "/opt/trailofbits";
 
   arg_parser.add_argument("--repository_path", type=str, help="This is where the repository is installed", default=default_repository_path)
 
@@ -83,13 +83,14 @@ def main():
 
   # get the llvm version
   llvm_version = str(args.llvm_version)
-  if len(llvm_version) != 3:
+  if len(llvm_version) < 3:
     print("Invalid LLVM version: " + str(llvm_version))
     return False
 
   properties = dict()
+  properties["cxx_common_dir"] = os.path.dirname(os.path.abspath(__file__))
   properties["llvm_version"] = llvm_version
-  properties["long_llvm_version"] = llvm_version[0] + "." + llvm_version[1] + "." + llvm_version[2]
+  properties["long_llvm_version"] = llvm_version[0:-2] + "." + llvm_version[-2] + "." + llvm_version[-1]
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
@@ -114,7 +115,7 @@ def main():
     if sys.platform == "win32":
       supported_llvm_version_list = [501]
     else:
-      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 700, 800]
+      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 700, 800, 900]
 
     if int(llvm_version) < 501:
       if not os.path.isfile("/usr/include/xlocale.h") and not args.exclude_libcxx:        
@@ -164,9 +165,12 @@ def main():
   cmake_modules_folder = os.path.join(properties["repository_path"], "cmake_modules")
   try:
     print("Installing the CMake modules...")
-    copy_tree("cmake_modules", os.path.join(properties["repository_path"], "cmake_modules"))
+    cmake_modules_dir = os.path.join(properties["cxx_common_dir"], "cmake_modules")
+    copy_tree(cmake_modules_dir, os.path.join(properties["repository_path"], "cmake_modules"))
 
   except:
+    import traceback
+    print(traceback.format_exc())
     print(" x Failed to copy the CMake modules")
     return False
 

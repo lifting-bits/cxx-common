@@ -14,7 +14,7 @@
 
 import os
 import multiprocessing
-from utils import *
+from .utils import *
 import sys
 
 def unix_installer_boost(properties, default_toolset):
@@ -33,17 +33,25 @@ def unix_installer_boost(properties, default_toolset):
     return False
 
   source_folder = os.path.realpath(os.path.join("build", "boost_" + version.replace(".", "_")))
-
-  if os.environ.get("CMAKE_C_COMPILER") is not None:
-    os.environ["CC"] = os.environ["CMAKE_C_COMPILER"]
-
-  if os.environ.get("CMAKE_CXX_COMPILER") is not None:
-    os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
-
-  if os.environ.get("CC") is not None:
+  toolset_name = default_toolset
+  
+  if "CC" in os.environ:
+    old_cc_env_var = os.environ["CC"]
     toolset_name = os.environ["CC"]
   else:
-    toolset_name = default_toolset
+    old_cc_env_var = None
+
+  if "CXX" in os.environ:
+    old_cxx_env_var = os.environ["CXX"]
+  else:
+    old_cxx_env_var = None
+
+  if "CMAKE_C_COMPILER" in os.environ:
+    os.environ["CC"] = os.environ["CMAKE_C_COMPILER"]
+    toolset_name = os.environ["CC"]
+
+  if "CMAKE_CXX_COMPILER" in os.environ:
+    os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
 
   configure_command = [source_folder + "/bootstrap.sh", "--prefix=" + os.path.join(repository_path, "boost"), "--with-toolset=" + toolset_name]
   if not run_program("Running the bootstrap script...", configure_command, source_folder, verbose=verbose_output):
@@ -57,7 +65,19 @@ def unix_installer_boost(properties, default_toolset):
   else:
     build_command += ["--variant=release"]
 
-  if not run_program("Building and installing...", build_command, source_folder, verbose=verbose_output):
+  ret = run_program("Building and installing...", build_command, source_folder, verbose=verbose_output)
+
+  if old_cc_env_var is not None:
+    os.environ["CC"] = old_cc_env_var
+  elif "CC" in os.environ:
+    del os.environ["CC"]
+
+  if old_cxx_env_var is not None:
+    os.environ["CXX"] = old_cxx_env_var
+  elif "CXX" in os.environ:
+    del os.environ["CXX"]
+
+  if not ret:
     return False
 
   return True
@@ -79,7 +99,7 @@ def unix_installer_cmake(properties):
     cmake_os = "win32"
     cmake_arch = "win64"
 
-  cmake_version = "3.15.0-rc2"
+  cmake_version = "3.16.0-rc3"
   url = "https://github.com/Kitware/CMake/releases/download/v" + cmake_version + "/cmake-" + cmake_version + ".tar.gz"
   
   source_tarball_path = download_file(properties, url, "sources")
@@ -116,7 +136,7 @@ def linux_installer_cmake(properties):
   return unix_installer_cmake(properties)
 
 def macos_installer_boost(properties):
-  return unix_installer_boost(properties, "clang")
+  return unix_installer_boost(properties, "cc")
 
 def linux_installer_boost(properties):
   return unix_installer_boost(properties, "cc")

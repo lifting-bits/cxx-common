@@ -18,7 +18,7 @@ import platform
 import sys
 import shutil
 
-from utils import *
+from .utils import *
 from distutils import spawn
 from distutils.dir_util import copy_tree
 
@@ -30,8 +30,8 @@ def patch_file(file_path, patch_name):
     if patch_executable is None:
       patch_executable = os.path.join(os.environ["ProgramFiles"], "Git", "usr", "bin", "patch.exe")
       if not os.path.exists(patch_executable):
-        print " x The patch.exe executable could not be found"
-        print " i Install Git for Windows to solve this error"
+        print(" x The patch.exe executable could not be found")
+        print(" i Install Git for Windows to solve this error")
 
         return False
 
@@ -303,15 +303,15 @@ def common_installer_google(properties):
   if not google_installer_gflags(properties):
     return False
 
-  print ""
+  print("")
   if not google_installer_glog(properties):
     return False
 
-  print ""
+  print("")
   if not google_installer_googletest(properties):
     return False
 
-  print ""
+  print("")
   if not google_installer_protobuf(properties):
     return False
 
@@ -337,7 +337,8 @@ def google_installer_protobuf(properties):
   # this version is too old and doesn't support cmake out of the box
   # so we need to use an external project
   try:
-    copy_tree(os.path.join("cmake", "protobuf_project"), os.path.join(source_folder, "cmake"))
+    copy_tree(os.path.join(properties["cxx_common_dir"], "cmake", "protobuf_project"), 
+              os.path.join(source_folder, "cmake"))
     print(" > Copying the CMake project...")
 
   except:

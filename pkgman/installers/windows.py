@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import shutil
-from utils import *
+from .utils import *
 
 def windows_installer_cmake(properties):
   repository_path = properties["repository_path"]
