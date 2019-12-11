@@ -39,7 +39,7 @@ linux_initialize() {
   fi
 
   printf " > Installing the required packages...\n"
-  sudo apt-get install -qqy python2.7 build-essential python-setuptools python-lzma python-pip
+  sudo apt-get install -qqy python2.7 build-essential python-setuptools python-lzma python-pip clang
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
@@ -116,7 +116,7 @@ linux_build() {
   printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
+  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -128,7 +128,7 @@ linux_build() {
   printf " > Launching the build script for LLVM...\n"  
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
