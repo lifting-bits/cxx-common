@@ -1,10 +1,19 @@
-FROM arm64v8/ubuntu:18.04 as base
+ARG LLVM_VERSION=800
+ARG arch=aarch64
+ARG BOOTSTRAP=/opt/trailofbits/bootstrap
+ARG LIBRARIES=/opt/trailofbits/libraries
+ARG UBUNTU_BASE=arm64v8/ubuntu:18.04
+
+FROM ${UBUNTU_BASE} as base
+ARG BOOTSTRAP
+ARG LIBRARIES
+ARG LLVM_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -qqy python2.7 build-essential python-setuptools python-lzma \
-        python-pip liblzma-dev clang-8 libssl-dev && \
+    apt-get install -qqy python3 python2.7 build-essential python-setuptools python-lzma \
+        python-pip liblzma-dev clang libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip2 install -U pip setuptools
@@ -12,23 +21,35 @@ RUN pip2 install backports.lzma requests
 
 COPY . /cxx-common
 WORKDIR /cxx-common
-ENV BOOTSTRAP=/opt/trailofbits/bootstrap \
-    LIBRARIES=/opt/trailofbits/libraries
 
 RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
 
 RUN ./pkgman.py \
-	--c_compiler=/usr/bin/clang-8 \
-	--cxx_compiler=/usr/bin/clang++-8 \
+	--c_compiler=/usr/bin/clang \
+	--cxx_compiler=/usr/bin/clang++ \
 	--repository_path="${BOOTSTRAP}" \
 	--packages=cmake
 
 RUN ./pkgman.py \
-	--c_compiler=/usr/bin/clang-8 \
-	--cxx_compiler=/usr/bin/clang++-8 \
-	--llvm_version=800 \
-	--verbose "--additional_paths=${BOOTSTRAP}/cmake/bin" \
-	"--repository_path=${BOOTSTRAP}" \
+	--c_compiler=/usr/bin/clang \
+	--cxx_compiler=/usr/bin/clang++ \
+	--llvm_version=${LLVM_VERSION} \
+	--verbose \
+        "--additional_paths=${BOOTSTRAP}/cmake/bin" \
+	"--repository_path=${LIBRARIES}" \
 	"--packages=llvm"
+
+FROM base as cxx-common-build
+
+WORKDIR /cxx-common
+ARG BOOTSTRAP
+ARG LIBRARIES
+
+RUN ./pkgman.py \
+        --cxx_compiler="${BOOTSTRAP}/llvm/bin/clang++" \
+        --c_compiler="${BOOTSTRAP}/llvm/bin/clang" \
+        --verbose "--additional_paths=${BOOTSTRAP}/cmake/bin:${BOOTSTRAP}/llvm/bin" \
+	"--repository_path=${LIBRARIES}" \
+	"--packages=cmake,capstone,google,xed,capnproto"
 
 ENTRYPOINT ["/bin/bash"]
