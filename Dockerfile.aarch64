@@ -1,0 +1,34 @@
+FROM arm64v8/ubuntu:18.04 as base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -qqy python2.7 build-essential python-setuptools python-lzma \
+        python-pip liblzma-dev clang-8 libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip2 install -U pip setuptools
+RUN pip2 install backports.lzma requests
+
+COPY . /cxx-common
+WORKDIR /cxx-common
+ENV BOOTSTRAP=/opt/trailofbits/bootstrap \
+    LIBRARIES=/opt/trailofbits/libraries
+
+RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
+
+RUN ./pkgman.py \
+	--c_compiler=/usr/bin/clang-8 \
+	--cxx_compiler=/usr/bin/clang++-8 \
+	--repository_path="${BOOTSTRAP}" \
+	--packages=cmake
+
+RUN ./pkgman.py \
+	--c_compiler=/usr/bin/clang-8 \
+	--cxx_compiler=/usr/bin/clang++-8 \
+	--llvm_version=800 \
+	--verbose "--additional_paths=${BOOTSTRAP}/cmake/bin" \
+	"--repository_path=${BOOTSTRAP}" \
+	"--packages=llvm"
+
+ENTRYPOINT ["/bin/bash"]
