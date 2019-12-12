@@ -19,8 +19,9 @@ RUN apt-get update && \
 RUN pip2 install -U pip setuptools
 RUN pip2 install backports.lzma requests
 
-COPY . /cxx-common
+RUN mkdir -p /cxx-common
 WORKDIR /cxx-common
+COPY . ./
 
 RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
 
@@ -46,9 +47,9 @@ ARG BOOTSTRAP
 ARG LIBRARIES
 
 RUN ./pkgman.py \
-        --cxx_compiler="${BOOTSTRAP}/llvm/bin/clang++" \
-        --c_compiler="${BOOTSTRAP}/llvm/bin/clang" \
-        --verbose "--additional_paths=${BOOTSTRAP}/cmake/bin:${BOOTSTRAP}/llvm/bin" \
+        --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
+        --c_compiler="${LIBRARIES}/llvm/bin/clang" \
+        --verbose "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
 	"--repository_path=${LIBRARIES}" \
 	"--packages=cmake,capstone,google,xed,capnproto"
 
