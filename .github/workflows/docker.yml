@@ -17,9 +17,17 @@ jobs:
     #     login-server: '<login server>'
     #     username: ${{ secrets.REGISTRY_USERNAME }}
     #     password: ${{ secrets.REGISTRY_PASSWORD }}
-    - name: Build Docker Image
+    - name: Build LLVM 9
       run: |
-        docker build . -t trailofbits/cxx-common:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86
-    # - name: Push Docker Image
-    #   run: |
-    #     docker push trailofbits/cxx-common:latest
+        docker build . -t trailofbits/cxx-common:ubuntu-18.04-llvm-9-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
+        docker build . -t trailofbits/cxx-common:ubuntu-16.04-llvm-9-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
+    - name: Build LLVM 8
+      run: |
+        docker build . -t trailofbits/cxx-common:ubuntu-18.04-llvm-8-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
+        docker build . -t trailofbits/cxx-common:ubuntu-16.04-llvm-8-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
+    - name: Push Docker Images
+      run: |
+        docker push trailofbits/cxx-common:ubuntu-18.04-llvm900-amd64
+        docker push trailofbits/cxx-common:ubuntu-18.04-llvm800-amd64
+        docker push trailofbits/cxx-common:ubuntu-16.04-llvm900-amd64
+        docker push trailofbits/cxx-common:ubuntu-16.04-llvm800-amd64

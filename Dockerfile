@@ -29,16 +29,20 @@ RUN ./pkgman.py \
 	--c_compiler=/usr/bin/clang \
 	--cxx_compiler=/usr/bin/clang++ \
 	--repository_path="${BOOTSTRAP}" \
-	--packages=cmake
+	--packages=cmake && \
+  rm -rf build && mkdir build && \
+  rm -rf sources && mkdir sources
 
 RUN ./pkgman.py \
 	--c_compiler=/usr/bin/clang \
 	--cxx_compiler=/usr/bin/clang++ \
 	--llvm_version=${LLVM_VERSION} \
 	--verbose \
-        "--additional_paths=${BOOTSTRAP}/cmake/bin" \
+  "--additional_paths=${BOOTSTRAP}/cmake/bin" \
 	"--repository_path=${LIBRARIES}" \
-	"--packages=llvm"
+	"--packages=llvm" && \
+  rm -rf build && mkdir build && \
+  rm -rf sources && mkdir sources
 
 FROM base as cxx-common-build
 
@@ -47,10 +51,13 @@ ARG BOOTSTRAP
 ARG LIBRARIES
 
 RUN ./pkgman.py \
-        --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
-        --c_compiler="${LIBRARIES}/llvm/bin/clang" \
-        --verbose "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
+  --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
+  --c_compiler="${LIBRARIES}/llvm/bin/clang" \
+  --verbose \
+  "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
 	"--repository_path=${LIBRARIES}" \
-	"--packages=cmake,capstone,google,xed,capnproto"
+	"--packages=cmake,capstone,google,xed,capnproto" && \
+  rm -rf build && mkdir build && \
+  rm -rf sources && mkdir sources
 
 ENTRYPOINT ["/bin/bash"]
