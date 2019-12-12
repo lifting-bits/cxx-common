@@ -209,7 +209,7 @@ def common_installer_xed(properties):
     print(" x Failed to determine the kit name")
     return False
 
-  kit_folder_name += "-{}".format("x86-64")
+  kit_folder_name += "-{}".format(platform.machine().replace("_", "-"))
   kit_folder_path = os.path.realpath(os.path.join("sources", "xed", "kits", kit_folder_name))
 
   try:
