@@ -19,15 +19,38 @@ jobs:
     #     password: ${{ secrets.REGISTRY_PASSWORD }}
     - name: Build LLVM 9
       run: |
-        docker build . -t trailofbits/cxx-common:ubuntu-18.04-llvm-9-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
-        docker build . -t trailofbits/cxx-common:ubuntu-16.04-llvm-9-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
+        docker build . -t trailofbits/cxx-common:llvm90-ubuntu1804-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
+        docker build . -t trailofbits/cxx-common:llvm90-ubuntu1604-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
     - name: Build LLVM 8
       run: |
-        docker build . -t trailofbits/cxx-common:ubuntu-18.04-llvm-8-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
-        docker build . -t trailofbits/cxx-common:ubuntu-16.04-llvm-8-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
+        docker build . -t trailofbits/cxx-common:llvm80-ubuntu1804-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
+        docker build . -t trailofbits/cxx-common:llvm80-ubuntu1604-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
     - name: Push Docker Images
       run: |
-        docker push trailofbits/cxx-common:ubuntu-18.04-llvm900-amd64
-        docker push trailofbits/cxx-common:ubuntu-18.04-llvm800-amd64
-        docker push trailofbits/cxx-common:ubuntu-16.04-llvm900-amd64
-        docker push trailofbits/cxx-common:ubuntu-16.04-llvm800-amd64
+        docker push trailofbits/cxx-common:llvm90-ubuntu1804-amd64
+        docker push trailofbits/cxx-common:llvm90-ubuntu1604-amd64
+        docker push trailofbits/cxx-common:llvm80-ubuntu1804-amd64
+        docker push trailofbits/cxx-common:llvm80-ubuntu1604-amd64
+    - name: Compress Artifacts
+      run: |
+        mkdir -p artifacts
+        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm90-ubuntu1804-amd64 -c "emit-artifact.sh /out/libraries-llvm90-ubuntu1804-amd64.xz"
+        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm90-ubuntu1604-amd64 -c "emit-artifact.sh /out/libraries-llvm90-ubuntu1604-amd64.xz"
+        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm80-ubuntu1804-amd64 -c "emit-artifact.sh /out/libraries-llvm80-ubuntu1804-amd64.xz"
+        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm80-ubuntu1604-amd64 -c "emit-artifact.sh /out/libraries-llvm80-ubuntu1604-amd64.xz"
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-llvm90-ubuntu1804-amd64.xz
+        path: artifacts/libraries-llvm90-ubuntu1804-amd64.xz
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-llvm90-ubuntu1604-amd64.xz
+        path: artifacts/libraries-llvm90-ubuntu1604-amd64.xz
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-llvm80-ubuntu1804-amd64.xz
+        path: artifacts/libraries-llvm80-ubuntu1804-amd64.xz
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-llvm80-ubuntu1604-amd64.xz
+        path: artifacts/libraries-llvm80-ubuntu1604-amd64.xz
