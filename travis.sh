@@ -54,10 +54,10 @@ linux_initialize() {
   # ubuntu 14.04 needs a new libstdc++ and gcc to build llvm. provide it
   # TODO(artem): Gate this for ubuntu 14.04 if it breaks newer ubuntu
   sudo apt-get install -qqy software-properties-common
-  sudo add-apt-repository -q ppa:ubuntu-toolchain-r/test
+  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   sudo apt-get update -qqy
-  sudo apt-get install gcc-7 g++-7 -y && \
-  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+  sudo apt-get install gcc-5 g++-5 -y && \
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 60 --slave /usr/bin/g++ g++ /usr/bin/g++-5
 
   printf " > Updating setuptools...\n"
   sudo pip install --upgrade setuptools > /dev/null 2>&1
@@ -127,7 +127,7 @@ linux_build() {
   printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
+  python2 pkgman.py --c_compiler=$(which gcc-5) --cxx_compiler=$(which g++-5) --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -139,7 +139,7 @@ linux_build() {
   printf " > Launching the build script for LLVM...\n"  
 
   printf "\n===\n"
-  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python2 pkgman.py --c_compiler=$(which gcc-5) --cxx_compiler=$(which g++-5) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 

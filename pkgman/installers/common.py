@@ -548,7 +548,7 @@ def common_installer_llvm(properties):
   arch_list += "'"
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
-                                                                                           "-DCMAKE_CXX_STANDARD=11", "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
+                                                                                           "-DCMAKE_CXX_STANDARD=14", "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
