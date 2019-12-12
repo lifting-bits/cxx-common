@@ -6,51 +6,34 @@ on:
       - master
       # This is only for testing. Should be removed before a merge.
       - github-actions
-
 jobs:
   Docker:
     runs-on: ubuntu-latest
+    strategy:    
+      matrix:
+        llvm: ["800", "900"]
+        ubuntu: ["18.04", "16.04"]
     steps:
     - uses: actions/checkout@v1
     # - uses: azure/docker-login@v1
     #   with:
     #     login-server: '<login server>'
-    #     username: ${{ secrets.REGISTRY_USERNAME }}
-    #     password: ${{ secrets.REGISTRY_PASSWORD }}
-    - name: Build LLVM 9
+    #     username: ${{  secrets.REGISTRY_USERNAME  }}
+    #     password: ${{  secrets.REGISTRY_PASSWORD  }}
+    - name: Build LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
-        docker build . -t trailofbits/cxx-common:llvm90-ubuntu1804-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
-        docker build . -t trailofbits/cxx-common:llvm90-ubuntu1604-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=900
-    - name: Build LLVM 8
+        docker build . -t docker.pkg.github.com/trailofbits/cxx-common:llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg arch=x86 --build-arg LLVM_VERSION=${{ matrix.llvm }}
+    - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
-        docker build . -t trailofbits/cxx-common:llvm80-ubuntu1804-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
-        docker build . -t trailofbits/cxx-common:llvm80-ubuntu1604-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=800
-    - name: Push Docker Images
-      run: |
-        docker push trailofbits/cxx-common:llvm90-ubuntu1804-amd64
-        docker push trailofbits/cxx-common:llvm90-ubuntu1604-amd64
-        docker push trailofbits/cxx-common:llvm80-ubuntu1804-amd64
-        docker push trailofbits/cxx-common:llvm80-ubuntu1604-amd64
-    - name: Compress Artifacts
+        docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+        docker push docker.pkg.github.com/trailofbits/cxx-common:llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64
+      env:
+        GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
+    - name: Compress Artifacts LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
         mkdir -p artifacts
-        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm90-ubuntu1804-amd64 -c "emit-artifact.sh /out/libraries-llvm90-ubuntu1804-amd64.xz"
-        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm90-ubuntu1604-amd64 -c "emit-artifact.sh /out/libraries-llvm90-ubuntu1604-amd64.xz"
-        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm80-ubuntu1804-amd64 -c "emit-artifact.sh /out/libraries-llvm80-ubuntu1804-amd64.xz"
-        docker run -v "$(pwd)/artifacts:/out" --rm trailofbits/cxx-common:llvm80-ubuntu1604-amd64 -c "emit-artifact.sh /out/libraries-llvm80-ubuntu1604-amd64.xz"
+        docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common:llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64 -c "emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.xz"
     - uses: actions/upload-artifact@v1
       with:
-        name: libraries-llvm90-ubuntu1804-amd64.xz
-        path: artifacts/libraries-llvm90-ubuntu1804-amd64.xz
-    - uses: actions/upload-artifact@v1
-      with:
-        name: libraries-llvm90-ubuntu1604-amd64.xz
-        path: artifacts/libraries-llvm90-ubuntu1604-amd64.xz
-    - uses: actions/upload-artifact@v1
-      with:
-        name: libraries-llvm80-ubuntu1804-amd64.xz
-        path: artifacts/libraries-llvm80-ubuntu1804-amd64.xz
-    - uses: actions/upload-artifact@v1
-      with:
-        name: libraries-llvm80-ubuntu1604-amd64.xz
-        path: artifacts/libraries-llvm80-ubuntu1604-amd64.xz
+        name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.xz
+        path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}.xz
