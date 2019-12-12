@@ -1,0 +1,25 @@
+name: Docker Build
+
+on:
+  push:
+    branches:
+      - master
+  # This is only for testing. Should be removed before a merge.
+  pull_request:
+
+jobs:
+  Docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    # - uses: azure/docker-login@v1
+    #   with:
+    #     login-server: '<login server>'
+    #     username: ${{ secrets.REGISTRY_USERNAME }}
+    #     password: ${{ secrets.REGISTRY_PASSWORD }}
+    - name: Build Docker Image
+      run: |
+        docker build . -t trailofbits/cxx-common:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:18.04 --build-arg arch=x86
+    # - name: Push Docker Image
+    #   run: |
+    #     docker push trailofbits/cxx-common:latest
