@@ -51,6 +51,14 @@ linux_initialize() {
   # This will fail on Ubuntu 14.04
   sudo apt-get install -qqy z3 >/dev/null 2>/dev/null
 
+  # ubuntu 14.04 needs a new libstdc++ and gcc to build llvm. provide it
+  # TODO(artem): Gate this for ubuntu 14.04 if it breaks newer ubuntu
+  sudo apt-get install -qqy software-properties-common
+  sudo add-apt-repository -q ppa:ubuntu-toolchain-r/test
+  sudo apt-get update -qqy
+  sudo apt-get install gcc-7 g++-7 -y && \
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+
   printf " > Updating setuptools...\n"
   sudo pip install --upgrade setuptools > /dev/null 2>&1
   if [ $? -ne 0 ] ; then
