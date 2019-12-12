@@ -26,21 +26,22 @@ COPY . ./
 RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
 
 RUN ./pkgman.py \
-	--c_compiler=/usr/bin/clang \
-	--cxx_compiler=/usr/bin/clang++ \
-	--repository_path="${BOOTSTRAP}" \
-	--packages=cmake && \
+  --c_compiler=/usr/bin/clang \
+  --cxx_compiler=/usr/bin/clang++ \
+  --repository_path="${BOOTSTRAP}" \
+  --packages=cmake && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources
 
 RUN ./pkgman.py \
-	--c_compiler=/usr/bin/clang \
-	--cxx_compiler=/usr/bin/clang++ \
-	--llvm_version=${LLVM_VERSION} \
-	--verbose \
+  --c_compiler=/usr/bin/clang \
+  --cxx_compiler=/usr/bin/clang++ \
+  --llvm_version=${LLVM_VERSION} \
+  --verbose \
+  --exclude_libcxx \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
-	"--repository_path=${LIBRARIES}" \
-	"--packages=llvm" && \
+  "--repository_path=${LIBRARIES}" \
+  "--packages=llvm" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources
 
@@ -55,8 +56,8 @@ RUN ./pkgman.py \
   --c_compiler="${LIBRARIES}/llvm/bin/clang" \
   --verbose \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
-	"--repository_path=${LIBRARIES}" \
-	"--packages=cmake,capstone,google,xed,capnproto" && \
+  "--repository_path=${LIBRARIES}" \
+  "--packages=cmake,capstone,google,xed,capnproto" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources
 
