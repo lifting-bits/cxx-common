@@ -37,8 +37,9 @@ jobs:
     - name: Compress Artifacts LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
         mkdir -p artifacts
-        docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/cxx-common/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.xz"
+        docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/cxx-common/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz"
+        ls -l artifacts/
     - uses: actions/upload-artifact@v1
       with:
-        name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.xz
-        path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}.xz
+        name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
