@@ -1,6 +1,57 @@
 # cxx-common
 
+Build Status: ![](https://github.com/trailofbits/cxx-common/workflows/Docker%20Build/badge.svg)
+
 Build and installation scripts for C and C++ libraries that are commonly used by Trail of Bits.
+
+# Docker Builds
+
+This project includes a Dockerfile that is automatically built and pushed to DockerHub and Github Package Registry. Both registries *should* have identical packages, but some architectures (currently, AArch64) packages are updated manually and may be out of sync between registries.
+
+Quick Package Repository Links:
+* [GitHub Package Repository](https://github.com/trailofbits/cxx-common/packages)
+* [DockerHub Package Repository](https://hub.docker.com/r/trailofbits/cxx-common/tags)
+
+Binary build artifacts are also automatically published with each passing CI build on [Github Actions](https://github.com/trailofbits/cxx-common/actions).
+
+## Using the Docker Build
+
+Docker images are parameterized by LLVM version, OS, and architecture. Not all LLVM/OS/Architecture combinations packages are pre-built.
+
+Supported LLVM Versions: 4.0.1 through current
+Supported Architectures: amd64, aarch64
+Supported OSes: Ubuntu 16.04, Ubuntu 18.04; Other Linux distributions likely also work but are untested. Windows and MacOS are supported via manual (that is, non-Docker) builds.
+
+For example, to fetch the cxx-common image using LLVM 8.0 for Ubuntu 18.04 on AMD64, you'd use:
+
+```sh
+# for DockerHub Packages
+docker pull trailofbits/cxx-common:llvm800-ubuntu18.04-amd64
+```
+
+or
+```sh
+# for GitHub Package Repository packages
+docker pull docker.pkg.github.com/trailofbits/cxx-common/llvm800-ubuntu18.04-amd64:latest
+```
+
+## Building The Docker Image Yourself
+
+The Dockerfile can be built locally. It is parameterized by LLVM version, OS release, and architecture. Some examples below:
+
+Building cxx-common for LLVM 8 on Ubuntu 18.04 on AArch64 (ARM v8 64-bit):
+```sh
+docker build . -t cxx-common:llvm800-ubuntu18.04-aarch64 -f Dockerfile --build-arg UBUNTU_BASE=arm64v8/ubuntu:18.04 --build-arg arch=aarch64 --build-arg LLVM_VERSION=800
+```
+
+Building cxx-common for LLVM 4.0.1 on Ubuntu 16.04 for AMD64 (x86-64):
+```sh
+docker build . -t cxx-common:llvm401-ubuntu16.04-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=401
+```
+
+# Manual (non-Docker) Builds
+
+There may be cases where Dockerized builds are not desired or not possible. The project can be also built manually.
 
 ## macOS/Linux prerequisites
 
