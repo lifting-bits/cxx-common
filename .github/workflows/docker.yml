@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-      # This is only for testing. Should be removed before a merge.
-      - github-actions
 jobs:
   Docker:
     runs-on: ubuntu-latest
