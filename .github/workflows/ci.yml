@@ -7,7 +7,7 @@ on:
       - gh-mac
     pull_request:
 jobs:
-  Docker Linux:
+  Docker_Linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
