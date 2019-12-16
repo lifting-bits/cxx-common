@@ -1,6 +1,6 @@
 # cxx-common
 
-Build Status: ![](https://github.com/trailofbits/cxx-common/workflows/Docker%20Build/badge.svg)
+[![Build Status](https://img.shields.io/github/workflow/status/trailofbits/cxx-common/CI%20CD/master)](https://github.com/trailofbits/cxx-common/actions?query=workflow%3ACI%20CD)
 
 Build and installation scripts for C and C++ libraries that are commonly used by Trail of Bits.
 

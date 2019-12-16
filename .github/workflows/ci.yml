@@ -1,17 +1,48 @@
-name: CI
+name: CI CD
 
 on:
   push:
     branches:
       - master
       - gh-mac
-  pull_request:
-  schedule:
-    # run CI every day even if no PRs/merges occur
-    - cron:  '0 6 * * *'
-
+    pull_request:
 jobs:
-  tests:
+  Docker Linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        llvm: ["800", "900"]
+        ubuntu: ["18.04", "16.04"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
+      run: |
+        docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg arch=x86 --build-arg LLVM_VERSION=${{ matrix.llvm }}
+    - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+        docker push docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest
+        docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
+        docker tag docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest trailofbits/cxx-common:llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64
+        docker push trailofbits/cxx-common:llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64
+      env:
+        GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
+        DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
+        DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
+    - name: Compress Artifacts LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        mkdir -p artifacts
+        docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/cxx-common/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz"
+        ls -l artifacts/
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+
+        name: CI
+  macOS:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
@@ -23,3 +54,12 @@ jobs:
       run: |
         ./travis.sh osx initialize
         ./travis.sh osx build
+    - name: Compress Artifacts for macOS
+      # TODO: uncomment this before merge
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        tar -jcf libraries-catalina-macos.tar.bz2 -C /usr/local/share/trailofbits/libraries
+    - uses: actions/upload-artifact@v1
+      with:
+        name: libraries-catalina-macos.tar.bz2
+        path: libraries-catalina-macos.tar.bz2
