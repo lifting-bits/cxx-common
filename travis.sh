@@ -89,7 +89,7 @@ osx_initialize() {
   xcode-select --install 2>&1 > /dev/null
 
   printf " > Installing the required packages...\n"
-  brew upgrade coreutils xz
+  brew install coreutils
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
