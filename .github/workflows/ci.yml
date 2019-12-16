@@ -40,8 +40,6 @@ jobs:
       with:
         name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
         path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
-
-        name: CI
   macOS:
     runs-on: macos-latest
     steps:
