@@ -37,6 +37,7 @@ jobs:
         docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/cxx-common/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz"
         ls -l artifacts/
     - uses: actions/upload-artifact@v1
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
         path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
@@ -58,6 +59,8 @@ jobs:
       run: |
         tar -jcf libraries-catalina-macos.tar.bz2 -C /usr/local/share/trailofbits/libraries
     - uses: actions/upload-artifact@v1
+      # TODO: uncomment this before merge
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-catalina-macos.tar.bz2
         path: libraries-catalina-macos.tar.bz2
