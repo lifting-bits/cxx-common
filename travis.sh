@@ -21,7 +21,7 @@ main() {
   elif [[ "$operation_type" == "build" ]] ; then
     "${platform_name}_build"
     return $?
-  
+
   else
     printf "Invalid operation\n"
     return 1
@@ -44,7 +44,7 @@ linux_initialize() {
     printf " x Could not install the required dependencies\n"
     return 1
   fi
-  
+
   # This may fail.
   sudo apt-get install -qqy realpath
 
@@ -87,14 +87,13 @@ osx_initialize() {
 
   printf " > Making sure XCode is installed...\n"
   xcode-select --install 2>&1 > /dev/null
-  
+
   printf " > Installing the required packages...\n"
-  brew install python coreutils xz
+  brew upgrade coreutils xz
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
   fi
-  easy_install pip
   pip install pyliblzma
 
   printf " > The system has been successfully initialized\n"
@@ -136,7 +135,7 @@ linux_build() {
     return 1
   fi
 
-  printf " > Launching the build script for LLVM...\n"  
+  printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
   python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
@@ -230,7 +229,7 @@ osx_build() {
     return 1
   fi
 
-  printf " > Launching the build script for LLVM...\n"  
+  printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
   python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
