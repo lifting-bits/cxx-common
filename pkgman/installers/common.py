@@ -560,6 +560,8 @@ def common_installer_llvm(properties):
                         "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES",
                         "-DLIBCXX_ENABLE_FILESYSTEM=YES",
                         "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
+  if "darwin" == sys.platform:
+    cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=ON", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
 
   cmake_command += [llvm_root_folder] + get_cmake_generator()
 
@@ -573,5 +575,9 @@ def common_installer_llvm(properties):
   cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
+
+  if "darwin" == sys.platform:
+    if not run_program("Installing Xcode Toolchain", ["make", "install-xcode-toolchain"], llvm_build_path, verbose=verbose_output):
+      return False
 
   return True

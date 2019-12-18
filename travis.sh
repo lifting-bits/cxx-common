@@ -181,7 +181,7 @@ linux_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
+  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -232,7 +232,7 @@ osx_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -251,7 +251,7 @@ osx_build() {
   fi
 
   if [ ! -f "temp/bin/gcc" ] ; then
-    ln -s "${bootstrap_repository}/llvm/bin/clang" "temp/bin/gcc"
+    ln -s "${library_repository}/llvm/bin/clang" "temp/bin/gcc"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang symbolic link"
       return 1
@@ -259,7 +259,7 @@ osx_build() {
   fi
 
   if [ ! -f "temp/bin/g++" ] ; then
-    ln -s "${bootstrap_repository}/llvm/bin/clang++" "temp/bin/g++"
+    ln -s "${library_repository}/llvm/bin/clang++" "temp/bin/g++"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang++ symbolic link"
       return 1
@@ -275,7 +275,7 @@ osx_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
+  python2 pkgman.py "--cxx_compiler=${library_repository}/llvm/bin/clang++" "--c_compiler=${library_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${library_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
