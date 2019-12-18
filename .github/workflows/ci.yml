@@ -54,14 +54,12 @@ jobs:
         ./travis.sh osx initialize
         ./travis.sh osx build
     - name: Compress Artifacts for macOS
-      # TODO: uncomment this before merge
-      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         brew install pixz
         tar --use-compress-program pixz -cf libraries-catalina-macos.tar.xz -C /usr/local/share/trailofbits libraries
     - uses: actions/upload-artifact@v1
-      # TODO: uncomment this before merge
-      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-catalina-macos.tar.xz
         path: libraries-catalina-macos.tar.xz
