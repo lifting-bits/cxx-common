@@ -572,12 +572,12 @@ def common_installer_llvm(properties):
   if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
+  cmake_command = ["sudo", "cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
   if "darwin" == sys.platform:
-    if not run_program("Installing Xcode Toolchain", ["make", "install-xcode-toolchain"], llvm_build_path, verbose=verbose_output):
+    if not run_program("Installing Xcode Toolchain", ["sudo", "make", "install-xcode-toolchain"], llvm_build_path, verbose=verbose_output):
       return False
 
   return True
