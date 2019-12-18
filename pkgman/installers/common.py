@@ -560,6 +560,8 @@ def common_installer_llvm(properties):
                         "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES",
                         "-DLIBCXX_ENABLE_FILESYSTEM=YES",
                         "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
+  if "darwin" == sys.platform:
+    cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
 
   cmake_command += [llvm_root_folder] + get_cmake_generator()
 
@@ -570,7 +572,13 @@ def common_installer_llvm(properties):
   if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  cmake_command = ["cmake", "--build", "."] +  get_cmake_build_configuration(debug) + ["--target", "install"]
+  if "darwin" == sys.platform:
+    cmake_command = ["sudo", "cmake", "--build", "."]
+  else:
+    cmake_command = ["cmake", "--build", "."]
+
+  cmake_command += get_cmake_build_configuration(debug) + ["--target", "install"]
+
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 

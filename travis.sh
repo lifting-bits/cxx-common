@@ -21,7 +21,7 @@ main() {
   elif [[ "$operation_type" == "build" ]] ; then
     "${platform_name}_build"
     return $?
-  
+
   else
     printf "Invalid operation\n"
     return 1
@@ -44,7 +44,7 @@ linux_initialize() {
     printf " x Could not install the required dependencies\n"
     return 1
   fi
-  
+
   # This may fail.
   sudo apt-get install -qqy realpath
 
@@ -87,15 +87,14 @@ osx_initialize() {
 
   printf " > Making sure XCode is installed...\n"
   xcode-select --install 2>&1 > /dev/null
-  
+
   printf " > Installing the required packages...\n"
-  brew install python coreutils xz
+  brew install coreutils
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
   fi
-  easy_install pip
-  pip install pyliblzma
+  pip install pyliblzma requests
 
   printf " > The system has been successfully initialized\n"
   return 0
@@ -136,7 +135,7 @@ linux_build() {
     return 1
   fi
 
-  printf " > Launching the build script for LLVM...\n"  
+  printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
   python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
@@ -182,7 +181,7 @@ linux_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
+  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -230,10 +229,10 @@ osx_build() {
     return 1
   fi
 
-  printf " > Launching the build script for LLVM...\n"  
+  printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -252,7 +251,7 @@ osx_build() {
   fi
 
   if [ ! -f "temp/bin/gcc" ] ; then
-    ln -s "${bootstrap_repository}/llvm/bin/clang" "temp/bin/gcc"
+    ln -s "${library_repository}/llvm/bin/clang" "temp/bin/gcc"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang symbolic link"
       return 1
@@ -260,7 +259,7 @@ osx_build() {
   fi
 
   if [ ! -f "temp/bin/g++" ] ; then
-    ln -s "${bootstrap_repository}/llvm/bin/clang++" "temp/bin/g++"
+    ln -s "${library_repository}/llvm/bin/clang++" "temp/bin/g++"
     if [ $? -ne 0 ] ; then
       printf "Failed to create the clang++ symbolic link"
       return 1
@@ -276,7 +275,7 @@ osx_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
+  python2 pkgman.py "--cxx_compiler=${library_repository}/llvm/bin/clang++" "--c_compiler=${library_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${library_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 

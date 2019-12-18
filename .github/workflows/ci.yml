@@ -1,27 +1,25 @@
-name: Docker Build
+name: CI CD
 
 on:
   push:
     branches:
       - master
+      - gh-mac
+    pull_request:
 jobs:
-  Docker:
+  Docker_Linux:
     runs-on: ubuntu-latest
-    strategy:    
+    strategy:
       matrix:
         llvm: ["800", "900"]
         ubuntu: ["18.04", "16.04"]
     steps:
-    - uses: actions/checkout@v1
-    # - uses: azure/docker-login@v1
-    #   with:
-    #     login-server: '<login server>'
-    #     username: ${{  secrets.REGISTRY_USERNAME  }}
-    #     password: ${{  secrets.REGISTRY_PASSWORD  }}
+    - uses: actions/checkout@v2
     - name: Build LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
         docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg arch=x86 --build-arg LLVM_VERSION=${{ matrix.llvm }}
     - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
         docker push docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest
@@ -33,11 +31,35 @@ jobs:
         DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
         DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
     - name: Compress Artifacts LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         mkdir -p artifacts
         docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/cxx-common/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz"
         ls -l artifacts/
     - uses: actions/upload-artifact@v1
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
         path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+  macOS:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 2.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 2.7
+    - name: Run Tests
+      run: |
+        ./travis.sh osx initialize
+        ./travis.sh osx build
+    - name: Compress Artifacts for macOS
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        brew install pixz
+        tar --use-compress-program pixz -cf libraries-catalina-macos.tar.xz -C /usr/local/share/trailofbits libraries
+    - uses: actions/upload-artifact@v1
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      with:
+        name: libraries-catalina-macos.tar.xz
+        path: libraries-catalina-macos.tar.xz
