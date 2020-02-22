@@ -572,12 +572,10 @@ def common_installer_llvm(properties):
   if not run_program("Building...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
 
-  if "darwin" == sys.platform:
-    cmake_command = ["sudo", "cmake", "--build", "."]
-  else:
-    cmake_command = ["cmake", "--build", "."]
 
-  cmake_command += get_cmake_build_configuration(debug) + ["--target", "install"]
+  cmake_command = ["cmake", "--build", "."]
+  cmake_command += get_cmake_build_configuration(debug)
+  cmake_command += ["--target", "install"]
 
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
