@@ -115,7 +115,7 @@ def main():
     if sys.platform == "win32":
       supported_llvm_version_list = [501]
     else:
-      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 700, 800, 900, 901, 1000]
+      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 601, 700, 800, 900, 901, 1000]
 
     if int(llvm_version) < 501:
       if not os.path.isfile("/usr/include/xlocale.h") and not args.exclude_libcxx:        
