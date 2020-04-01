@@ -563,6 +563,8 @@ def common_installer_llvm(properties):
   if "darwin" == sys.platform:
     cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
 
+  #cmake_command += ["-DLLVM_USE_SANITIZER=Address"]
+
   cmake_command += [llvm_root_folder] + get_cmake_generator()
 
   if not run_program("Configuring...", cmake_command, llvm_build_path, verbose=verbose_output):
