@@ -94,7 +94,7 @@ osx_initialize() {
     printf " x Could not install the required dependencies\n"
     return 1
   fi
-  pip install pyliblzma requests
+  pip3 install requests
 
   printf " > The system has been successfully initialized\n"
   return 0
