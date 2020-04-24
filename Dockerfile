@@ -12,7 +12,7 @@ ARG LLVM_VERSION
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -qqy python3 python3-pip build-essential \
+    apt-get install -qqy python2.7 python3 python3-pip build-essential \
          liblzma-dev clang libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
