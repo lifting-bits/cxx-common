@@ -280,14 +280,16 @@ def run_program(description, command, working_directory, verbose=False):
     if exit_code == 0:
       return True
 
-    log_file.seek(0)
-    log_contents = log_file.read()
-    log_file.close()
-   
     print(" x The command has exited with error code " + str(exit_code) + "\n")
-    print("===\n")
-    print(log_contents)
-    print("===\n")
+
+    if not verbose:
+      log_file.seek(0)
+      log_contents = log_file.read()
+      log_file.close()
+
+      print("===\n")
+      print(log_contents)
+      print("===\n")
 
     return False
 
@@ -295,4 +297,3 @@ def run_program(description, command, working_directory, verbose=False):
     print(" ! " + str(e))
     print(" x Failed to start the command")
     return False
-  
