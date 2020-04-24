@@ -12,12 +12,12 @@ ARG LLVM_VERSION
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -qqy python3 python2.7 build-essential python-setuptools python-lzma \
-        python-pip liblzma-dev clang libssl-dev && \
+    apt-get install -qqy python2.7 python3 python3-pip build-essential \
+         liblzma-dev clang libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip2 install -U pip setuptools
-RUN pip2 install backports.lzma requests
+RUN pip3 install -U pip setuptools
+RUN pip3 install requests
 
 RUN mkdir -p /cxx-common
 WORKDIR /cxx-common

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import argparse
 import sys
@@ -48,14 +48,14 @@ def main():
 
   args = arg_parser.parse_args()
 
-  print("Build type:"),
+  print(("Build type:"), end=' ')
   if args.debug:
     print("Debug")
   else:
     print("Release")
 
-  print("Platform type:"),
-  print(get_platform_type())
+  print(("Platform type:"), end=' ')
+  print((get_platform_type()))
 
   # update the PATH environment variable; this is done here to work around a Travis issue
   if args.additional_paths is not None:
@@ -66,11 +66,11 @@ def main():
   
   # set the compilers
   if args.c_compiler is not None:
-    print("Setting the C compiler: " + args.c_compiler)
+    print(("Setting the C compiler: " + args.c_compiler))
     os.environ["CMAKE_C_COMPILER"] = args.c_compiler
 
   if args.cxx_compiler is not None:
-    print("Setting the C++ compiler: " + args.cxx_compiler)
+    print(("Setting the C++ compiler: " + args.cxx_compiler))
     os.environ["CMAKE_CXX_COMPILER"] = args.cxx_compiler
   
   # acquire the package list
@@ -78,13 +78,13 @@ def main():
 
   for package in packages_to_install:
     if package not in package_list:
-      print("Invalid package: " + package)
+      print(("Invalid package: " + package))
       return False
 
   # get the llvm version
   llvm_version = str(args.llvm_version)
   if len(llvm_version) < 3:
-    print("Invalid LLVM version: " + str(llvm_version))
+    print(("Invalid LLVM version: " + str(llvm_version)))
     return False
 
   properties = dict()
@@ -109,7 +109,7 @@ def main():
   properties["include_libcxx"] = not args.exclude_libcxx
 
   # print a summary of what we are about to do
-  print("Repository path: " + args.repository_path)
+  print(("Repository path: " + args.repository_path))
 
   if "llvm" in packages_to_install:
     if sys.platform == "win32":
@@ -128,15 +128,15 @@ def main():
         print("work then consider also trying with --exclude_libcxx")
         print("===")
 
-        raw_input("Press return to continue or CTRL-C to abort")
+        input("Press return to continue or CTRL-C to abort")
 
-    print("LLVM version: " + llvm_version),
+    print(("LLVM version: " + llvm_version), end=' ')
     if args.llvm_version not in supported_llvm_version_list:
       print("(unsupported)")
     else:
       print("(supported)")
 
-    print("Package list: " + str(packages_to_install) + "\n")
+    print(("Package list: " + str(packages_to_install) + "\n"))
 
   # build each package
   if not os.path.exists("sources"):
@@ -170,7 +170,7 @@ def main():
 
   except:
     import traceback
-    print(traceback.format_exc())
+    print((traceback.format_exc()))
     print(" x Failed to copy the CMake modules")
     return False
 
@@ -206,7 +206,7 @@ def get_module_package_list(module):
       continue
 
     if package_name in package_list:
-      print("ERROR: The following package has more than one installer: " + package_name)
+      print(("ERROR: The following package has more than one installer: " + package_name))
       sys.exit(1)
 
     package_list.append(package_name)
