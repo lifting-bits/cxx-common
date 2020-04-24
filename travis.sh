@@ -39,7 +39,7 @@ linux_initialize() {
   fi
 
   printf " > Installing the required packages...\n"
-  sudo apt-get install -qqy python2.7 build-essential python-setuptools python-lzma python-pip clang
+  sudo apt-get install -qqy python2.7 build-essential python3 python3-pip clang
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
@@ -60,7 +60,7 @@ linux_initialize() {
   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
 
   printf " > Updating setuptools...\n"
-  sudo pip install --upgrade setuptools > /dev/null 2>&1
+  sudo pip3 install --upgrade setuptools > /dev/null 2>&1
   if [ $? -ne 0 ] ; then
     printf " x Could not update setuptools\n"
     return 1
@@ -126,7 +126,7 @@ linux_build() {
   printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
+  python3 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -138,7 +138,7 @@ linux_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python3 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -181,7 +181,7 @@ linux_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,capstone,google,xed,capnproto"
+  python3 pkgman.py "--cxx_compiler=${bootstrap_repository}/llvm/bin/clang++" "--c_compiler=${bootstrap_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${bootstrap_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -220,7 +220,7 @@ osx_build() {
   printf " > Launching the build script for CMake...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
+  python3 pkgman.py --verbose "--repository_path=${bootstrap_repository}" "--packages=cmake"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -232,7 +232,7 @@ osx_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python2 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
+  python3 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -275,7 +275,7 @@ osx_build() {
   printf " > Re-launching the build script using the newly built clang...\n"
 
   printf "\n===\n"
-  python2 pkgman.py "--cxx_compiler=${library_repository}/llvm/bin/clang++" "--c_compiler=${library_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${library_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
+  python3 pkgman.py "--cxx_compiler=${library_repository}/llvm/bin/clang++" "--c_compiler=${library_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${library_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
 
