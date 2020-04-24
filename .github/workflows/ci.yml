@@ -4,15 +4,16 @@ on:
   push:
     branches:
       - master
-      - gh-mac
     pull_request:
+      branches:
+      - master
 jobs:
   Docker_Linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         llvm: ["800", "900"]
-        ubuntu: ["18.04", "16.04"]
+        ubuntu: ["20.04", "19.10", "18.04"]
     steps:
     - uses: actions/checkout@v2
     - name: Build LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}

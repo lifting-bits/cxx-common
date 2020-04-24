@@ -559,7 +559,8 @@ def common_installer_llvm(properties):
       cmake_command += ["-DLIBCXX_ENABLE_STATIC=YES", "-DLIBCXX_ENABLE_SHARED=YES",
                         "-DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES",
                         "-DLIBCXX_ENABLE_FILESYSTEM=YES",
-                        "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
+                        "-LIBCXX_INCLUDE_BENCHMARKS=NO",
+                        "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "libcxx")]
   if "darwin" == sys.platform:
     cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
 
