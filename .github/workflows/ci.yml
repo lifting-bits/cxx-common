@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - master
-      - gh-mac
     pull_request:
+      branches:
+      - master
 jobs:
   Docker_Linux:
     runs-on: ubuntu-latest
