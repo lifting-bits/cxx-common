@@ -138,7 +138,7 @@ linux_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python3 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
+  python3 pkgman.py --c_compiler=$(which clang) --cxx_compiler=$(which clang++) --exclude_libcxx --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${bootstrap_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
