@@ -561,9 +561,7 @@ def common_installer_llvm(properties):
                         "-DLIBCXX_ENABLE_FILESYSTEM=YES",
                         "-LIBCXX_INCLUDE_BENCHMARKS=NO"]
   if "darwin" == sys.platform:
-    #cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
-    #Note(ARTEM): Attempt sysroot fix for Catalina
-    cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/"]
+    cmake_command += ["-DLLVM_CREATE_XCODE_TOOLCHAIN=YES", "-DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"]
 
   #cmake_command += ["-DLLVM_USE_SANITIZER=Address"]
 
