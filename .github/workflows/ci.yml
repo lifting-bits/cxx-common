@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - master
-    pull_request:
-      branches:
-      - master
+  pull_request:
+
 jobs:
   Docker_Linux:
     runs-on: ubuntu-latest
