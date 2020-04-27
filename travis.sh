@@ -232,7 +232,7 @@ osx_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python3 pkgman.py --verbose --exclude_libcxx "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
+  python3 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 
@@ -274,13 +274,10 @@ osx_build() {
 
   printf " > Re-launching the build script using the newly built clang...\n"
 
-  # Needed for C++ headers
-  export CXXFLAGS="-I/Library/Developer/CommandLineTools/usr/include/c++/v1"
   printf "\n===\n"
   python3 pkgman.py "--cxx_compiler=${library_repository}/llvm/bin/clang++" "--c_compiler=${library_repository}/llvm/bin/clang" --verbose "--additional_paths=${bootstrap_repository}/cmake/bin:${library_repository}/llvm/bin:${custom_bin_path}" "--repository_path=${library_repository}" "--packages=cmake,llvm,capstone,google,xed,capnproto"
   local pkgman_error=$?
   printf "===\n\n"
-  unset CXXFLAGS
 
   if [ "$pkgman_error" -ne 0 ] ; then
     printf " x Build failed\n"

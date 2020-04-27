@@ -553,6 +553,7 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
   if use_libcxx:
+    cmake_command += ["-DLLVM_ENABLE_LIBCXX=ON"]
     if int(properties["llvm_version"]) < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
@@ -581,5 +582,12 @@ def common_installer_llvm(properties):
 
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
     return False
+
+  if "darwin" == sys.platform:
+    cmake_command = ["cmake", "--build", "."]
+    cmake_command += get_cmake_build_configuration(debug)
+    cmake_command += ["--target", "install-xcode-toolchain"]
+    if not run_program("Installing llvm xcode toolchain...", cmake_command, llvm_build_path, verbose=verbose_output):
+      return False
 
   return True
