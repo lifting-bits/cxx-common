@@ -553,7 +553,6 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
   if use_libcxx:
-    cmake_command += ["-DLLVM_ENABLE_LIBCXX=ON"]
     if int(properties["llvm_version"]) < 371:
       cmake_command += ["-DLIBCXX_ENABLE_SHARED=NO"]
     else:
