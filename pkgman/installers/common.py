@@ -66,7 +66,12 @@ def get_python_path(version):
       version_string = str(sys.version_info[0]) + \
            "." + str(sys.version_info[1])
 
+    # Check for the exact version executable first
     path = spawn.find_executable("python" + version_string + extension)
+    if path is not None:
+      return path
+
+    path = spawn.find_executable("python" + str(version) + extension)
     if path is not None:
       return path
 
