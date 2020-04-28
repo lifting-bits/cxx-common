@@ -60,6 +60,17 @@ def get_python_path(version):
     if sys.platform == "win32":
       extension = ".exe"
 
+    version_string = str(version)
+    if sys.version_info[0] == 3 and \
+      sys.version_info[1] > 0:
+      version_string = str(sys.version_info[0]) + \
+           "." + str(sys.version_info[1])
+
+    # Check for the exact version executable first
+    path = spawn.find_executable("python" + version_string + extension)
+    if path is not None:
+      return path
+
     path = spawn.find_executable("python" + str(version) + extension)
     if path is not None:
       return path
