@@ -1,5 +1,4 @@
 ARG LLVM_VERSION=800
-ARG arch=aarch64
 ARG BOOTSTRAP=/opt/trailofbits/bootstrap
 ARG LIBRARIES=/opt/trailofbits/libraries
 ARG UBUNTU_BASE=arm64v8/ubuntu:18.04

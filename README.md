@@ -37,16 +37,16 @@ docker pull docker.pkg.github.com/trailofbits/cxx-common/llvm800-ubuntu18.04-amd
 
 ## Building The Docker Image Yourself
 
-The Dockerfile can be built locally. It is parameterized by LLVM version, OS release, and architecture. Some examples below:
+The Dockerfile can be built locally. It is parameterized by LLVM version and OS release. Currently same-architecture builds are expected (i.e., build amd64 images on amd64 and build aarch64 images on aarch64). Some examples below:
 
 Building cxx-common for LLVM 8 on Ubuntu 18.04 on AArch64 (ARM v8 64-bit):
 ```sh
-docker build . -t cxx-common:llvm800-ubuntu18.04-aarch64 -f Dockerfile --build-arg UBUNTU_BASE=arm64v8/ubuntu:18.04 --build-arg arch=aarch64 --build-arg LLVM_VERSION=800
+docker build . -t cxx-common:llvm800-ubuntu18.04-aarch64 -f Dockerfile --build-arg UBUNTU_BASE=arm64v8/ubuntu:18.04 --build-arg LLVM_VERSION=800
 ```
 
 Building cxx-common for LLVM 4.0.1 on Ubuntu 16.04 for AMD64 (x86-64):
 ```sh
-docker build . -t cxx-common:llvm401-ubuntu16.04-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg arch=x86 --build-arg LLVM_VERSION=401
+docker build . -t cxx-common:llvm401-ubuntu16.04-amd64 -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:16.04 --build-arg LLVM_VERSION=401
 ```
 
 # Manual (non-Docker) Builds
