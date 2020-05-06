@@ -67,6 +67,14 @@ jobs:
     needs: [macOS, Docker_Linux]
     runs-on: ubuntu-latest
     steps:
+    - name: Increment Release Version
+      id: release_ver
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        curl -H "Authorization: token ${GITHUB_TOKEN}" -s https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest | jq -r '[.tag_name][0] | split(".") as $ver | $ver[-1]|tonumber as $last | $ver[:-1] as $first | $first + [$last+1] | map(tostring) |  join(".")' > version
+        echo "::set-output name=VERSION::$(<version)"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Download all artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/download-artifact@v2
@@ -79,6 +87,7 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.release_ver.outputs.VERSION }}
         files: releases/*/*.xz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
