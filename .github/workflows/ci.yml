@@ -63,3 +63,22 @@ jobs:
       with:
         name: libraries-catalina-macos.tar.xz
         path: libraries-catalina-macos.tar.xz
+  CreateRelease:
+    needs: [macOS, Docker_Linux]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all artifacts
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: actions/download-artifact@v2
+      with:
+        path: releases
+    - name: Verify Artifact Downloads
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: ls -R
+    - name: Publish Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: releases/*/*.xz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
