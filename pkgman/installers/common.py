@@ -457,23 +457,38 @@ def common_installer_capnproto(properties):
 
   return True
 
+def make_llvm_url(long_version, product):
+  int_version = int(long_version.replace(".", ""))
+  # LLVM from 9.0.1 is hosted on github
+  if int_version > 900:
+    #https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/llvm-10.0.0.src.tar.xz
+    if product == "cfe":
+      product = "clang"
+    url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-" + long_version + "/" + product + "-" + long_version + ".src.tar.xz"
+  else:
+    #https://releases.llvm.org/9.0.0/llvm-9.0.0.src.tar.xz
+    url = "https://releases.llvm.org/"  + long_version + "/" + product + "-" + long_version + ".src.tar.xz"
+  return url
+
 def common_installer_llvm(properties):
   repository_path = properties["repository_path"]
   verbose_output = properties["verbose"]
   debug = properties["debug"]
 
-  llvm_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/llvm-" + properties["long_llvm_version"] + ".src.tar.xz"
-  llvm_tarball_name = "llvm-" + str(properties["llvm_version"]) + ".tar.xz"
+  sv = str(properties["llvm_version"])
+  lv = str(properties["long_llvm_version"])
+  llvm_tarball_url = make_llvm_url(lv, product="llvm")
+  llvm_tarball_name = "llvm-" + sv + ".tar.xz"
 
-  clang_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/cfe-" + properties["long_llvm_version"] + ".src.tar.xz"
-  clang_tarball_name = "clang-" + str(properties["llvm_version"]) + ".tar.xz"
+  clang_tarball_url = make_llvm_url(lv, product="cfe")
+  clang_tarball_name = "clang-" + sv + ".tar.xz"
   use_libcxx = sys.platform != "win32" and properties["include_libcxx"]
   if use_libcxx:
-    libcxx_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxx-" + properties["long_llvm_version"] + ".src.tar.xz"
-    libcxx_tarball_name = "libcxx-" + str(properties["llvm_version"]) + ".tar.xz"
+    libcxx_tarball_url = make_llvm_url(lv, product="libcxx")
+    libcxx_tarball_name = "libcxx-" + sv + ".tar.xz"
 
-    libcxxabi_tarball_url = "http://releases.llvm.org/" + properties["long_llvm_version"] + "/libcxxabi-" + properties["long_llvm_version"] + ".src.tar.xz"
-    libcxxabi_tarball_name = "libcxxabi-" + str(properties["llvm_version"]) + ".tar.xz"
+    libcxxabi_tarball_url = make_llvm_url(lv, product="libcxxabi")
+    libcxxabi_tarball_name = "libcxxabi-" + sv + ".tar.xz"
 
   # download everything we need
   llvm_tarball_path = download_file(properties, llvm_tarball_url, "sources", llvm_tarball_name)
@@ -509,7 +524,7 @@ def common_installer_llvm(properties):
     if not extract_archive(libcxxabi_tarball_path, "sources"):
       return False
 
-  llvm_root_folder = os.path.realpath(os.path.join("sources", "llvm-" + str(properties["long_llvm_version"] + ".src")))
+  llvm_root_folder = os.path.realpath(os.path.join("sources", "llvm-" + lv + ".src"))
 
   try:
     print(" > Moving the project folders in the LLVM source tree...")
@@ -525,7 +540,12 @@ def common_installer_llvm(properties):
 
     clang_destination = os.path.join(llvm_root_folder, "tools", "clang")
     if not os.path.isdir(clang_destination):
-      shutil.move(os.path.join("sources", "cfe-" + properties["long_llvm_version"] + ".src"), clang_destination)
+      cfe_name = "cfe-"
+
+      if int(properties["llvm_version"]) > 900:
+        cfe_name = "clang-"
+
+      shutil.move(os.path.join("sources", cfe_name + properties["long_llvm_version"] + ".src"), clang_destination)
 
   except Exception as e:
     print(" ! " + str(e))
@@ -558,8 +578,11 @@ def common_installer_llvm(properties):
     arch_list += ";AArch64;Sparc"
   arch_list += "'"
 
+  cppstd = "11"
+  if int(properties["llvm_version"]) > 900:
+    cppstd = "14"
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
-                                                                                           "-DCMAKE_CXX_STANDARD=11", "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
+                                                                                           "-DCMAKE_CXX_STANDARD="+cppstd, "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
