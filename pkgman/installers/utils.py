@@ -59,6 +59,9 @@ def get_cmake_generator(use_clang=True):
     parameters = ["-G", "Visual Studio 15 2017 Win64"]
     if use_clang:
       parameters += ["-T", "LLVM-vs2014"]
+  elif sys.platform.startswith("linux"):
+    # do ninja-build on linux for faster builds
+    parameters = ["-G", "Ninja"]
 
   return parameters
 
