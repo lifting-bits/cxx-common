@@ -34,6 +34,7 @@ def main():
   arg_parser.add_argument("--c_compiler", type=str, help="The C compiler to use.")
   arg_parser.add_argument("--exclude_libcxx", help="Exclude libc++ from the build", action='store_true')
   arg_parser.add_argument("--use_no_ssl_requests", help="Use the requests library to download files, and do so without SSL verification. If behind a firewall/proxy, this can help", action='store_true')
+  arg_parser.add_argument("--use_ccache", help="Enable ccache build for LLVM", action='store_true')
 
   default_repository_path = ""
   if get_platform_type() == "windows":
@@ -94,6 +95,8 @@ def main():
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
+
+  properties["ccache"] = args.use_ccache
 
   # Make sure that file downloading will work.
   if args.use_no_ssl_requests:
