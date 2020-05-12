@@ -575,7 +575,7 @@ def common_installer_llvm(properties):
 
   arch_list = "'X86"
   if sys.platform != "win32":
-    arch_list += ";AArch64;Sparc"
+    arch_list += ";AArch64;Sparc;NVPTX;ARM"
   arch_list += "'"
 
   cppstd = "11"
@@ -585,6 +585,15 @@ def common_installer_llvm(properties):
                                                                                            "-DCMAKE_CXX_STANDARD="+cppstd, "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
+
+  if properties["ccache"]:
+    print(" i Enabling ccache on /cache ... ")
+    # some versions of LLVM use CCACHE_MAX_SIZE, others use CCACHE_SIZE
+    cmake_command.extend(
+        ["-DLLVM_CCACHE_BUILD=ON",
+         "-DLLVM_CCACHE_SIZE=10G",
+         "-DLLVM_CCACHE_DIR=/cache",
+         "-DLLVM_CCACHE_MAXSIZE=10G"])
 
   if use_libcxx:
     if int(properties["llvm_version"]) < 371:
