@@ -11,7 +11,7 @@ ARG LLVM_VERSION
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -qqy python2.7 python3 python3-pip build-essential \
+    apt-get install -qqy ninja-build python2.7 python3 python3-pip build-essential ccache \
          liblzma-dev clang libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -32,17 +32,18 @@ RUN ./pkgman.py \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources
 
-RUN ./pkgman.py \
+RUN mkdir -p /cache && ./pkgman.py \
   --c_compiler=/usr/bin/clang \
   --cxx_compiler=/usr/bin/clang++ \
   --llvm_version=${LLVM_VERSION} \
   --verbose \
+  --use_ccache \
   --exclude_libcxx \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
   "--repository_path=${LIBRARIES}" \
   "--packages=llvm" && \
   rm -rf build && mkdir build && \
-  rm -rf sources && mkdir sources
+  rm -rf sources && mkdir sources && rm -rf /cache
 
 FROM base as cxx-common-build
 
@@ -50,14 +51,15 @@ WORKDIR /cxx-common
 ARG BOOTSTRAP
 ARG LIBRARIES
 
-RUN ./pkgman.py \
+RUN mkdir -p /cache && ./pkgman.py \
   --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
   --c_compiler="${LIBRARIES}/llvm/bin/clang" \
+  --use_ccache \
   --verbose \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
   "--packages=cmake,capstone,google,xed,capnproto" && \
   rm -rf build && mkdir build && \
-  rm -rf sources && mkdir sources
+  rm -rf sources && mkdir sources && rm -rf /cache
 
 ENTRYPOINT ["/bin/bash"]
