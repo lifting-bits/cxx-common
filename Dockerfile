@@ -1,7 +1,7 @@
 ARG LLVM_VERSION=800
 ARG BOOTSTRAP=/opt/trailofbits/bootstrap
 ARG LIBRARIES=/opt/trailofbits/libraries
-ARG UBUNTU_BASE=arm64v8/ubuntu:18.04
+ARG UBUNTU_BASE=ubuntu:18.04
 
 FROM ${UBUNTU_BASE} as base
 ARG BOOTSTRAP
@@ -9,6 +9,17 @@ ARG LIBRARIES
 ARG LLVM_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -qqy --no-install-recommends liblzma5 libssl1.1 && \
+    rm -rf /var/lib/apt/lists/*
+
+# bootstrap image should be what's needed to get a more reproducible build
+# environment for cxx-common
+FROM base as bootstrap
+ARG BOOTSTRAP
+ARG LIBRARIES
+ARG LLVM_VERSION
 
 RUN apt-get update && \
     apt-get install -qqy ninja-build python2.7 python3 python3-pip build-essential ccache \
@@ -45,7 +56,9 @@ RUN mkdir -p /cache && ./pkgman.py \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources && rm -rf /cache
 
-FROM base as cxx-common-build
+# cxx-common-build should be image that contains all dependencies necessary to
+# build cxx-common
+FROM bootstrap as cxx-common-build
 
 WORKDIR /cxx-common
 ARG BOOTSTRAP
@@ -61,5 +74,11 @@ RUN mkdir -p /cache && ./pkgman.py \
   "--packages=cmake,capstone,google,xed,capnproto" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources && rm -rf /cache
+
+# dist image should be minimal artifact image
+FROM base as dist
+ARG LIBRARIES
+
+COPY --from=cxx-common-build ${LIBRARIES} ${LIBRARIES}
 
 ENTRYPOINT ["/bin/bash"]
