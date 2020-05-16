@@ -584,7 +584,7 @@ def common_installer_llvm(properties):
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
                                                                                            "-DCMAKE_CXX_STANDARD="+cppstd, "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
-                                                                                           "-DLLVM_INCLUDE_TESTS=OFF"]
+                                                                                           "-DLLVM_INCLUDE_TESTS=OFF", "-DLLVM_ENABLE_Z3_SOLVER=OFF"]
 
   if properties["ccache"]:
     print(" i Enabling ccache on /cache ... ")
