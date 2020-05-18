@@ -7,9 +7,7 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
+# distributed under the License is distributed on an "AS IS" BASIS, # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  # See the License for the specific language governing permissions and
 # limitations under the License.
 
 import time
@@ -623,6 +621,50 @@ def common_installer_llvm(properties):
   cmake_command += ["--target", "install"]
 
   if not run_program("Installing...", cmake_command, llvm_build_path, verbose=verbose_output):
+    return False
+
+  return True
+
+def common_installer_z3(properties):
+  repository_path = properties["repository_path"]
+  verbose_output = properties["verbose"]
+  debug = properties["debug"]
+
+  source_folder = download_github_source_archive(properties, "Z3Prover", "z3", branch="z3-4.8.8")
+  if source_folder is None:
+    return False
+
+  build_folder = os.path.join("build", "z3")
+  if not os.path.isdir(build_folder):
+    try:
+      os.mkdir(build_folder)
+
+    except:
+      print(" x Failed to create the build folder")
+      return False
+
+  cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
+  cmake_command += ["-DCMAKE_CXX_STANDARD=11",
+                    "-DCMAKE_CXX_EXTENSIONS=ON",
+                    "-DZ3_BUILD_LIBZ3_SHARED=False",
+                    "-DZ3_ENABLE_EXAMPLE_TARGETS=False",
+                    "-DZ3_BUILD_DOCUMENTATION=False",
+                    "-DZ3_BUILD_EXECUTABLE=True",
+                    "-DZ3_BUILD_TEST_EXECUTABLES=False",
+                    "-DZ3_USE_LIB_GMP=False",
+                    "-DZ3_ENABLE_TRACING_FOR_NON_DEBUG=False",
+                    "-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "z3"),
+                    source_folder]
+
+  if not run_program("Configuring...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + [ "--", get_parallel_build_options()]
+  if not run_program("Building...", cmake_command, build_folder, verbose=verbose_output):
+    return False
+
+  cmake_command = ["cmake", "--build", "."] + get_cmake_build_configuration(debug) + ["--target", "install"]
+  if not run_program("Installing...", cmake_command, build_folder, verbose=verbose_output):
     return False
 
   return True

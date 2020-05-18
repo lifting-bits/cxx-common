@@ -71,7 +71,7 @@ RUN mkdir -p /cache && ./pkgman.py \
   --verbose \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
-  "--packages=cmake,capstone,google,xed,capnproto" && \
+  "--packages=cmake,google,xed,z3" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources && rm -rf /cache
 
