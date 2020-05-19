@@ -115,6 +115,13 @@ def main():
   print(("Repository path: " + args.repository_path))
 
   if "llvm" in packages_to_install:
+    if "z3" not in packages_to_install:
+      properties["llvm_has_z3"] = False
+    else:
+      properties["llvm_has_z3"] = True
+      # ensure "z3" is always first to install
+      packages_to_install.remove("z3")
+      packages_to_install.insert(0, "z3")
     if sys.platform == "win32":
       supported_llvm_version_list = [501]
     else:

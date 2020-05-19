@@ -52,7 +52,7 @@ RUN mkdir -p /cache && ./pkgman.py \
   --exclude_libcxx \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
   "--repository_path=${LIBRARIES}" \
-  "--packages=llvm" && \
+  "--packages=z3,llvm" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources && rm -rf /cache
 
@@ -71,7 +71,7 @@ RUN mkdir -p /cache && ./pkgman.py \
   --verbose \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
-  "--packages=cmake,google,xed,z3" && \
+  "--packages=cmake,google,xed" && \
   rm -rf build && mkdir build && \
   rm -rf sources && mkdir sources && rm -rf /cache
 
