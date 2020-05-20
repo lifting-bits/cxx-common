@@ -558,6 +558,20 @@ def common_installer_llvm(properties):
       print(" x Failed to patch LLVM")
       return False
 
+  if int(properties["llvm_version"]) <= 1000:
+    print(" i Fixing LLVM's FindZ3.cmake")
+    fz3_location = os.path.realpath(os.path.join(llvm_root_folder, "cmake", "modules", "FindZ3.cmake"))
+    have_fz3 = os.path.exists(fz3_location)
+    if have_fz3:
+      src_file = os.path.join(PATCHES_DIR, "FindZ3.cmake")
+      # overwrite the bad FindZ3.cmake with our version
+      shutil.copyfile(src_file, fz3_location)
+
+      src_file = os.path.join(PATCHES_DIR, "testz3.cpp")
+      tz3_location = os.path.realpath(os.path.join(llvm_root_folder, "cmake", "modules", "testz3.cpp"))
+      shutil.copyfile(src_file, tz3_location)
+
+
   # create the build directory and compile the package
   llvm_build_path = os.path.realpath(os.path.join("build", "llvm-" + str(properties["llvm_version"])))
   if not os.path.isdir(llvm_build_path):
@@ -582,7 +596,12 @@ def common_installer_llvm(properties):
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + ["-DCMAKE_INSTALL_PREFIX=" + destination_path,
                                                                                            "-DCMAKE_CXX_STANDARD="+cppstd, "-DLLVM_TARGETS_TO_BUILD=" + arch_list,
                                                                                            "-DLLVM_ENABLE_RTTI=ON", "-DLLVM_INCLUDE_EXAMPLES=OFF",
-                                                                                           "-DLLVM_INCLUDE_TESTS=OFF", "-DLLVM_ENABLE_Z3_SOLVER=OFF"]
+                                                                                           "-DLLVM_INCLUDE_TESTS=OFF"]
+
+  if properties["llvm_has_z3"]:
+    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=ON", "-DLLVM_Z3_INSTALL_DIR=" + os.path.join(repository_path, "z3")]
+  else:
+    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=OFF"]
 
   if properties["ccache"]:
     print(" i Enabling ccache on /cache ... ")
@@ -644,9 +663,7 @@ def common_installer_z3(properties):
       return False
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
-  cmake_command += ["-DCMAKE_CXX_STANDARD=11",
-                    "-DCMAKE_CXX_EXTENSIONS=ON",
-                    "-DZ3_BUILD_LIBZ3_SHARED=False",
+  cmake_command += ["-DZ3_BUILD_LIBZ3_SHARED=False",
                     "-DZ3_ENABLE_EXAMPLE_TARGETS=False",
                     "-DZ3_BUILD_DOCUMENTATION=False",
                     "-DZ3_BUILD_EXECUTABLE=True",
