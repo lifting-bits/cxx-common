@@ -599,9 +599,9 @@ def common_installer_llvm(properties):
                                                                                            "-DLLVM_INCLUDE_TESTS=OFF"]
 
   if properties["llvm_has_z3"]:
-    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=ON", "-DLLVM_Z3_INSTALL_DIR=" + os.path.join(repository_path, "z3")]
+    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=ON", "-DLLVM_Z3_INSTALL_DIR=" + os.path.join(repository_path, "z3"), "-DCLANG_ANALYZER_Z3_INSTALL_DIR=" + os.path.join(repository_path, "z3")]
   else:
-    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=OFF"]
+    cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=OFF", "-DCLANG_ANALYZER_ENABLE_Z3_SOLVER=OFF"]
 
   if properties["ccache"]:
     print(" i Enabling ccache on /cache ... ")
