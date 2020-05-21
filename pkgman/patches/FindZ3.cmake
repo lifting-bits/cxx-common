@@ -35,7 +35,7 @@ find_path(Z3_INCLUDE_DIR NAMES z3.h
   PATH_SUFFIXES libz3 z3
   )
 
-find_library(Z3_LIBRARIES NAMES z3 libz3
+find_library(Z3_LIBS NAMES z3 libz3
   NO_DEFAULT_PATH
   PATHS ${LLVM_Z3_INSTALL_DIR}
   PATH_SUFFIXES lib bin
@@ -46,7 +46,7 @@ find_path(Z3_INCLUDE_DIR NAMES z3.h
   PATH_SUFFIXES libz3 z3
   )
 
-find_library(Z3_LIBRARIES NAMES z3 libz3
+find_library(Z3_LIBS NAMES z3 libz3
   PATH_SUFFIXES lib bin
   )
 
@@ -55,10 +55,10 @@ unset(Z3_VERSION_STRING)
 
 # First, try to check it dynamically, by compiling a small program that
 # prints Z3's version
-if(Z3_INCLUDE_DIR AND Z3_LIBRARIES)
+if(Z3_INCLUDE_DIR AND Z3_LIBS)
   # We do not have the Z3 binary to query for a version. Try to use
   # a small C++ program to detect it via the Z3_get_version() API call.
-  check_z3_version(${Z3_INCLUDE_DIR} ${Z3_LIBRARIES})
+  check_z3_version(${Z3_INCLUDE_DIR} ${Z3_LIBS})
 endif()
 
 # If the dynamic check fails, we might be cross compiling: if that's the case,
@@ -99,7 +99,14 @@ endif()
 # all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(Z3
-                                  REQUIRED_VARS Z3_LIBRARIES Z3_INCLUDE_DIR
+                                  REQUIRED_VARS Z3_LIBS Z3_INCLUDE_DIR
                                   VERSION_VAR Z3_VERSION_STRING)
-
-mark_as_advanced(Z3_INCLUDE_DIR Z3_LIBRARIES)
+if(Z3_FOUND AND NOT TARGET Z3)
+  add_library(Z3 UNKNOWN IMPORTED)
+  set_target_properties(Z3 PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${Z3_INCLUDE_DIR}"
+    IMPORTED_LOCATION "${Z3_LIBS}"
+  )
+  set(Z3_LIBRARIES "Z3")
+endif()
+mark_as_advanced(Z3_INCLUDE_DIR Z3_LIBS Z3_LIBRARIES)
