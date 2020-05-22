@@ -33,17 +33,21 @@ RUN mkdir -p /cxx-common
 WORKDIR /cxx-common
 COPY . ./
 
+# Try to recover cache
+# Get cache using
+#   docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp cxx-bootstrap -c "cp -r /cache/* /tmp"
+RUN mv ./cache /cache || true
+
 RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
 
 RUN ./pkgman.py \
   --c_compiler=/usr/bin/clang \
   --cxx_compiler=/usr/bin/clang++ \
+  --verbose \
   --repository_path="${BOOTSTRAP}" \
-  --packages=cmake && \
-  rm -rf build && mkdir build && \
-  rm -rf sources && mkdir sources
+  --packages=cmake
 
-RUN mkdir -p /cache && ./pkgman.py \
+RUN ./pkgman.py \
   --c_compiler=/usr/bin/clang \
   --cxx_compiler=/usr/bin/clang++ \
   --llvm_version=${LLVM_VERSION} \
@@ -52,28 +56,21 @@ RUN mkdir -p /cache && ./pkgman.py \
   --exclude_libcxx \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
   "--repository_path=${LIBRARIES}" \
-  "--packages=z3,llvm" && \
-  rm -rf build && mkdir build && \
-  rm -rf sources && mkdir sources && rm -rf /cache
+  "--packages=z3,llvm"
 
 # cxx-common-build should be image that contains all dependencies necessary to
 # build cxx-common
 FROM bootstrap as cxx-common-build
-
-WORKDIR /cxx-common
 ARG BOOTSTRAP
 ARG LIBRARIES
 
 RUN mkdir -p /cache && ./pkgman.py \
   --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
   --c_compiler="${LIBRARIES}/llvm/bin/clang" \
-  --use_ccache \
   --verbose \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
-  "--packages=cmake,google,xed" && \
-  rm -rf build && mkdir build && \
-  rm -rf sources && mkdir sources && rm -rf /cache
+  "--packages=cmake,google,xed"
 
 # dist image should be minimal artifact image
 FROM base as dist

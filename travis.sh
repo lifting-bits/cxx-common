@@ -89,7 +89,7 @@ osx_initialize() {
   xcode-select --install 2>&1 > /dev/null
 
   printf " > Installing the required packages...\n"
-  brew install coreutils
+  brew install coreutils ccache
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
@@ -232,7 +232,7 @@ osx_build() {
   printf " > Launching the build script for LLVM...\n"
 
   printf "\n===\n"
-  python3 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--repository_path=${library_repository}" "--packages=llvm"
+  python3 pkgman.py --verbose "--additional_paths=${bootstrap_repository}/cmake/bin" "--use_ccache" "--repository_path=${library_repository}" "--packages=llvm"
   local pkgman_error=$?
   printf "===\n\n"
 

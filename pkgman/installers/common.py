@@ -604,13 +604,13 @@ def common_installer_llvm(properties):
     cmake_command += ["-DLLVM_ENABLE_Z3_SOLVER=OFF", "-DCLANG_ANALYZER_ENABLE_Z3_SOLVER=OFF"]
 
   if properties["ccache"]:
-    print(" i Enabling ccache on /cache ... ")
+    print(" i Enabling ccache on /cache/ccache ... ")
     # some versions of LLVM use CCACHE_MAX_SIZE, others use CCACHE_SIZE
     cmake_command.extend(
         ["-DLLVM_CCACHE_BUILD=ON",
-         "-DLLVM_CCACHE_SIZE=10G",
-         "-DLLVM_CCACHE_DIR=/cache",
-         "-DLLVM_CCACHE_MAXSIZE=10G"])
+         "-DLLVM_CCACHE_SIZE=5G",
+         "-DLLVM_CCACHE_DIR=/cache/ccache",
+         "-DLLVM_CCACHE_MAXSIZE=5G"])
 
   if use_libcxx:
     if int(properties["llvm_version"]) < 371:
