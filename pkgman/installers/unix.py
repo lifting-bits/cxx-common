@@ -123,12 +123,12 @@ def unix_installer_cmake(properties):
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
     os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
 
-  enable_ccache = ""
+  enable_ccache = None
   if properties["ccache"]:
     set_ccache_compiler()
     enable_ccache = "--enable-ccache"
 
-  if not run_program("Running the bootstrap script...", ["./bootstrap", "--verbose", enable_ccache, "--parallel=" + str(multiprocessing.cpu_count()), "--prefix=" + destination_path], source_folder, verbose=verbose_output):
+  if not run_program("Running the bootstrap script...", ["./bootstrap", "--verbose", "--parallel=" + str(multiprocessing.cpu_count()), "--prefix=" + destination_path] + ([enable_ccache] if enable_ccache else []), source_folder, verbose=verbose_output):
     return False
 
   if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], source_folder, verbose=verbose_output):
