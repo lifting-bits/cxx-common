@@ -53,6 +53,11 @@ def unix_installer_boost(properties, default_toolset):
   if "CMAKE_CXX_COMPILER" in os.environ:
     os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
 
+  if properties["ccache"]:
+    set_ccache_compiler()
+    os.environ["CXX"] = f"ccache {os.environ['CXX']}"
+    os.environ["CC"] = f"ccache {os.environ['CC']}"
+
   configure_command = [source_folder + "/bootstrap.sh", "--prefix=" + os.path.join(repository_path, "boost"), "--with-toolset=" + toolset_name]
   if not run_program("Running the bootstrap script...", configure_command, source_folder, verbose=verbose_output):
     return False
@@ -118,7 +123,12 @@ def unix_installer_cmake(properties):
   if os.environ.get("CMAKE_CXX_COMPILER") is not None:
     os.environ["CXX"] = os.environ["CMAKE_CXX_COMPILER"]
 
-  if not run_program("Running the bootstrap script...", ["./bootstrap", "--verbose", "--parallel=" + str(multiprocessing.cpu_count()), "--prefix=" + destination_path], source_folder, verbose=verbose_output):
+  enable_ccache = ""
+  if properties["ccache"]:
+    set_ccache_compiler()
+    enable_ccache = "--enable-ccache"
+
+  if not run_program("Running the bootstrap script...", ["./bootstrap", "--verbose", enable_ccache, "--parallel=" + str(multiprocessing.cpu_count()), "--prefix=" + destination_path], source_folder, verbose=verbose_output):
     return False
 
   if not run_program("Building the source code...", ["make", "-j" + str(multiprocessing.cpu_count())], source_folder, verbose=verbose_output):

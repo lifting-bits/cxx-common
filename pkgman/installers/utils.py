@@ -32,7 +32,25 @@ def get_env_compiler_settings():
   if os.environ.get("CMAKE_C_COMPILER") is not None:
     cmake_compiler_settings.append("-DCMAKE_C_COMPILER=" + os.environ["CMAKE_C_COMPILER"])
 
+  if os.environ.get("CMAKE_CXX_COMPILER_LAUNCHER") is not None:
+    cmake_compiler_settings.append("-DCMAKE_CXX_COMPILER_LAUNCHER=" + os.environ["CMAKE_CXX_COMPILER_LAUNCHER"])
+
+  if os.environ.get("CMAKE_C_COMPILER_LAUNCHER") is not None:
+    cmake_compiler_settings.append("-DCMAKE_C_COMPILER_LAUNCHER=" + os.environ["CMAKE_C_COMPILER_LAUNCHER"])
+
   return cmake_compiler_settings
+
+
+def set_ccache_compiler():
+    """
+    Set the compiler environment variables to use ccache.
+
+    NOTE: LLVM uses its own ccache settings. Make sure these are synchronized
+    """
+    os.environ["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
+    os.environ["CMAKE_C_COMPILER_LAUNCHER"] = "ccache"
+    os.environ["CCACHE_DIR"] = "/cache/ccache"
+
 
 def get_parallel_build_options():
   processor_count = str(multiprocessing.cpu_count())

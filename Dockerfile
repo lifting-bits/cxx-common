@@ -44,6 +44,7 @@ RUN ./pkgman.py \
   --c_compiler=/usr/bin/clang \
   --cxx_compiler=/usr/bin/clang++ \
   --verbose \
+  --use_ccache \
   --repository_path="${BOOTSTRAP}" \
   --packages=cmake
 
@@ -68,6 +69,7 @@ RUN mkdir -p /cache && ./pkgman.py \
   --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
   --c_compiler="${LIBRARIES}/llvm/bin/clang" \
   --verbose \
+  --use_ccache \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
   "--packages=cmake,google,xed"

@@ -100,6 +100,9 @@ def google_installer_glog(properties):
       print(" x Failed to create the build folder")
       return False
 
+  if properties["ccache"]:
+      set_ccache_compiler()
+
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
                     "-DBUILD_TESTING=OFF",
@@ -140,6 +143,9 @@ def common_installer_capstone(properties):
     except:
       print(" x Failed to create the build folder")
       return False
+
+  if properties["ccache"]:
+      set_ccache_compiler()
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_EXE_LINKER_FLAGS=-g",
@@ -247,6 +253,8 @@ def google_installer_gflags(properties):
       print(" x Failed to create the build folder")
       return False
 
+  if properties["ccache"]:
+      set_ccache_compiler()
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_INSTALL_PREFIX=" + os.path.join(repository_path, "gflags"),
@@ -288,6 +296,9 @@ def google_installer_googletest(properties):
     except:
       print(" x Failed to create the build folder")
       return False
+
+  if properties["ccache"]:
+      set_ccache_compiler()
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator(False)
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
@@ -363,6 +374,9 @@ def google_installer_protobuf(properties):
       print(" x Failed to create the build folder")
       return False
 
+  if properties["ccache"]:
+      set_ccache_compiler()
+
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator(False)
   cmake_command += ["-DPROTOBUF_ROOT=" + source_folder,
                     "-DBUILD_SHARED_LIBS=OFF",
@@ -432,6 +446,9 @@ def common_installer_capnproto(properties):
     except:
       print(" x Failed to create the build folder")
       return False
+
+  if properties["ccache"]:
+      set_ccache_compiler()
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DCMAKE_CXX_STANDARD=11",
@@ -590,6 +607,13 @@ def common_installer_llvm(properties):
     arch_list += ";AArch64;Sparc;NVPTX;ARM"
   arch_list += "'"
 
+  if properties["ccache"]:
+    # Remove this so we don't clash with LLVM's built-in ccache config
+    if "CMAKE_CXX_COMPILER_LAUNCHER" in os.environ:
+      del(os.environ["CMAKE_CXX_COMPILER_LAUNCHER"])
+    if "CMAKE_C_COMPILER_LAUNCHER" in os.environ:
+      del(os.environ["CMAKE_C_COMPILER_LAUNCHER"])
+
   cppstd = "11"
   if int(properties["llvm_version"]) > 900:
     cppstd = "14"
@@ -661,6 +685,9 @@ def common_installer_z3(properties):
     except:
       print(" x Failed to create the build folder")
       return False
+
+  if properties["ccache"]:
+      set_ccache_compiler()
 
   cmake_command = ["cmake"] + get_env_compiler_settings() + get_cmake_build_type(debug) + get_cmake_generator()
   cmake_command += ["-DZ3_BUILD_LIBZ3_SHARED=False",
