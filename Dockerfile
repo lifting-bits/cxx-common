@@ -31,12 +31,12 @@ RUN pip3 install requests
 
 RUN mkdir -p /cxx-common
 WORKDIR /cxx-common
-COPY . ./
 
-# Try to recover cache
+# Will try to use cache at './cache'
 # Get cache using
-#   docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp cxx-bootstrap -c "cp -r /cache/* /tmp"
-RUN mv ./cache /cache || true
+#   docker build -t cxx-common-build --target cxx-common-build .
+#   docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp cxx-common-build -c "cp -r ./cache /tmp"
+COPY . ./
 
 RUN mkdir -p "${BOOTSTRAP}" && mkdir -p "${LIBRARIES}"
 

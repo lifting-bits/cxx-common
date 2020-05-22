@@ -49,7 +49,8 @@ def set_ccache_compiler():
     """
     os.environ["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
     os.environ["CMAKE_C_COMPILER_LAUNCHER"] = "ccache"
-    os.environ["CCACHE_DIR"] = "/cache/ccache"
+    # Only works if we never change directories in the script(s)
+    os.environ["CCACHE_DIR"] = f'"{os.getcwd()}/cache/ccache"'
 
 
 def get_parallel_build_options():
