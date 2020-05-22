@@ -16,7 +16,7 @@ RUN apt-get update && \
 
 # bootstrap image should be what's needed to get a more reproducible build
 # environment for cxx-common
-FROM base as bootstrap
+FROM base as cxx-common-build
 ARG BOOTSTRAP
 ARG LIBRARIES
 ARG LLVM_VERSION
@@ -58,12 +58,6 @@ RUN ./pkgman.py \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
   "--repository_path=${LIBRARIES}" \
   "--packages=z3,llvm"
-
-# cxx-common-build should be image that contains all dependencies necessary to
-# build cxx-common
-FROM bootstrap as cxx-common-build
-ARG BOOTSTRAP
-ARG LIBRARIES
 
 RUN mkdir -p /cache && ./pkgman.py \
   --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
