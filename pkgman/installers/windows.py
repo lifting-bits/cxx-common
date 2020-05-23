@@ -23,7 +23,7 @@ def windows_installer_cmake(properties):
   if debug:
     print(" ! Debug build not supported on Windows")
 
-  version = "3.10.2"
+  version = "3.17.2"
 
   version_components = version.split(".")
   short_version = "v" + version_components[0] + "." + version_components[1]
