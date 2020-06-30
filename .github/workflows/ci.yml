@@ -15,9 +15,24 @@ jobs:
         ubuntu: ["20.04", "19.10", "18.04"]
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/cache@v1
+      name: Cache build artifact store
+      with:
+        path: ./cache
+        # https://github.com/actions/cache/issues/109 "Enable always writing cache to support hermetic build systems"
+        # https://github.com/actions/cache/issues/239#issuecomment-606950711 Investigate this workaround if cache starts filling up
+        key: store-${{ runner.os }}-${{ matrix.ubuntu }}-${{ matrix.llvm }}-${{ github.sha }}
+        restore-keys: |
+          store-${{ runner.os }}-${{ matrix.ubuntu }}-${{ matrix.llvm }}-
+          store-${{ runner.os }}-${{ matrix.ubuntu }}-
+          store-${{ runner.os }}-
     - name: Build LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       run: |
         docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg LLVM_VERSION=${{ matrix.llvm }}
+    - name: Grab Cache
+      run: |
+        docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg LLVM_VERSION=${{ matrix.llvm }} --target cxx-common-build
+        docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -c "cp -r ./cache/* /tmp"
     - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
@@ -46,6 +61,15 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/cache@v1
+      name: Cache build artifact store
+      with:
+        path: ./cache
+        # https://github.com/actions/cache/issues/109 "Enable always writing cache to support hermetic build systems"
+        # https://github.com/actions/cache/issues/239#issuecomment-606950711 Investigate this workaround if cache starts filling up
+        key: store-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          store-${{ runner.os }}-
     - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
