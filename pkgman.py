@@ -49,29 +49,29 @@ def main():
 
   args = arg_parser.parse_args()
 
-  print(("Build type:"), end=' ')
+  print("Build type:", end=' ')
   if args.debug:
     print("Debug")
   else:
     print("Release")
 
-  print(("Platform type:"), end=' ')
-  print((get_platform_type()))
+  print("Platform type:", end=' ')
+  print(get_platform_type())
 
   # update the PATH environment variable; this is done here to work around a Travis issue
   if args.additional_paths is not None:
     print("Updating the PATH environment...")
 
     for path in args.additional_paths.split(","):
-      os.environ["PATH"] = path + ":" + os.environ["PATH"]
+      os.environ["PATH"] = "{}:{}".format(path, os.environ["PATH"])
   
   # set the compilers
   if args.c_compiler is not None:
-    print(("Setting the C compiler: " + args.c_compiler))
+    print("Setting the C compiler: {}".format(args.c_compiler))
     os.environ["CMAKE_C_COMPILER"] = args.c_compiler
 
   if args.cxx_compiler is not None:
-    print(("Setting the C++ compiler: " + args.cxx_compiler))
+    print("Setting the C++ compiler: {}".format(args.cxx_compiler))
     os.environ["CMAKE_CXX_COMPILER"] = args.cxx_compiler
   
   # acquire the package list
@@ -85,13 +85,13 @@ def main():
   # get the llvm version
   llvm_version = str(args.llvm_version)
   if len(llvm_version) < 3:
-    print(("Invalid LLVM version: " + str(llvm_version)))
+    print("Invalid LLVM version: {}".format(str(llvm_version)))
     return False
 
   properties = dict()
   properties["cxx_common_dir"] = os.path.dirname(os.path.abspath(__file__))
   properties["llvm_version"] = llvm_version
-  properties["long_llvm_version"] = llvm_version[0:-2] + "." + llvm_version[-2] + "." + llvm_version[-1]
+  properties["long_llvm_version"] = "{}.{}.{}".format(llvm_version[0:-2], llvm_version[-2], llvm_version[-1])
   properties["repository_path"] = args.repository_path
   properties["verbose"] = args.verbose
   properties["debug"] = args.debug
@@ -112,7 +112,7 @@ def main():
   properties["include_libcxx"] = not args.exclude_libcxx
 
   # print a summary of what we are about to do
-  print(("Repository path: " + args.repository_path))
+  print("Repository path: {}".format(args.repository_path))
 
   if "llvm" in packages_to_install:
     if "z3" not in packages_to_install:
@@ -140,13 +140,13 @@ def main():
 
         input("Press return to continue or CTRL-C to abort")
 
-    print(("LLVM version: " + llvm_version), end=' ')
+    print("LLVM version: {}".format(llvm_version), end=' ')
     if args.llvm_version not in supported_llvm_version_list:
       print("(unsupported)")
     else:
       print("(supported)")
 
-    print(("Package list: " + str(packages_to_install) + "\n"))
+    print("Package list: {}\n".format(str(packages_to_install)))
 
   # build each package
   if not os.path.exists("sources"):
@@ -180,7 +180,7 @@ def main():
 
   except:
     import traceback
-    print((traceback.format_exc()))
+    print(traceback.format_exc())
     print(" x Failed to copy the CMake modules")
     return False
 
