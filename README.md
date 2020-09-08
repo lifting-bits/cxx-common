@@ -87,8 +87,43 @@ Note that only LLVM 5.0.1 is known to work right now; when running the script on
  * Travis script dependencies (**./travis.sh linux initialize** or **./travis.sh osx initialize**)
 
 ### Build steps
- * Run **./travis.sh** *<*linux *or* osx*>* **build**
- * Or, manually:
-    * Build CMake: **./pkgman.py --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=cmake**
-    * Update the PATH: **export PATH="/opt/TrailOfBits/libraries/cmake/bin:${PATH}"**
-    * Build the remaining packages: **./pkgman.py --llvm_version=352 --c_compiler=clang-3.5 --cxx_compiler=clang++-3.5 --repository_path=/opt/TrailOfBits/libraries --packages=llvm,capstone,google,xed,capnproto**
+### Automatically
+
+```bash
+./travish.sh linux build
+```
+
+or
+
+```bash
+./travis.sh osx build
+```
+
+### Manually
+
+First, define the `TRAILOFBITS_LIBRARIES` environment variable. You can change the path used. You should create
+the directory referenced by this variable, and whatever directory you specify, it should end in `.../libraries`.
+
+```bash
+export TRAILOFBITS_LIBRARIES=/opt/trailofbits/libraries
+```
+
+Then, bootstrap CMake. This gets you a reasonably up-to-date version of the CMake build system.
+
+```bash
+./pkgman.py --c_compiler=clang --cxx_compiler=clang++ --repository_path="${TRAILOFBITS_LIBRARIES}" --packages=cmake
+```
+
+Next up, update your `PATH`:
+
+```bash
+export PATH="${TRAILOFBITS_LIBRARIES}/cmake/bin:${PATH}"
+```
+
+Now that you've got a good enough CMake, built the rest of the packages.
+
+```bash
+./pkgman.py --llvm_version=900 --c_compiler=clang --cxx_compiler=clang++ --repository_path="${TRAILOFBITS_LIBRARIES}" --packages=z3,llvm,google,xed,capnproto
+```
+
+You're all set!
