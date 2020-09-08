@@ -70,7 +70,7 @@ function main
 
   local root_build_directory=`pwd`
 
-  export BUILD_TYPE="Release"
+  export BUILD_TYPE="${build_type}"
 
   # First, build LLVM using the system compiler.
   InstallLLVM "$llvm_version" "${root_build_directory}/llvm-system" || return 1
@@ -81,7 +81,6 @@ function main
   # Kill the old LLVM build dir.
   rm -rf "${root_build_directory}/llvm-build"
 
-  export BUILD_TYPE="${build_type}"
   # Recompile LLVM, self-hosting it.
   InstallLLVM "$llvm_version" "${root_install_directory}/llvm" || return 1
   
