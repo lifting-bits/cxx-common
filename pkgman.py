@@ -19,10 +19,7 @@ def main():
   package_list = get_package_list()
 
   # parse the command line
-  if sys.platform == "win32":
-    default_llvm_version=501
-  else:
-    default_llvm_version=900
+  default_llvm_version=1000
 
   arg_parser = argparse.ArgumentParser(description="This utility is used to build common libraries for various Trail of Bits products.")
   arg_parser.add_argument("--llvm_version", type=int, help="LLVM version, specified as a single integer (i.e.: 352, 380, 390, 401, ...).", default=default_llvm_version)
@@ -122,10 +119,9 @@ def main():
       # ensure "z3" is always first to install
       packages_to_install.remove("z3")
       packages_to_install.insert(0, "z3")
-    if sys.platform == "win32":
-      supported_llvm_version_list = [501]
-    else:
-      supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600, 601, 700, 800, 900, 901, 1000]
+
+    supported_llvm_version_list = [352, 362, 371, 381, 391, 401, 500, 501, 600,
+                                   601, 700, 800, 900, 901, 1000, 1001, 1100]
 
     if int(llvm_version) < 501:
       if not os.path.isfile("/usr/include/xlocale.h") and not args.exclude_libcxx:        
