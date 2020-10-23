@@ -76,6 +76,12 @@ jobs:
         python-version: 3.8
     - name: Run Tests
       run: |
+        brew uninstall openssl@1.0.2t #workaround github homebrew bug
+        brew uninstall python@2.7.17
+        brew untap local/openssl
+        brew untap local/python2
+        brew update
+        brew upgrade
         ./travis.sh osx initialize
         ./travis.sh osx build
     - name: Compress Artifacts for macOS
