@@ -23,7 +23,7 @@ ARG LLVM_VERSION
 
 RUN apt-get update && \
     apt-get install -qqy ninja-build python2.7 python3 python3-pip build-essential ccache \
-         liblzma-dev clang libssl-dev && \
+         liblzma-dev clang libssl-dev git && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install -U pip setuptools

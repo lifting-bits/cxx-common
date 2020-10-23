@@ -575,7 +575,7 @@ def common_installer_llvm(properties):
       print(" x Failed to patch LLVM")
       return False
 
-  if int(properties["llvm_version"]) <= 1000:
+  if int(properties["llvm_version"]) <= 1100:
     print(" i Fixing LLVM's FindZ3.cmake")
     fz3_location = os.path.realpath(os.path.join(llvm_root_folder, "cmake", "modules", "FindZ3.cmake"))
     have_fz3 = os.path.exists(fz3_location)
