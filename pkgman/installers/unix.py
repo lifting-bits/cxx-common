@@ -104,7 +104,7 @@ def unix_installer_cmake(properties):
     cmake_os = "win64"
     cmake_arch = "x64"
   
-  cmake_version = "3.17.2"
+  cmake_version = "3.18.4"
   url = "https://github.com/Kitware/CMake/releases/download/v" + cmake_version + "/cmake-" + cmake_version + ".tar.gz"
   
   source_tarball_path = download_file(properties, url, "sources")
