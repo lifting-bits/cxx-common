@@ -95,6 +95,7 @@ osx_initialize() {
     return 1
   fi
   pip3 install requests wheel
+  pip2 install wheel
 
   printf " > The system has been successfully initialized\n"
   return 0
