@@ -72,12 +72,9 @@ jobs:
           store-${{ runner.os }}-
     - name: Fix Github Actions Bugs
       run: |
-        brew uninstall openssl@1.0.2t #workaround github homebrew bug
-        brew uninstall python@2.7.17
         brew untap local/openssl
         brew untap local/python2
         brew update
-        brew install openssl@1.0.2t
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
