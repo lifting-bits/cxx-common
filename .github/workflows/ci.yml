@@ -82,6 +82,7 @@ jobs:
         brew untap local/python2
         brew update
         brew upgrade
+        brew install openssl@1.1
         ./travis.sh osx initialize
         ./travis.sh osx build
     - name: Compress Artifacts for macOS
