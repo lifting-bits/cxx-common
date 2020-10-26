@@ -22,7 +22,7 @@ ARG LIBRARIES
 ARG LLVM_VERSION
 
 RUN apt-get update && \
-    apt-get install -qqy ninja-build python2.7 python3 python3-pip build-essential ccache \
+    apt-get install -qqy ninja-build python2.7 python3 python3-pip build-essential \
          liblzma-dev clang libssl-dev git && \
     rm -rf /var/lib/apt/lists/*
 
@@ -44,7 +44,6 @@ RUN ./pkgman.py \
   --c_compiler=/usr/bin/clang \
   --cxx_compiler=/usr/bin/clang++ \
   --verbose \
-  --use_ccache \
   --repository_path="${BOOTSTRAP}" \
   --packages=cmake
 
@@ -53,7 +52,6 @@ RUN ./pkgman.py \
   --cxx_compiler=/usr/bin/clang++ \
   --llvm_version=${LLVM_VERSION} \
   --verbose \
-  --use_ccache \
   --exclude_libcxx \
   "--additional_paths=${BOOTSTRAP}/cmake/bin" \
   "--repository_path=${LIBRARIES}" \
@@ -63,7 +61,6 @@ RUN mkdir -p /cache && ./pkgman.py \
   --cxx_compiler="${LIBRARIES}/llvm/bin/clang++" \
   --c_compiler="${LIBRARIES}/llvm/bin/clang" \
   --verbose \
-  --use_ccache \
   "--additional_paths=${BOOTSTRAP}/cmake/bin:${LIBRARIES}/llvm/bin" \
   "--repository_path=${LIBRARIES}" \
   "--packages=cmake,google,xed"
