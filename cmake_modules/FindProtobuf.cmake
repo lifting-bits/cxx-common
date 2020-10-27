@@ -1,7 +1,7 @@
 # Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 # file Copyright.txt or https://cmake.org/licensing for details.
 
-set(LIBRARY_ROOT "${LIBRARY_REPOSITORY_ROOT}/protobuf")
+set(LIBRARY_ROOT "${CXX_COMMON_REPOSITORY_ROOT}/protobuf")
 
 set(Protobuf_FOUND TRUE)
 set(Protobuf_INCLUDE_DIR "${LIBRARY_ROOT}/include")
