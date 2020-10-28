@@ -1,4 +1,4 @@
-set(LIBRARY_ROOT "${LIBRARY_REPOSITORY_ROOT}/googletest")
+set(LIBRARY_ROOT "${CXX_COMMON_REPOSITORY_ROOT}/googletest")
 
 set(gtest_FOUND TRUE)
 set(gtest_INCLUDE_DIRS "${LIBRARY_ROOT}/include")
