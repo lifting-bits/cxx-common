@@ -62,16 +62,16 @@ When building LLVM < 5.x on Linux you will need the 'xlocale.h' include header f
 
 ## How to build the 'libraries' repository
 
- * Dependencies can be installed using Travis build script: **./travis.sh <linux|macos> initialize**
- * If you are building recent LLVM versions, you can probably just run **./travis.sh <linux|macos> build**
- * If you are calling pkgman.py directly, always try to use the best compiler available, passing the --c_compiler and -cxx_compiler parameters.
- * When calling the **build** function of the Travis script, you can set your preferred compiler using the standard environment variables: CC and CXX.
+ * Dependencies can be installed using Travis build script: **`./travis.sh <linux|macos> initialize`**
+ * If you are building recent LLVM versions, you can probably just run **`./travis.sh <linux|macos> build`**
+ * If you are calling pkgman.py directly, always try to use the best compiler available, passing the `--c_compiler` and `--cxx_compiler` parameters.
+ * When calling the **build** function of the Travis script, you can set your preferred compiler using the standard environment variables: `CC` and `CXX`.
 
-Errors are always printed but if you'd rather see the build output in real time, the **--verbose** parameter can be passed to **pkgman.py**.
+Errors are always printed but if you'd rather see the build output in real time, the **`--verbose`** parameter can be passed to `pkgman.py`.
 
 ## Windows support
 
-Note that only LLVM 5.0.1 is known to work right now; when running the script on Windows, the --llvm_version parameter defaults to 501.
+Note that only LLVM 5.0.1 is known to work right now; when running the script on Windows, the `--llvm_version` parameter defaults to 501.
 
 ### Prerequisites
 1. Python 2.7 (x64): https://www.python.org/ftp/python/2.7.14/python-2.7.14.amd64.msi (add to PATH)
