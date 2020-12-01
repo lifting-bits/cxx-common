@@ -32,7 +32,7 @@ jobs:
     - name: Grab Cache
       run: |
         docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg LLVM_VERSION=${{ matrix.llvm }} --target cxx-common-build
-        docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -c "cp -r ./cache/* /tmp"
+        docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -c "cp -r ./cache/* /tmp || true"
     - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
