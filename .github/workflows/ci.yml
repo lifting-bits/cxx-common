@@ -13,12 +13,16 @@ jobs:
       matrix:
         llvm: ["900", "1000", "1100"]
         ubuntu: ["20.04", "18.04"]
+    defaults:
+      run:
+        shell: bash
+        working-directory: old
     steps:
     - uses: actions/checkout@v2
     - uses: actions/cache@v1
       name: Cache build artifact store
       with:
-        path: ./cache
+        path: ./old/cache
         # https://github.com/actions/cache/issues/109 "Enable always writing cache to support hermetic build systems"
         # https://github.com/actions/cache/issues/239#issuecomment-606950711 Investigate this workaround if cache starts filling up
         key: store-${{ runner.os }}-${{ matrix.ubuntu }}-${{ matrix.llvm }}-${{ github.sha }}
@@ -56,9 +60,13 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
-        path: artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        path: ./old/artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
   macOS:
     runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: old
     steps:
     - uses: actions/checkout@v2
     - uses: actions/cache@v1
@@ -92,10 +100,14 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
         name: libraries-catalina-macos.tar.xz
-        path: libraries-catalina-macos.tar.xz
+        path: ./old/libraries-catalina-macos.tar.xz
   CreateRelease:
     needs: [macOS, Docker_Linux]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: old
     steps:
     - name: Increment Release Version
       id: release_ver
@@ -109,7 +121,7 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/download-artifact@v2
       with:
-        path: releases
+        path: ./old/releases
     - name: Verify Artifact Downloads
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: ls -R
@@ -118,6 +130,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.release_ver.outputs.VERSION }}
-        files: releases/*/*.xz
+        files: ./old/releases/*/*.xz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

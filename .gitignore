@@ -1,7 +1,6 @@
-build
-repository
-sources
-temp
+/old/build
+/old/repository
+/old/sources
+/old/temp
 *.pyc
 .vscode
-
