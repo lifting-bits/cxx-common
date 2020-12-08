@@ -1,16 +1,21 @@
 name: Old CI CD
 
 on:
+  release:
+    types:
+      - published
   push:
     branches:
       - master
     paths:
       - '!.github/workflows/vcpkg_*'
       - 'old/**'
-  pull_request:
-    paths:
-      - '!.github/workflows/vcpkg_*'
-      - 'old/**'
+    tags-ignore:
+      - 'v*'
+  # pull_request:
+  #   paths:
+  #     - '!.github/workflows/vcpkg_*'
+  #     - 'old/**'
 
 jobs:
   Docker_Linux:
@@ -44,7 +49,8 @@ jobs:
         docker build . -t docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -f Dockerfile --build-arg UBUNTU_BASE=ubuntu:${{ matrix.ubuntu }} --build-arg LLVM_VERSION=${{ matrix.llvm }} --target cxx-common-build
         docker run --rm --entrypoint /bin/bash -v $(pwd)/cache:/tmp docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64-build:latest -c "cp -r ./cache/* /tmp || true"
     - name: Push Image for LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event.release
       run: |
         docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
         for i in 1 2 3; do docker push docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest && break || sleep 10; done
@@ -56,17 +62,25 @@ jobs:
         DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
         DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
     - name: Compress Artifacts LLVM ${{ matrix.llvm }} on ${{ matrix.ubuntu }}
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event.release
       run: |
         mkdir -p artifacts
         cp -v emit-artifact.sh ./artifacts/
         docker run -v "$(pwd)/artifacts:/out" --rm docker.pkg.github.com/trailofbits/cxx-common/llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64:latest -c "/out/emit-artifact.sh /out/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz"
         ls -l artifacts/
-    - uses: actions/upload-artifact@v1
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    - name: Publish Release Assets
+      if: |
+        github.event.release
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
-        path: ./old/artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./old/artifacts/libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        asset_name: libraries-llvm${{ matrix.llvm }}-ubuntu${{ matrix.ubuntu }}-amd64.tar.xz
+        asset_content_type: application/x-xz
+
   macOS:
     runs-on: macos-latest
     defaults:
@@ -93,50 +107,66 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: 3.8
-    - name: Run Tests
+    - name: Build
       run: |
         ./travis.sh osx initialize
         ./travis.sh osx build
     - name: Compress Artifacts for macOS
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event.release
       run: |
         brew install pixz
         tar --use-compress-program pixz -cf libraries-catalina-macos.tar.xz -C /usr/local/share/trailofbits libraries
-    - uses: actions/upload-artifact@v1
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    - name: Publish Release Assets
+      if: |
+        github.event.release
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: libraries-catalina-macos.tar.xz
-        path: ./old/libraries-catalina-macos.tar.xz
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./old/libraries-catalina-macos.tar.xz
+        asset_name: libraries-catalina-macos.tar.xz
+        asset_content_type: application/x-xz
 
-  CreateRelease:
-    needs: [macOS, Docker_Linux]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: old
-    steps:
-    - name: Increment Release Version
-      id: release_ver
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: |
-        curl -H "Authorization: token ${GITHUB_TOKEN}" -s https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest | jq -r '[.tag_name][0] | split(".") as $ver | $ver[-1]|tonumber as $last | $ver[:-1] as $first | $first + [$last+1] | map(tostring) |  join(".")' > version
-        echo "::set-output name=VERSION::$(<version)"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Download all artifacts
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: actions/download-artifact@v2
-      with:
-        path: ./old/releases
-    - name: Verify Artifact Downloads
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: ls -R
-    - name: Publish Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.release_ver.outputs.VERSION }}
-        files: ./old/releases/*/*.xz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # CreateRelease:
+  #   needs: [macOS, Docker_Linux]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   # - name: Increment Release Version
+  #   #   id: release_ver
+  #   #   if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  #   #   run: |
+  #   #     curl -H "Authorization: token ${GITHUB_TOKEN}" -s https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest | jq -r '[.tag_name][0] | split(".") as $ver | $ver[-1]|tonumber as $last | $ver[:-1] as $first | $first + [$last+1] | map(tostring) |  join(".")' > version
+  #   #     echo "::set-output name=VERSION::$(<version)"
+  #   #   env:
+  #   #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #   - name: Download all artifacts
+  #     # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  #     if: github.event.release
+  #     uses: actions/download-artifact@v2
+  #     with:
+  #       path: releases
+  #   - name: Verify Artifact Downloads
+  #     # if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  #     if: github.event.release
+  #     run: ls -R
+  #   - name: Publish Release Assets
+  #     if: |
+  #       github.event.release
+  #     uses: actions/upload-release-asset@v1.0.2
+  #     env:
+  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     with:
+  #       upload_url: ${{ github.event.release.upload_url }}
+  #       asset_path: ${{ env.ARTIFACT_NAME }}
+  #       asset_name: ${{ env.ARTIFACT_NAME }}
+  #       asset_content_type: application/x-xz
+  #   # - name: Publish Release
+  #   #   if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  #   #   uses: softprops/action-gh-release@v1
+  #   #   with:
+  #   #     tag_name: ${{ steps.release_ver.outputs.VERSION }}
+  #   #     files: releases/*/*.xz
+  #   #   env:
+  #   #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
