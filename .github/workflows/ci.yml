@@ -5,6 +5,7 @@ on:
     branches:
       - master
     paths:
+      - '!.github/workflows/vcpkg_*'
       - 'old/**'
   pull_request:
     paths:

@@ -9,6 +9,7 @@ on:
     #   - master
     paths:
       - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
 
 jobs:
   build:
@@ -30,8 +31,8 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          registry: docker.pkg.github.com
+          username: publisher
           password: ${{ secrets.GITHUB_PACKAGE_REGISTRY_TOKEN }}
 
       - name: Build and push
@@ -42,5 +43,5 @@ jobs:
           target: caching
           context: ./docker
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+          tags: docker.pkg.github.com/${{ github.repository_owner }}/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
           build-args: DISTRO_VERSION=${{ matrix.container.version }}
