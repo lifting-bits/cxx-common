@@ -24,24 +24,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Build and Push
+        working-directory: docker
+        run: |
+          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${version}" -t "${DOCKER_TAG}" .
+          docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+          for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
+          docker logout docker.pkg.github.com
+        env:
+          DOCKER_TAG: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+          GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1.0.3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v1.0.3
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: docker.pkg.github.com
-          username: publisher
-          password: ${{ secrets.GITHUB_PACKAGE_REGISTRY_TOKEN }}
+      # - name: Login to GitHub Container Registry
+      #   uses: docker/login-action@v1
+      #   with:
+      #     registry: docker.pkg.github.com
+      #     username: ${{ github.repository_owner }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2.2.1
-        with:
-          file: ./docker/Dockerfile.${{ matrix.container.distro }}.vcpkg
-          target: caching
-          context: ./docker
-          push: true
-          tags: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
-          build-args: DISTRO_VERSION=${{ matrix.container.version }}
+      # - name: Build and push
+      #   id: docker_build
+      #   uses: docker/build-push-action@v2.2.1
+      #   with:
+      #     file: ./docker/Dockerfile.${{ matrix.container.distro }}.vcpkg
+      #     target: caching
+      #     context: ./docker
+      #     push: true
+      #     tags: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+      #     build-args: DISTRO_VERSION=${{ matrix.container.version }}
