@@ -1,10 +1,14 @@
-name: CI CD
+name: Old CI CD
 
 on:
   push:
     branches:
       - master
+    paths:
+      - 'old/**'
   pull_request:
+    paths:
+      - 'old/**'
 
 jobs:
   Docker_Linux:
@@ -101,6 +105,7 @@ jobs:
       with:
         name: libraries-catalina-macos.tar.xz
         path: ./old/libraries-catalina-macos.tar.xz
+
   CreateRelease:
     needs: [macOS, Docker_Linux]
     runs-on: ubuntu-latest

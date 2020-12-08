@@ -1,0 +1,32 @@
+{
+  "name": "remill",
+  "version-string": "2020-12-05",
+  "description": "Library for lifting of x86, amd64, and aarch64 machine code to LLVM bitcode",
+  "homepage": "https://github.com/lifting-bits/remill",
+  "default-features": [
+    "llvm-10"
+  ],
+  "features": {
+    "llvm-9": {
+      "description": "Use LLVM 9",
+      "dependencies": [
+          "llvm-9"
+      ]
+    },
+    "llvm-10": {
+      "description": "Use LLVM 10",
+      "dependencies": [
+          "llvm-10"
+      ]
+    },
+    "llvm-11": {
+      "description": "Use LLVM 11",
+      "dependencies": [
+          "llvm-11"
+      ]
+    }
+  },
+  "dependencies": [
+    "xed"
+  ]
+}

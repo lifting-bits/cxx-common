@@ -1,0 +1,239 @@
+name: MacOS Continuous Integration
+
+env:
+  # "Source" is set in the setup-dotnet action
+  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
+  TRIPLET: 'x64-osx-rel'
+
+on:
+  release:
+    types:
+      - published
+  push:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+      - '**.md'
+      - 'old/**'
+    tags-ignore:
+      - 'v*'
+    branches:
+      - "*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two latest released stable Xcode versions
+        os:
+          - { runner: 'macos-10.15', xcode: '12.1.0' }
+          - { runner: 'macos-11.0', xcode: '12.2.0' }
+        llvm: [
+          'llvm-9',
+          'llvm-10',
+          'llvm-11'
+          ]
+
+    runs-on: ${{ matrix.os.runner }}
+
+    env:
+      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64.tar.xz
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: '3.1.x' # SDK Version to use.
+          # Sets as "Source"
+          source-url: https://nuget.pkg.github.com/ekilmer/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: maxim-lobanov/setup-xcode@v1.2.1
+        # 'latest-stable' has some bugs... Keep explicit for now
+        with:
+          xcode-version: ${{ matrix.os.xcode }}
+
+      - name: Read vcpkg Info
+        id: vcpkg_info
+        shell: bash
+        run: |
+          { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
+          echo ::set-output name=repo_url::${vcpkg_repo_url}
+          echo ::set-output name=commit::${vcpkg_commit}
+
+        # Needed for caching the actual vcpkg executable
+      - name: 'Restore from cache and install vcpkg'
+        uses: lukka/run-vcpkg@v6.0
+        with:
+          vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
+          vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
+          appendedCacheKey: '${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}'
+          setupOnly: true
+
+        # Omit this step if using manifests
+      - name: 'vcpkg install dependencies'
+        shell: 'bash'
+        run: |
+          # Setup NuGet authentication
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            "${{ secrets.GITHUB_TOKEN }}"
+
+          ${VCPKG_ROOT}/vcpkg install \
+            --triplet "${TRIPLET}" \
+            --clean-after-build \
+            --debug \
+            ${{ matrix.llvm }} \
+            @overlays.txt \
+            @dependencies.txt
+
+      - name: 'Export Packages'
+        if: contains(github.event.head_commit.message, 'debug artifacts') || github.event.release
+        shell: 'bash'
+        run: |
+          brew install pixz
+          ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
+
+      - uses: actions/upload-artifact@v2.2.1
+        if: "contains(github.event.head_commit.message, 'debug artifacts')"
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}
+
+      # Only for LLVM-10 right now...
+      - name: 'Build Packaged Lifting Tools'
+        if: ${{ matrix.llvm == 'llvm-10' }}
+        shell: 'bash'
+        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
+        run: |
+          ${VCPKG_ROOT}/vcpkg install \
+            --triplet "${TRIPLET}" \
+            --debug \
+            @overlays.txt \
+            remill
+
+      - name: 'Install build dependencies'
+        shell: 'bash'
+        run: |
+          brew install ninja ccache
+
+      - name: Prepare ccache
+        id: ccache_prep
+        shell: bash
+        run: |
+          echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
+          echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo ::set-output name=timestamp::$(python -c 'from datetime import datetime; print(datetime.utcnow().strftime("%Y-%m-%d-%H:%M:%S"))')
+
+      - name: ccache cache files
+        uses: actions/cache@v2.1.3
+        with:
+          path: ${{  github.workspace }}/.ccache
+          key: ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-
+
+      - name: ccache Initial stats
+        shell: bash
+        run: |
+          ccache --show-stats
+
+      - name: 'Test rellic build'
+        shell: 'bash'
+        run: |
+          cd rellic
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+
+      - name: 'Test remill build'
+        shell: 'bash'
+        run: |
+          cd remill
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          cmake --build . --target test_dependencies
+          env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
+
+      # Only for LLVM-10 right now...
+      - name: 'Anvill build - vcpkg remill'
+        if: ${{ matrix.llvm == 'llvm-10' }}
+        shell: 'bash'
+        run: |
+          cd anvill
+          mkdir build-vcpkg && cd build-vcpkg
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+
+      - name: 'Anvill build - custom remill'
+        shell: 'bash'
+        run: |
+          cd anvill
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+
+      - name: 'Test mcsema build'
+        if: ${{ matrix.llvm != 'llvm-11' }}
+        shell: 'bash'
+        run: |
+          cd mcsema
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
+            -Danvill_DIR="$(pwd)/../../anvill/build/install/lib/cmake/anvill" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+
+      - name: Publish Release Assets
+        if: |
+          github.event.release
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ env.ARTIFACT_NAME }}
+          asset_name: ${{ env.ARTIFACT_NAME }}
+          asset_content_type: application/x-xz
+
+      - name: Cache cleanup and reporting
+        shell: 'bash'
+        run: |
+          rm -rf ${VCPKG_ROOT}/{buildtrees,installed,packages}
+          ccache --show-stats

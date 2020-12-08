@@ -1,0 +1,60 @@
+ARG DISTRO_VERSION=20.04
+
+ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
+FROM ${BUILD_BASE} as base
+ARG DISTRO_VERSION
+
+# All build dependencies for vcpkg packages
+# First row is build dependencies for lifting tools
+# Second row is toolchain and build programs
+# Third row is vcpkg library build-time dependencies
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
+    apt-add-repository ppa:git-core/ppa --yes && \
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null && \
+    \
+    if [ ${DISTRO_VERSION} = "20.04" ] ; then \
+      apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' ; \
+    elif [ ${DISTRO_VERSION} = "18.04" ] ; then \
+      apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' ; \
+    fi && \
+    \
+    apt-get update && \
+    apt-get dist-upgrade --yes --no-install-recommends \
+      g++-multilib libtinfo-dev libzstd-dev python3.8 python3-pip python3-setuptools python-setuptools \
+      clang-10 lld-10 cmake ninja-build \
+      curl unzip tar git zip python python3 pkg-config && \
+    apt-get clean --yes && \
+    rm -rf /var/lib/apt/lists/* && \
+    \
+    curl -s  https://api.github.com/repos/ccache/ccache/releases/latest | grep tarball_url | cut -d '"' -f 4 | wget -i- -O - | tar -xz && \
+    cd ccache-ccache-* && \
+    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --target install && \
+    cd .. && rm -rf ccache-ccache-*
+
+ENV CC=/usr/bin/clang-10 \
+    CXX=/usr/bin/clang++-10
+
+
+# Much heavier installation due to mono dependency for NuGet
+FROM base as caching
+ARG DISTRO_VERSION
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
+    \
+    if [ ${DISTRO_VERSION} = "20.04" ] ; then \
+      echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
+    elif [ ${DISTRO_VERSION} = "18.04" ] ; then \
+      echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
+    fi && \
+    \
+    apt-get update && \
+    apt-get install --yes mono-devel && \
+    apt-get clean --yes && \
+    rm -rf /var/lib/apt/lists/*
+
+# Only build base by default
+FROM base

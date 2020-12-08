@@ -1,0 +1,16 @@
+[submodule "mcsema"]
+	path = mcsema
+	url = https://github.com/ekilmer/mcsema.git
+	branch = vcpkg
+[submodule "remill"]
+	path = remill
+	url = https://github.com/ekilmer/remill.git
+	branch = vcpkg
+[submodule "anvill"]
+	path = anvill
+	url = https://github.com/ekilmer/anvill.git
+	branch = vcpkg
+[submodule "rellic"]
+	path = rellic
+	url = https://github.com/ekilmer/rellic.git
+	branch = vcpkg
