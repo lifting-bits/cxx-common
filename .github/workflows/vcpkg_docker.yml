@@ -27,7 +27,7 @@ jobs:
       - name: Build and Push
         working-directory: docker
         run: |
-          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${version}" -t "${DOCKER_TAG}" .
+          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "${DOCKER_TAG}" .
           docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
           for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
           docker logout docker.pkg.github.com
