@@ -43,5 +43,5 @@ jobs:
           target: caching
           context: ./docker
           push: true
-          tags: docker.pkg.github.com/${{ github.repository_owner }}/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+          tags: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
           build-args: DISTRO_VERSION=${{ matrix.container.version }}
