@@ -5,8 +5,8 @@ on:
     types:
       - published
   push:
-    # branches:
-    #   - master
+    branches:
+      - '*'
     paths:
       - '!.github/workflows/vcpkg_*'
       - '.github/workflows/ci.yml'
