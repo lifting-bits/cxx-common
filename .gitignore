@@ -1,7 +1,8 @@
-build
-repository
-sources
-temp
+/vcpkg
+
+/old/build
+/old/repository
+/old/sources
+/old/temp
 *.pyc
 .vscode
-

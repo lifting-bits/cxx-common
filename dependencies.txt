@@ -1,0 +1,6 @@
+xed
+z3
+glog
+gtest
+gflags
+protobuf
