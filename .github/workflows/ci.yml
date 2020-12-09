@@ -9,6 +9,7 @@ on:
     #   - master
     paths:
       - '!.github/workflows/vcpkg_*'
+      - '.github/workflows/ci.yml'
       - 'old/**'
     tags-ignore:
       - 'v*'
