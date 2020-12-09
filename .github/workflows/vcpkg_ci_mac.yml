@@ -13,6 +13,9 @@ on:
     paths-ignore:
       - 'docker/**'
       - '.github/workflows/vcpkg_docker.yml'
+      - '.github/workflows/vcpkg_ci_linux.yml'
+      - '.github/workflows/vcpkg_release.yml'
+      - '.github/workflows/ci.yml'
       - '**.md'
       - 'old/**'
     tags-ignore:
