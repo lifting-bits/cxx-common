@@ -4,7 +4,7 @@
 	branch = vcpkg
 [submodule "remill"]
 	path = remill
-	url = https://github.com/ekilmer/remill.git
+	url = https://github.com/lifting-bits/remill.git
 	branch = vcpkg
 [submodule "anvill"]
 	path = anvill
