@@ -1,15 +1,15 @@
 [submodule "mcsema"]
 	path = mcsema
 	url = https://github.com/lifting-bits/mcsema.git
-	branch = vcpkg
+	branch = master
 [submodule "remill"]
 	path = remill
 	url = https://github.com/lifting-bits/remill.git
-	branch = vcpkg
+	branch = master
 [submodule "anvill"]
 	path = anvill
 	url = https://github.com/lifting-bits/anvill.git
-	branch = vcpkg
+	branch = master
 [submodule "rellic"]
 	path = rellic
 	url = https://github.com/ekilmer/rellic.git
