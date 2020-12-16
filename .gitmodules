@@ -13,4 +13,4 @@
 [submodule "rellic"]
 	path = rellic
 	url = https://github.com/lifting-bits/rellic.git
-	branch = vcpkg
+	branch = master
