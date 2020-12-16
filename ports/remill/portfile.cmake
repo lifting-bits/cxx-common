@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO ekilmer/remill
-    REF abebf20a29456ed2f5229277b575ca4d6859b0b6
-    SHA512 d23a653bbbb2a9d0a36eb8425651154df0bd3339f8286d9e7449b128b6ae045c0aaefc864613910c2cda548d395b1f3c926bbb9b7b58e46657aa6572fa8179f3
+    REPO lifting-bits/remill
+    REF 37741957d6d43bcaafac8e316a875a1b7ce4838f
+    SHA512 325aa81c0b9ace4e2b908f8afffcec6f9f998b98363a5ff09d7f5ea4b57dc9b6d2e2d0c860baac3072bb4c01b147e2dee6d2375b6b251f02362c02f327b328d9
     HEAD_REF vcpkg
 )
 
