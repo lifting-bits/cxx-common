@@ -17,3 +17,4 @@
 [submodule "vmill"]
 	path = vmill
 	url = https://github.com/lifting-bits/vmill
+	branch = master
