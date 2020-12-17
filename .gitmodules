@@ -14,3 +14,6 @@
 	path = rellic
 	url = https://github.com/lifting-bits/rellic.git
 	branch = master
+[submodule "vmill"]
+	path = vmill
+	url = https://github.com/lifting-bits/vmill

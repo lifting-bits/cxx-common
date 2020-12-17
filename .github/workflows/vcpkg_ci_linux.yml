@@ -217,6 +217,19 @@ jobs:
           cmake --build .
           cmake --build . --target install
 
+      - name: 'Vmill build'
+        shell: 'bash'
+        run: |
+          cd vmill
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
+           ..
+          cmake --build .
+          cmake --build . --target install
+
       - name: Publish Release Assets
         if: |
           github.event.release
