@@ -219,6 +219,8 @@ jobs:
 
       - name: 'Install vmill extra dependencies'
         shell: 'bash'
+        # vmill doesn't work with llvm-11 yet
+        if: ${{ matrix.llvm != 'llvm-11' }}
         run: |
           ${VCPKG_ROOT}/vcpkg install \
             --triplet "${TRIPLET}" \
@@ -229,6 +231,8 @@ jobs:
 
       - name: 'Vmill build'
         shell: 'bash'
+        # vmill doesn't work with llvm-11 yet
+        if: ${{ matrix.llvm != 'llvm-11' }}
         run: |
           cd vmill
           mkdir build && cd build
