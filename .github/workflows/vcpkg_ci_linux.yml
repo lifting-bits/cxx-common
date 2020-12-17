@@ -217,6 +217,16 @@ jobs:
           cmake --build .
           cmake --build . --target install
 
+      - name: 'Install vmill extra dependencies'
+        shell: 'bash'
+        run: |
+          ${VCPKG_ROOT}/vcpkg install \
+            --triplet "${TRIPLET}" \
+            --clean-after-build \
+            --debug \
+            @overlays.txt \
+            zlib
+
       - name: 'Vmill build'
         shell: 'bash'
         run: |
