@@ -100,11 +100,6 @@ jobs:
         key: store-${{ runner.os }}-${{ github.sha }}
         restore-keys: |
           store-${{ runner.os }}-
-    - name: Fix Github Actions Bugs
-      run: |
-        brew untap local/openssl
-        brew untap local/python2
-        brew update
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
