@@ -9,6 +9,15 @@ on:
   release:
     types:
       - published
+  pull_request:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+      - '.github/workflows/vcpkg_ci_mac.yml'
+      - '.github/workflows/vcpkg_release.yml'
+      - '.github/workflows/ci.yml'
+      - '**.md'
+      - 'old/**'
   push:
     paths-ignore:
       - 'docker/**'
@@ -21,7 +30,7 @@ on:
     tags-ignore:
       - 'v*'
     branches:
-      - '*'
+      - 'master'
 
 jobs:
   build:

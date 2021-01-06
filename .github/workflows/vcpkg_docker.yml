@@ -5,8 +5,8 @@ on:
     # Once every Wednesday at 00:00
     - cron: '0 0 * * 3'
   push:
-    # branches:
-    #   - master
+    branches:
+      - master
     paths:
       - 'docker/**'
       - '.github/workflows/vcpkg_docker.yml'
