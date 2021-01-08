@@ -5,18 +5,19 @@ on:
     types:
       - published
   push:
-    branches:
-      - '*'
     paths:
       - '!.github/workflows/vcpkg_*'
       - '.github/workflows/ci.yml'
       - 'old/**'
     tags-ignore:
       - 'v*'
-  # pull_request:
-  #   paths:
-  #     - '!.github/workflows/vcpkg_*'
-  #     - 'old/**'
+    branches:
+      - 'master'
+  pull_request:
+    paths:
+      - '!.github/workflows/vcpkg_*'
+      - '.github/workflows/ci.yml'
+      - 'old/**'
 
 jobs:
   Docker_Linux:
@@ -99,11 +100,6 @@ jobs:
         key: store-${{ runner.os }}-${{ github.sha }}
         restore-keys: |
           store-${{ runner.os }}-
-    - name: Fix Github Actions Bugs
-      run: |
-        brew untap local/openssl
-        brew untap local/python2
-        brew update
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:

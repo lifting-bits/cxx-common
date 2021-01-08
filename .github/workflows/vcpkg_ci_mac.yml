@@ -9,6 +9,15 @@ on:
   release:
     types:
       - published
+  pull_request:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+      - '.github/workflows/vcpkg_ci_linux.yml'
+      - '.github/workflows/vcpkg_release.yml'
+      - '.github/workflows/ci.yml'
+      - '**.md'
+      - 'old/**'
   push:
     paths-ignore:
       - 'docker/**'
@@ -21,7 +30,7 @@ on:
     tags-ignore:
       - 'v*'
     branches:
-      - "*"
+      - 'master'
 
 jobs:
   build:
@@ -71,7 +80,7 @@ jobs:
 
         # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v6.0
+        uses: lukka/run-vcpkg@v6.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
@@ -102,7 +111,7 @@ jobs:
           brew install pixz
           ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.2.1
+      - uses: actions/upload-artifact@v2.2.2
         if: "contains(github.event.head_commit.message, 'debug artifacts')"
         with:
           name: ${{ env.ARTIFACT_NAME }}
