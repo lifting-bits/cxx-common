@@ -26,11 +26,21 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     enable-z3 LLVM_ENABLE_Z3_SOLVER
 )
 
-# Linking with gold is better
+# Linking with gold is better than /bin/ld
+# Linking with lld is better than gold
+# MacOS just has LLD, so only set explicit linker on Linux
 if(VCPKG_TARGET_IS_LINUX)
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_USE_LINKER=gold
-    )
+    # Use lld when building with clang
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      list(APPEND FEATURE_OPTIONS
+          -DLLVM_USE_LINKER=lld
+      )
+    # Use GNU Gold when building with not clang (likely, g++)
+    else()
+      list(APPEND FEATURE_OPTIONS
+          -DLLVM_USE_LINKER=gold
+      )
+    endif()
 endif()
 
 # By default assertions are enabled for Debug configuration only.
