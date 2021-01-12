@@ -1,0 +1,3 @@
+Source: llvm-vcpkg-common
+Version: 1
+Description: a common script for building all LLVM versions in vcpkg

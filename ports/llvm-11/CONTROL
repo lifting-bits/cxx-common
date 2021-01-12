@@ -3,6 +3,7 @@ Version: 11.0.0
 Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
+Build-Depends: llvm-vcpkg-common
 Default-Features: tools, clang, enable-rtti, enable-z3, disable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
 
 Feature: tools
