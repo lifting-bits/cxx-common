@@ -12,13 +12,13 @@ vcpkg_from_github(
         0001-add-msvc-options.patch
         0002-fix-install-paths.patch
         0003-fix-openmp-debug.patch
-        0003-fix-vs2019-v16.6.patch
         0004-fix-dr-1734.patch
         0005-fix-tools-path.patch
-        0005-remove-FindZ3.cmake.patch
-        0006-fix-FindZ3.cmake.patch
         0006-workaround-msvc-bug.patch
+        0007-remove-FindZ3.cmake.patch
+        0008-fix-FindZ3.cmake.patch
         0009-clang-sys-include-dir-path.patch
+        0020-fix-vs2019-v16.6.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")

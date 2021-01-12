@@ -1,0 +1,13 @@
+diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
+index a9a273529b46..ac4f46144a35 100644
+--- a/clang/lib/Driver/Driver.cpp
++++ b/clang/lib/Driver/Driver.cpp
+@@ -98,7 +98,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
+   // exact same string ("a/../b/" and "b/" get different hashes, for example).
+ 
+   // Dir is bin/ or lib/, depending on where BinaryPath is.
+-  std::string Dir = llvm::sys::path::parent_path(BinaryPath);
++  std::string Dir = std::string(llvm::sys::path::parent_path(llvm::sys::path::parent_path(BinaryPath)));
+ 
+   SmallString<128> P(Dir);
+   if (CustomResourceDir != "") {

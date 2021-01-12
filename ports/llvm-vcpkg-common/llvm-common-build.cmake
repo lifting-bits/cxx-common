@@ -252,9 +252,7 @@ vcpkg_configure_cmake(
         # Disable build LLVM-C.dll (Windows only) due to doesn't compile with CMAKE_DEBUG_POSTFIX
         -DLLVM_BUILD_LLVM_C_DYLIB=OFF
         # Path for binary subdirectory (defaults to 'bin')
-        # FIXME: Doesn't work because clang can't find C headers like stddef.h
-        # Tries to do "vcpkg/installed/x64-linux-rel/tools/lib/clang/11.0.0/include"
-        # -DLLVM_TOOLS_INSTALL_DIR=tools/${PORT}
+        -DLLVM_TOOLS_INSTALL_DIR=tools/${PORT}
     OPTIONS_DEBUG
         -DCMAKE_DEBUG_POSTFIX=d
 )
