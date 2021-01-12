@@ -1,4 +1,4 @@
-set(LLVM_VERSION "9.0.0")
+set(LLVM_VERSION "9.0.1")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 2ad844f2d85d6734178a4ad746975a03ea9cda1454f7ea436f0ef8cc3199edec15130e322b4372b28a3178a8033af72d0a907662706cbd282ef57359235225a5
+    SHA512 fa88beeaae94b6d0cd9b5ba38658d0ffed8004035d7d8a4f95c3d31a709b88b581ae9bd7761333c8e5375c44b8f6be01768b5a3be901163159d7e6c43b71da59
     HEAD_REF master
     PATCHES
         0001-add-msvc-options.patch
