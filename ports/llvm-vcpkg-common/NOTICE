@@ -1,0 +1,5 @@
+This directory was initially copied from ports/llvm/portfile.cmake
+https://github.com/microsoft/vcpkg/tree/e95a7a8dc04da4bddb24a6fc122fe9dc3ccc7151
+
+This directory will also contain new fixes and modifications to the build steps
+in order to work with all supported LLVM versions

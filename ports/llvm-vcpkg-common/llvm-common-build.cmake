@@ -1,3 +1,12 @@
+#####################
+##### ATTENTION #####
+#####################
+# If you modify this file, please update the CONTROL file to indicate a new
+# version, otherwise vcpkg won't know that anything important changed
+#####################
+#####################
+#####################
+
 # set(LLVM_VERSION "11.0.0")
 
 # vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
