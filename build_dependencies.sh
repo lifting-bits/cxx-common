@@ -14,6 +14,41 @@ function die {
   exit 1
 }
 
+function die_if_not_installed {
+  if ! type $1 &>/dev/null; then
+    die "Please install the package providing [${1}] for your OS"
+  fi
+}
+
+for pkg in git zip unzip cmake ninja python3 curl tar pkg-config
+do
+  die_if_not_installed ${pkg}
+done
+
+# check if CC is not set or a null string
+if [[ ! -v "CC" || -z "${CC}" ]]; then
+  if type clang &>/dev/null; then
+    export CC="${CC:-$(which clang)}"
+    msg "Using default clang as CC=${CC}"
+  else
+    msg "Using default C comiler"
+  fi
+else
+  msg "Using custom CC=${CC}"
+fi
+
+# check if CXX is not set or a null string
+if [[ ! -v "CXX" || -z "${CXX}" ]]; then
+  if type clang++ &>/dev/null; then
+    export CXX="${CXX:-$(which clang++)}"
+    msg "Using default clang++ as CXX=${CC}"
+  else
+    msg "Using default C++ compiler"
+  fi
+else
+  msg "Using custom CXX=${CXX}"
+fi
+
 msg "Building dependencies from source"
 
 triplet=""
@@ -73,11 +108,6 @@ msg " " "$@"
   cd "${repo_dir}"
   (
     set -x
-
-    if type clang >/dev/null 2>&1; then
-        export CC="${CC:-$(which clang)}"
-        export CXX="${CXX:-$(which clang++)}"
-    fi
 
     # TODO: Better way to remove all unspecified packages that we're about to
     # install for specified triplet? Need this because different LLVM versions

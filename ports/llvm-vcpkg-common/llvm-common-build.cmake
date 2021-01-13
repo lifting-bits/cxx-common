@@ -40,11 +40,29 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     enable-z3 LLVM_ENABLE_Z3_SOLVER
 )
 
-# Linking with gold is better
+# Linking with gold is better than /bin/ld
+# Linking with lld is better than gold
+# MacOS just has LLD, so only set explicit linker on Linux
 if(VCPKG_TARGET_IS_LINUX)
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_USE_LINKER=gold
-    )
+    # NOTE(ekilmer): This should probably be a vcpkg utility function
+    file(READ "${CURRENT_BUILDTREES_DIR}/../detect_compiler/config-${TARGET_TRIPLET}-rel-err.log" _compiler_info)
+    string(REGEX MATCH "#COMPILER_CXX_ID#([^\r\n]*)" _ ${_compiler_info})
+    set(VCPKG_DETECTED_CXX_COMPILER_ID ${CMAKE_MATCH_1})
+    # ENDNOTE
+
+    message(STATUS "Detected Compiler ID: '${VCPKG_DETECTED_CXX_COMPILER_ID}'")
+    if (VCPKG_DETECTED_CXX_COMPILER_ID MATCHES "Clang")
+        list(APPEND FEATURE_OPTIONS
+          -DLLVM_USE_LINKER=lld
+        )
+        message(STATUS "Using lld for linking")
+    # Use GNU Gold when building with not clang (likely, g++)
+    else()
+      list(APPEND FEATURE_OPTIONS
+          -DLLVM_USE_LINKER=gold
+      )
+      message(STATUS "Using (default) gold linker for linking")
+    endif()
 endif()
 
 if(VCPKG_TARGET_IS_WINDOWS)
