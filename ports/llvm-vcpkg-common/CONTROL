@@ -1,4 +1,4 @@
 Source: llvm-vcpkg-common
 Version: 1
-Port-Version: 3
+Port-Version: 1
 Description: A common build script for building all LLVM versions with vcpkg
