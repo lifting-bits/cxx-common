@@ -12,7 +12,7 @@ index a9a273529b46..ac4f46144a35 100644
    SmallString<128> P(Dir);
    if (CustomResourceDir != "") {
 diff --git a/clang/lib/Driver/ToolChains/Darwin.cpp b/clang/lib/Driver/ToolChains/Darwin.cpp
-index 5de7d7132df8.. 86940adada71 100644
+index 5de7d7132df8..fc731a219c96 100644
 --- a/clang/lib/Driver/ToolChains/Darwin.cpp
 +++ b/clang/lib/Driver/ToolChains/Darwin.cpp
 @@ -1925,10 +1925,11 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
@@ -25,6 +25,6 @@ index 5de7d7132df8.. 86940adada71 100644
        llvm::SmallString<128> P = llvm::StringRef(getDriver().getInstalledDir());
        // Note that P can be relative, so we have to '..' and not parent_path.
 +      llvm::sys::path::append(P, "..");
-       llvm::sys::path::append(P, "..", "..", "include", "c++", "v1");
+       llvm::sys::path::append(P, "..", "include", "c++", "v1");
        addSystemInclude(DriverArgs, CC1Args, P);
      }
