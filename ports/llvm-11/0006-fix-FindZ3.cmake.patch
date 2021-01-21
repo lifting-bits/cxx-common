@@ -3,7 +3,7 @@ new file mode 100644
 index 000000000..32f6f4160
 --- /dev/null
 +++ b/llvm/cmake/modules/FindZ3.cmake
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,115 @@
 +INCLUDE(CheckCXXSourceRuns)
 +
 +# Function to check Z3's version
@@ -114,6 +114,9 @@ index 000000000..32f6f4160
 +    IMPORTED_LOCATION "${Z3_LIBS}"
 +  )
 +  set(Z3_LIBRARIES "Z3")
++  set(THREADS_PREFER_PTHREAD_FLAG ON)
++  find_package(Threads REQUIRED)
++  target_link_libraries(Z3 PRIVATE Threads::Threads)
 +endif()
 +mark_as_advanced(Z3_INCLUDE_DIR Z3_LIBS Z3_LIBRARIES)
 diff --git a/llvm/cmake/modules/testz3.cpp b/llvm/cmake/modules/testz3.cpp
