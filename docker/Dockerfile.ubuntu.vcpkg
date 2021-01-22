@@ -29,6 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get clean --yes && \
     rm -rf /var/lib/apt/lists/* && \
     \
+    cd ~ && mkdir build && cd build && \
     curl -s  https://api.github.com/repos/ccache/ccache/releases/latest | grep tarball_url | cut -d '"' -f 4 | wget -i- -O - | tar -xz && \
     cd ccache-ccache-* && \
     cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && \
