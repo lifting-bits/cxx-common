@@ -21,11 +21,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        host: [
+          'ubuntu-20.04',
+          ['self-hosted', 'Linux', 'ARM64']
+          ]
         container:
           - { distro: 'ubuntu', version: '18.04' }
           - { distro: 'ubuntu', version: '20.04' }
 
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.host }}
 
     steps:
       - uses: actions/checkout@v2
