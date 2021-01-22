@@ -49,6 +49,10 @@ else
   msg "Using custom CXX=${CXX}"
 fi
 
+if [[ "$(uname -m)" = "aarch64" ]]; then
+  export VCPKG_FORCE_SYSTEM_BINARIES=1
+fi
+
 msg "Building dependencies from source"
 
 triplet=""
@@ -58,16 +62,31 @@ extra_cmake_usage_args=()
 if [ $# -ge 1 ] && [ "$1" = "--release" ]; then
   msg "Only building release versions"
 
-  uname="$(uname -s)"
-  if [ "${uname}" = "Linux" ]; then
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  # default to linux on amd64
+  triplet_os="linux"
+  triplet_arch="x64"
+
+  if [[ "${arch}" = "aarch64" ]]; then
+    triplet_arch="arm64"
+  elif [[ "${arch}" = "x86_64" ]]; then
+    triplet_arch="x64"
+  else
+    die "Unknown system architecture: ${arch}"
+  fi
+
+  if [[ "${os}" = "Linux" ]]; then
     msg "Detected Linux OS"
-    triplet="x64-linux-rel"
-  elif [ "${uname}" = "Darwin" ]; then
+    triplet_os="linux"
+  elif [[ "${os}" = "Darwin" ]]; then
     msg "Detected Darwin OS"
-    triplet="x64-osx-rel"
+    triplet_os="osx"
   else
     die "Could not detect OS. OS detection required for release-only builds."
   fi
+
+  triplet="${triplet_arch}-${triplet_os}-rel"
   extra_vcpkg_args+=("--triplet=${triplet}")
   extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
   shift
@@ -125,3 +144,9 @@ msg "Set the following in your CMake configure command to use these dependencies
 msg "  -DVCPKG_ROOT=\"${vcpkg_dir}\" ${extra_cmake_usage_args[*]}"
 msg "or"
 msg "  -DCMAKE_TOOLCHAIN_FILE=\"${vcpkg_dir}/scripts/buildsystems/vcpkg.cmake\" ${extra_cmake_usage_args[*]}"
+
+if [[ "$(uname -m)" = "aarch64" ]]; then
+  echo ""
+  msg "On aarch64, you also need to set:"
+  msg "  export VCPKG_FORCE_SYSTEM_BINARIES=1"
+fi
