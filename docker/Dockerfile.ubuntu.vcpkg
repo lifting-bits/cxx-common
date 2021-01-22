@@ -18,7 +18,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get dist-upgrade --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
       libtinfo-dev libzstd-dev python3.8 python3-pip python3-setuptools python-setuptools \
-      clang-10 lld-10 ninja-build \
+      build-essential g++ gcc clang-10 lld-10 ninja-build \
       curl unzip tar git zip python python3 pkg-config && \
     apt-get clean --yes && \
     rm -rf /var/lib/apt/lists/* && \
