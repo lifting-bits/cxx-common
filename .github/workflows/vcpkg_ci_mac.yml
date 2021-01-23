@@ -84,7 +84,7 @@ jobs:
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}'
+          appendedCacheKey: '${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-clear'
           setupOnly: true
 
         # Omit this step if using manifests
