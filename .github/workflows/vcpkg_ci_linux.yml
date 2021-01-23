@@ -75,7 +75,7 @@ jobs:
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}'
+          appendedCacheKey: '${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
           setupOnly: true
 
         # Omit this step if using manifests
