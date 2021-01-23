@@ -21,9 +21,18 @@ message(STATUS "Copying mbuild to parallel source directory...")
 file(COPY ${MBUILD_SOURCE_PATH}/ DESTINATION ${SOURCE_PATH}/../mbuild)
 message(STATUS "Copied mbuild")
 
+set(EXTRA_CXX_FLAGS "")
+set(EXTRA_C_FLAGS "")
+
 set(LINK_TYPE shared)
 if (VCPKG_LIBRARY_LINKAGE STREQUAL static)
   set(LINK_TYPE static)
+  # Windows static library and dynamic crt linkage
+  if (NOT VCPKG_CMAKE_SYSTEM_NAME AND VCPKG_CRT_LINKAGE STREQUAL dynamic)
+    # TODO Debug link /MDd
+    set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} /MD")
+    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /MD")
+  endif()
 endif()
 
 set(RELEASE_TRIPLET ${TARGET_TRIPLET}-rel)
@@ -39,7 +48,7 @@ if (NOT VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL release)
   file(REMOVE_RECURSE ${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET})
   file(MAKE_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET})
   vcpkg_execute_required_process(
-    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR} --build-dir "${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_C_FLAGS_RELEASE}" "--extra-cxxflags=${VCPKG_CXX_FLAGS_RELEASE}" "--extra-linkflags=${VCPKG_LINKER_FLAGS_RELEASE}" --verbose=9
+    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR} --build-dir "${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS}" "--extra-cxxflags=${VCPKG_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}" "--extra-linkflags=${VCPKG_LINKER_FLAGS_RELEASE}" --verbose=9
     WORKING_DIRECTORY ${SOURCE_PATH}
     LOGNAME python-${TARGET_TRIPLET}-build-install-rel
   )
