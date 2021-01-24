@@ -85,11 +85,11 @@ jobs:
       - name: 'vcpkg install dependencies'
         run: |
           # Setup NuGet authentication
-          & "$(& "${VCPKG_ROOT}/vcpkg" fetch nuget | select -last 1)" setapikey `
+          & "$(& "${env:VCPKG_ROOT}/vcpkg" fetch nuget | select -last 1)" setapikey `
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
             "${{ secrets.GITHUB_TOKEN }}"
 
-          & "${VCPKG_ROOT}/vcpkg" install `
+          & "${env:VCPKG_ROOT}/vcpkg" install `
             --triplet "${TRIPLET}" `
             --clean-after-build `
             --debug `
@@ -133,7 +133,7 @@ jobs:
           mkdir build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DVCPKG_ROOT="${VCPKG_ROOT}" `
+            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-rel `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
             ..
@@ -141,7 +141,7 @@ jobs:
           cmake --build . --config Release --target install
 
           # TODO Testing on Windows
-          # ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+          # ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${env:VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
 
       - name: 'Test remill build'
         run: |
@@ -149,7 +149,7 @@ jobs:
           mkdir build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DVCPKG_ROOT="${VCPKG_ROOT}" `
+            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
             -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-rel `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
             ..
@@ -171,7 +171,7 @@ jobs:
       #     mkdir build; cd build
       #     cmake -T ClangCl \
       #       -DCMAKE_VERBOSE_MAKEFILE=ON \
-      #       -DVCPKG_ROOT="${VCPKG_ROOT}" \
+      #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" \
       #       -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
       #       ..
       #     cmake --build . --config Release -j
@@ -224,5 +224,5 @@ jobs:
       # - name: Cache cleanup and reporting
       #   shell: 'bash'
       #   run: |
-      #     rm -rf ${VCPKG_ROOT}/{buildtrees,installed,packages}
+      #     rm -rf ${env:VCPKG_ROOT}/{buildtrees,installed,packages}
       #     ccache --show-stats
