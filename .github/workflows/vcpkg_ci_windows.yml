@@ -90,7 +90,7 @@ jobs:
             "${{ secrets.GITHUB_TOKEN }}"
 
           & "${env:VCPKG_ROOT}/vcpkg" install `
-            --triplet "${TRIPLET}" `
+            --triplet "${env:TRIPLET}" `
             --clean-after-build `
             --debug `
             ${{ matrix.llvm }} `
@@ -134,14 +134,14 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-rel `
+            -DVCPKG_TARGET_TRIPLET="${env:TRIPLET}" `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
             ..
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
           # TODO Testing on Windows
-          # ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${env:VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+          # ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${env:VCPKG_ROOT}/installed/${env:TRIPLET}/bin/clang" || true
 
       - name: 'Test remill build'
         run: |
@@ -150,7 +150,7 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md-rel `
+            -DVCPKG_TARGET_TRIPLET="${env:TRIPLET}" `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
             ..
           cmake --build . --config Release -j
