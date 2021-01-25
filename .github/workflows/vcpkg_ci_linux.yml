@@ -3,7 +3,6 @@ name: Linux Continuous Integration
 env:
   # "Source" is set in the vcpkg install step
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
-  TRIPLET: 'x64-linux-rel'
 
 on:
   release:
@@ -38,8 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         host:
-          - { name: 'ubuntu-20.04', arch: 'amd64' }
-          - { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64' }
+          - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel' }
+          - { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel' }
         image:
           - { name: 'ubuntu', tag: '18.04' }
           - { name: 'ubuntu', tag: '20.04' }
@@ -78,13 +77,17 @@ jobs:
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
+          appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
           setupOnly: true
 
         # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
         shell: 'bash'
         run: |
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
+
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
@@ -98,7 +101,7 @@ jobs:
             "${{ secrets.GITHUB_TOKEN }}"
 
           ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
+            --triplet "${{ matrix.host.triplet }}" \
             --clean-after-build \
             --debug \
             ${{ matrix.llvm }} \
@@ -126,7 +129,7 @@ jobs:
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
         run: |
           ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
+            --triplet "${{ matrix.host.triplet }}" \
             --debug \
             @overlays.txt \
             remill
@@ -167,7 +170,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/bin/clang" || true
 
       - name: 'Test remill build'
         shell: 'bash'
