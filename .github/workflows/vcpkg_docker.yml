@@ -21,15 +21,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host: [
-          'ubuntu-20.04',
-          ['self-hosted', 'Linux', 'ARM64']
-          ]
+        # arch is to tag docker images for uniqueness
+        host:
+          - { name: 'ubuntu-20.04', arch: '' }
+          - { name: ['self-hosted', 'Linux', 'ARM64'], arch: '_arm64' }
         container:
           - { distro: 'ubuntu', version: '18.04' }
           - { distro: 'ubuntu', version: '20.04' }
 
-    runs-on: ${{ matrix.host }}
+    runs-on: ${{ matrix.host.name }}
 
     steps:
       - uses: actions/checkout@v2
@@ -54,7 +54,7 @@ jobs:
             for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" && break || sleep 10; done
           fi
         env:
-          DOCKER_TAG: trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+          DOCKER_TAG: trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
           DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
           DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
