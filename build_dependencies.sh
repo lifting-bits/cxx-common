@@ -53,6 +53,9 @@ if [[ "$(uname -m)" = "aarch64" ]]; then
   export VCPKG_FORCE_SYSTEM_BINARIES=1
 fi
 
+# Disable metrics upload to Microsoft
+export VCPKG_DISABLE_METRICS=1
+
 msg "Building dependencies from source"
 
 triplet=""

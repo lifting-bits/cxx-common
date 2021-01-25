@@ -10,17 +10,26 @@ on:
     paths:
       - 'docker/**'
       - '.github/workflows/vcpkg_docker.yml'
+  pull_request:
+    paths:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
+        host: [
+          'ubuntu-20.04',
+          ['self-hosted', 'Linux', 'ARM64']
+          ]
         container:
           - { distro: 'ubuntu', version: '18.04' }
           - { distro: 'ubuntu', version: '20.04' }
 
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.host }}
 
     steps:
       - uses: actions/checkout@v2
@@ -31,15 +40,19 @@ jobs:
           docker pull ubuntu:${{ matrix.container.version}}
 
           docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "docker.pkg.github.com/${DOCKER_TAG}" .
-          docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
           # Docker image with NuGet support goes to github packages for CI use only
-          for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+            docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+            for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
+          fi
 
-          docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
           # NOTE: Docker Hub only allows one slash in tag
           docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" .
           # Smaller Docker image without NuGet support goes to Docker Hub for users
-          for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" && break || sleep 10; done
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+            docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
+            for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" && break || sleep 10; done
+          fi
         env:
           DOCKER_TAG: trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
