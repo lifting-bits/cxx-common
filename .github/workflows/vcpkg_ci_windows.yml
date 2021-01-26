@@ -89,19 +89,16 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
             "${{ secrets.GITHUB_TOKEN }}"
 
-          try {
-            & "${env:VCPKG_ROOT}/vcpkg" install `
+          & "${env:VCPKG_ROOT}/vcpkg" install `
             --triplet "${env:TRIPLET}" `
             --clean-after-build `
             --debug `
             ${{ matrix.llvm }} `
             "@overlays.txt" `
-            "@dependencies.txt"
-          }
-          catch {
-            Get-Content -tail 1000 D:\a\cxx-common\cxx-common\vcpkg\buildtrees\${{ matrix.llvm }}\config-x64-windows-static-md-rel-rel-out.log
-            Get-Content -tail 1000 D:\a\cxx-common\cxx-common\vcpkg\buildtrees\${{ matrix.llvm }}\install-x64-windows-static-md-rel-rel-out.log
-          }
+            "@dependencies.txt" || Get-Content -Tail 1000 D:\a\cxx-common\cxx-common\vcpkg\buildtrees\${{ matrix.llvm }}\config-x64-windows-static-md-rel-rel-out.log || Get-Content -Tail 1000 D:\a\cxx-common\cxx-common\vcpkg\buildtrees\${{ matrix.llvm }}\install-x64-windows-static-md-rel-rel-out.log
+
+          echo "Please get here"
+          exit 1
 
       # - name: 'Export Packages'
       #   if: contains(github.event.head_commit.message, 'debug artifacts') || github.event.release
