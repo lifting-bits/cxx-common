@@ -91,7 +91,6 @@ jobs:
 
           & "${env:VCPKG_ROOT}/vcpkg" install `
             --triplet "${env:TRIPLET}" `
-            --clean-after-build `
             --debug `
             ${{ matrix.llvm }} `
             "@overlays.txt" `
