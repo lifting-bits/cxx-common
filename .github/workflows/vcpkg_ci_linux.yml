@@ -96,6 +96,13 @@ jobs:
             -username "${{ github.repository_owner }}" \
             -password "${{ secrets.GITHUB_TOKEN }}" || true
 
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources update \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            -storepasswordincleartext \
+            -name "Source" \
+            -username "${{ github.repository_owner }}" \
+            -password "${{ secrets.GITHUB_TOKEN }}"
+
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
