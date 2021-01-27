@@ -266,7 +266,7 @@ vcpkg_configure_cmake(
         "-DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}"
         -DPACKAGE_VERSION=${LLVM_VERSION}
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
-        -DLLVM_PARALLEL_LINK_JOBS=1
+        -DLLVM_PARALLEL_LINK_JOBS=2
         # Disable build LLVM-C.dll (Windows only) due to doesn't compile with CMAKE_DEBUG_POSTFIX
         -DLLVM_BUILD_LLVM_C_DYLIB=OFF
         # Path for binary subdirectory (defaults to 'bin')
