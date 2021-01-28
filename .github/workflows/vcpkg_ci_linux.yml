@@ -135,6 +135,10 @@ jobs:
         shell: 'bash'
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
         run: |
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
+
           ${VCPKG_ROOT}/vcpkg install \
             --triplet "${{ matrix.host.triplet }}" \
             --debug \
@@ -177,7 +181,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/bin/clang" || true
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/${{ matrix.llvm }}/clang" || true
 
       - name: 'Test remill build'
         shell: 'bash'
