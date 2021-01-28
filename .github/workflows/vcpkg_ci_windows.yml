@@ -94,7 +94,7 @@ jobs:
             --debug `
             ${{ matrix.llvm }} `
             "@overlays.txt" `
-            "@dependencies.txt" || Get-Content -Tail 1000 D:\a\cxx-common\cxx-common\vcpkg\buildtrees\${{ matrix.llvm }}\install-x64-windows-static-md-rel-rel-out.log
+            "@dependencies.txt"
 
           echo "Please get here"
           exit 1
