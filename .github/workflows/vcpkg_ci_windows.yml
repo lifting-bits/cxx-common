@@ -46,7 +46,7 @@ jobs:
           'llvm-11'
           ]
 
-    runs-on: 'windows-2019'
+    runs-on: ['self-hosted', 'Windows', 'X64']
 
     env:
       ARTIFACT_NAME: vcpkg_windows-2019_${{ matrix.llvm }}_amd64.tar.xz
