@@ -72,6 +72,9 @@ jobs:
           echo ::set-output name=repo_url::${vcpkg_repo_url}
           echo ::set-output name=commit::${vcpkg_commit}
 
+        # Setup Visual Studio Dev Environment (x64, default version/toolset)
+      - uses: ilammy/msvc-dev-cmd@v1.5.0
+
         # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
         uses: lukka/run-vcpkg@v6.1
