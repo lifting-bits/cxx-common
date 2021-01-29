@@ -132,7 +132,7 @@ jobs:
       - name: 'Test rellic build'
         run: |
           cd rellic
-          mkdir build; cd build
+          mkdir -p build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
@@ -148,7 +148,7 @@ jobs:
       - name: 'Test remill build'
         run: |
           cd remill
-          mkdir build; cd build
+          mkdir -p build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
@@ -170,7 +170,7 @@ jobs:
       #   shell: 'bash'
       #   run: |
       #     cd anvill
-      #     mkdir build; cd build
+      #     mkdir -p build; cd build
       #     cmake -T ClangCl \
       #       -DCMAKE_VERBOSE_MAKEFILE=ON \
       #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" \
@@ -184,7 +184,7 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
-          mkdir build; cd build
+          mkdir -p build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
@@ -201,7 +201,7 @@ jobs:
         shell: 'bash'
         run: |
           cd mcsema
-          mkdir build; cd build
+          mkdir -p build; cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
