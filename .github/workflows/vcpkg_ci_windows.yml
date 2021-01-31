@@ -132,7 +132,8 @@ jobs:
       - name: 'Test rellic build'
         run: |
           cd rellic
-          New-Item -Path .\build -ItemType Directory -Force
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
@@ -149,7 +150,8 @@ jobs:
       - name: 'Test remill build'
         run: |
           cd remill
-          New-Item -Path .\build -ItemType Directory -Force
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
@@ -172,7 +174,8 @@ jobs:
       #   shell: 'bash'
       #   run: |
       #     cd anvill
-      #     New-Item -Path .\build -ItemType Directory -Force
+      #     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+      #     New-Item -Path .\build -ItemType Directory
       #     cd build
       #     cmake -T ClangCl \
       #       -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -186,7 +189,8 @@ jobs:
       - name: 'Anvill build - custom remill'
         run: |
           cd anvill
-          New-Item -Path .\build -ItemType Directory -Force
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
@@ -203,7 +207,8 @@ jobs:
         if: ${{ matrix.llvm != 'llvm-11' }}
         run: |
           cd mcsema
-          New-Item -Path .\build -ItemType Directory -Force
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
