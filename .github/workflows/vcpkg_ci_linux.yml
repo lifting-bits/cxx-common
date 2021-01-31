@@ -173,7 +173,7 @@ jobs:
         shell: 'bash'
         run: |
           cd rellic
-          mkdir build && cd build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -187,7 +187,7 @@ jobs:
         shell: 'bash'
         run: |
           cd remill
-          mkdir build && cd build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -204,7 +204,7 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
-          mkdir build-vcpkg && cd build-vcpkg
+          mkdir -p build-vcpkg && cd build-vcpkg
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -218,7 +218,7 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
-          mkdir build && cd build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
@@ -233,7 +233,7 @@ jobs:
         shell: 'bash'
         run: |
           cd mcsema
-          mkdir build && cd build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
