@@ -75,13 +75,18 @@ jobs:
         # Setup Visual Studio Dev Environment (x64, default version/toolset)
       - uses: ilammy/msvc-dev-cmd@v1.5.0
 
-        # Needed for caching the actual vcpkg executable
+      - name: Clear prior vcpkg directory
+      run: |
+        rm -ErrorAction SilentlyContinue -r -fo -Path "${{ github.workspace }}/vcpkg"
+
+      # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
         uses: lukka/run-vcpkg@v6.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
           appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-clear'
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
 
         # Omit this step if using manifests
@@ -194,8 +199,8 @@ jobs:
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
-            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             ..
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
@@ -212,9 +217,9 @@ jobs:
           cd build
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" `
-            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" `
-            -Danvill_DIR="$(pwd)/../../anvill/build/install/lib/cmake/anvill" `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
+            -Danvill_DIR="$(pwd)\..\..\anvill\build\install\lib\cmake\anvill" `
             ..
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
