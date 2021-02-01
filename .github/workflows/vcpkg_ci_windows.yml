@@ -77,7 +77,11 @@ jobs:
 
       - name: Clear prior vcpkg directory
         run: |
-          rm -ErrorAction SilentlyContinue -r -fo -Path "${{ github.workspace }}/vcpkg"
+          echo "Before cleaning"
+          ls
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ github.workspace }}\vcpkg"
+          echo "After cleaning"
+          ls
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
@@ -239,8 +243,10 @@ jobs:
 
       - name: Cache cleanup
         run: |
-          ls ${env:VCPKG_ROOT}
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue ${env:VCPKG_ROOT}\buildtrees
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue ${env:VCPKG_ROOT}\installed
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue ${env:VCPKG_ROOT}\packages
-          ls ${env:VCPKG_ROOT}
+          echo "Before cleaning"
+          ls "${env:VCPKG_ROOT}"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\buildtrees"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\installed"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\packages"
+          echo "After cleaning"
+          ls "${env:VCPKG_ROOT}"
