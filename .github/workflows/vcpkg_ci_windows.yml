@@ -198,6 +198,7 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
             -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             ..
           cmake --build . --config Release -j
@@ -216,6 +217,8 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DMCSEMA_INSTALL_PYTHON2_LIBS=OFF `
+            -DMCSEMA_INSTALL_PYTHON3_LIBS=OFF `
             -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             -Danvill_DIR="$(pwd)\..\..\anvill\build\install\lib\cmake\anvill" `
             ..
