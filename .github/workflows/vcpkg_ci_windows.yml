@@ -143,7 +143,6 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DVCPKG_TARGET_TRIPLET="${env:TRIPLET}" `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
             ..
           cmake --build . --config Release -j
@@ -161,7 +160,6 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DVCPKG_TARGET_TRIPLET="${env:TRIPLET}" `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
             ..
           cmake --build . --config Release -j
