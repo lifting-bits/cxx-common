@@ -237,8 +237,8 @@ jobs:
       #     asset_name: ${{ env.ARTIFACT_NAME }}
       #     asset_content_type: application/x-xz
 
-      # - name: Cache cleanup and reporting
-      #   shell: 'bash'
-      #   run: |
-      #     rm -rf ${env:VCPKG_ROOT}/{buildtrees,installed,packages}
-      #     ccache --show-stats
+      - name: Cache cleanup and reporting
+        shell: 'bash'
+        run: |
+          rm -rf ${env:VCPKG_ROOT}/{buildtrees,installed,packages}
+          # ccache --show-stats
