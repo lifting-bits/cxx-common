@@ -76,8 +76,8 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1.5.0
 
       - name: Clear prior vcpkg directory
-      run: |
-        rm -ErrorAction SilentlyContinue -r -fo -Path "${{ github.workspace }}/vcpkg"
+        run: |
+          rm -ErrorAction SilentlyContinue -r -fo -Path "${{ github.workspace }}/vcpkg"
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
