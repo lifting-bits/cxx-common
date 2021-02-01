@@ -9,15 +9,16 @@ ARG DISTRO_VERSION
 # Second row is toolchain and build programs
 # Third row is vcpkg library build-time dependencies
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
+    if [ "$(uname -m)" = "aarch64" ]; then dpkg --add-architecture armhf; fi && \
+    apt-get update && apt-get install --yes apt-utils && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
     apt-add-repository ppa:git-core/ppa --yes && \
     wget "https://github.com/Kitware/CMake/releases/download/v3.19.3/cmake-3.19.3-Linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     apt-get update && \
-    apt-get dist-upgrade --yes --no-install-recommends \
+    apt-get install --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
-      "$( [ "$(uname -m)" == "aarch64" ] && echo "g++-multilib-*")" \
+      "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" \
       libtinfo-dev libzstd-dev python3.8 python3-pip python3-setuptools python-setuptools \
       build-essential g++ gcc clang-10 lld-10 ninja-build \
       curl unzip tar git zip python python3 pkg-config && \
