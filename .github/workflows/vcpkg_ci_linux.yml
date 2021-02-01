@@ -135,8 +135,10 @@ jobs:
         shell: 'bash'
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
         run: |
+          # Doesn't work on arm64
           if [ ${{ matrix.host.arch }} == "arm64" ] ; then
             export VCPKG_FORCE_SYSTEM_BINARIES=1
+            exit 0
           fi
 
           ${VCPKG_ROOT}/vcpkg install \
