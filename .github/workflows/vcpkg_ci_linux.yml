@@ -71,13 +71,22 @@ jobs:
           echo ::set-output name=repo_url::${vcpkg_repo_url}
           echo ::set-output name=commit::${vcpkg_commit}
 
-        # Needed for caching the actual vcpkg executable
+      - name: Clear prior vcpkg directory
+      run: |
+        echo "Before cleaning"
+        ls
+        rm -rf "${{ github.workspace }}/vcpkg"
+        echo "After cleaning"
+        ls
+
+      # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
         uses: lukka/run-vcpkg@v6.2
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
           appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
 
         # Omit this step if using manifests
@@ -175,6 +184,7 @@ jobs:
         shell: 'bash'
         run: |
           cd rellic
+          rm -rf build
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -189,6 +199,7 @@ jobs:
         shell: 'bash'
         run: |
           cd remill
+          rm -rf build
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -206,6 +217,7 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
+          rm -rf build-vcpkg
           mkdir -p build-vcpkg && cd build-vcpkg
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -220,6 +232,7 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
+          rm -rf build
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -235,6 +248,7 @@ jobs:
         shell: 'bash'
         run: |
           cd mcsema
+          rm -rf build
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
