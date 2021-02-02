@@ -85,7 +85,7 @@ jobs:
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
+          appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-clear'
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
 
@@ -170,9 +170,9 @@ jobs:
         uses: actions/cache@v2.1.3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
