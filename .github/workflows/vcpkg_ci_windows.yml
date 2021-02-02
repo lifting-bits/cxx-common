@@ -89,7 +89,7 @@ jobs:
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-clear'
+          appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-new'
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
 
