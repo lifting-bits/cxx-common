@@ -72,12 +72,12 @@ jobs:
           echo ::set-output name=commit::${vcpkg_commit}
 
       - name: Clear prior vcpkg directory
-      run: |
-        echo "Before cleaning"
-        ls
-        rm -rf "${{ github.workspace }}/vcpkg"
-        echo "After cleaning"
-        ls
+        run: |
+          echo "Before cleaning"
+          ls
+          rm -rf "${{ github.workspace }}/vcpkg"
+          echo "After cleaning"
+          ls
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
