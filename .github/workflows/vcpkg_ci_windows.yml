@@ -77,11 +77,7 @@ jobs:
 
       - name: Clear prior vcpkg directory
         run: |
-          echo "Before cleaning"
-          ls
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ github.workspace }}\vcpkg"
-          echo "After cleaning"
-          ls
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
@@ -92,9 +88,13 @@ jobs:
           appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-new'
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
+        env:
+          VCPKG_DISABLE_METRICS: 1
 
         # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
+        env:
+          VCPKG_DISABLE_METRICS: 1
         run: |
           # Setup NuGet authentication
           & "$(& "${env:VCPKG_ROOT}\vcpkg.exe" fetch nuget | select -last 1)" setapikey `
@@ -124,6 +124,8 @@ jobs:
       # Only for LLVM-10 right now...
       # - name: 'Build Packaged Lifting Tools'
       #   if: ${{ matrix.llvm == 'llvm-10' }}
+      #   env:
+      #     VCPKG_DISABLE_METRICS: 1
       #   shell: 'bash'
       #   # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
       #   run: |
@@ -243,10 +245,6 @@ jobs:
 
       - name: Cache cleanup
         run: |
-          echo "Before cleaning"
-          ls "${env:VCPKG_ROOT}"
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\buildtrees"
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\installed"
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\packages"
-          echo "After cleaning"
-          ls "${env:VCPKG_ROOT}"
