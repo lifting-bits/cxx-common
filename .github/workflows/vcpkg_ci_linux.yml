@@ -73,11 +73,7 @@ jobs:
 
       - name: Clear prior vcpkg directory
         run: |
-          echo "Before cleaning"
-          ls
           rm -rf "${{ github.workspace }}/vcpkg"
-          echo "After cleaning"
-          ls
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
@@ -93,6 +89,7 @@ jobs:
       - name: 'vcpkg install dependencies'
         shell: 'bash'
         run: |
+          export VCPKG_DISABLE_METRICS=1
           if [ ${{ matrix.host.arch }} == "arm64" ] ; then
             export VCPKG_FORCE_SYSTEM_BINARIES=1
           fi
@@ -142,9 +139,9 @@ jobs:
       - name: 'Build Packaged Lifting Tools'
         if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
-        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
+        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files in remill
         run: |
-          # Doesn't work on arm64
+          export VCPKG_DISABLE_METRICS=1
           if [ ${{ matrix.host.arch }} == "arm64" ] ; then
             export VCPKG_FORCE_SYSTEM_BINARIES=1
           fi
