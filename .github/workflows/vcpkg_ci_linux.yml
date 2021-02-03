@@ -3,7 +3,6 @@ name: Linux Continuous Integration
 env:
   # "Source" is set in the vcpkg install step
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
-  TRIPLET: 'x64-linux-rel'
 
 on:
   release:
@@ -37,6 +36,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        host:
+          - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
+          - { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
         image:
           - { name: 'ubuntu', tag: '18.04' }
           - { name: 'ubuntu', tag: '20.04' }
@@ -46,15 +48,15 @@ jobs:
           'llvm-11'
           ]
 
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.host.name }}
     container:
-      image: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
+      image: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
       credentials:
         username: publisher
         password: ${{ secrets.GITHUB_PACKAGE_REGISTRY_TOKEN }}
 
     env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_amd64.tar.xz
+      ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}.tar.xz
 
     steps:
       - uses: actions/checkout@v2
@@ -69,21 +71,38 @@ jobs:
           echo ::set-output name=repo_url::${vcpkg_repo_url}
           echo ::set-output name=commit::${vcpkg_commit}
 
-        # Needed for caching the actual vcpkg executable
+      - name: Clear prior vcpkg directory
+        run: |
+          rm -rf "${{ github.workspace }}/vcpkg"
+
+      # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
         uses: lukka/run-vcpkg@v6.2
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-clear'
+          appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-clear'
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
           setupOnly: true
 
         # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
         shell: 'bash'
         run: |
+          export VCPKG_DISABLE_METRICS=1
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
+
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            -storepasswordincleartext \
+            -name "Source" \
+            -username "${{ github.repository_owner }}" \
+            -password "${{ secrets.GITHUB_TOKEN }}" || true
+
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources update \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             -storepasswordincleartext \
             -name "Source" \
@@ -95,7 +114,7 @@ jobs:
             "${{ secrets.GITHUB_TOKEN }}"
 
           ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
+            --triplet "${{ matrix.host.triplet }}" \
             --clean-after-build \
             --debug \
             ${{ matrix.llvm }} \
@@ -120,10 +139,15 @@ jobs:
       - name: 'Build Packaged Lifting Tools'
         if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
-        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
+        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files in remill
         run: |
+          export VCPKG_DISABLE_METRICS=1
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
+
           ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
+            --triplet "${{ matrix.host.triplet }}" \
             --debug \
             @overlays.txt \
             remill
@@ -143,9 +167,9 @@ jobs:
         uses: actions/cache@v2.1.3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
@@ -156,7 +180,8 @@ jobs:
         shell: 'bash'
         run: |
           cd rellic
-          mkdir build && cd build
+          rm -rf build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -164,13 +189,14 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/${{ matrix.llvm }}/clang" || true
 
       - name: 'Test remill build'
         shell: 'bash'
         run: |
           cd remill
-          mkdir build && cd build
+          rm -rf build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -187,7 +213,8 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
-          mkdir build-vcpkg && cd build-vcpkg
+          rm -rf build-vcpkg
+          mkdir -p build-vcpkg && cd build-vcpkg
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
@@ -201,7 +228,8 @@ jobs:
         shell: 'bash'
         run: |
           cd anvill
-          mkdir build && cd build
+          rm -rf build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
@@ -216,7 +244,8 @@ jobs:
         shell: 'bash'
         run: |
           cd mcsema
-          mkdir build && cd build
+          rm -rf build
+          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
