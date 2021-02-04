@@ -91,6 +91,13 @@ jobs:
         env:
           VCPKG_DISABLE_METRICS: 1
 
+      - name: 'Workaround for flaky vcpkg bootstrap'
+        run: |
+          for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
+          {
+            & "${env:VCPKG_ROOT}\bootstrap.ps1" || true
+          }
+
         # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
         env:
