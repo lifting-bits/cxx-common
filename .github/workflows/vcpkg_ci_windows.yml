@@ -87,6 +87,8 @@ jobs:
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
           appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-new'
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          # Caching is flaky with slow upload speeds
+          doNotCache: true
           setupOnly: true
         env:
           VCPKG_DISABLE_METRICS: 1
@@ -95,7 +97,7 @@ jobs:
         run: |
           for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
           {
-            & "${env:VCPKG_ROOT}\bootstrap.ps1" || true
+            & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
           }
 
         # Omit this step if using manifests
