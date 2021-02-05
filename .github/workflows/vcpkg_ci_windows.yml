@@ -49,7 +49,7 @@ jobs:
     runs-on: ['self-hosted', 'Windows', 'X64']
 
     env:
-      ARTIFACT_NAME: vcpkg_windows-2019_${{ matrix.llvm }}_amd64.tar.xz
+      ARTIFACT_NAME: vcpkg_windows-vs2019_${{ matrix.llvm }}_amd64
 
     steps:
       - uses: actions/checkout@v2
@@ -117,18 +117,21 @@ jobs:
             "@overlays.txt" `
             "@dependencies.txt"
 
-      # - name: 'Export Packages'
-      #   if: contains(github.event.head_commit.message, 'debug artifacts') || github.event.release
-      #   shell: 'bash'
-      #   run: |
-      #     brew install pixz
-      #     ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
+      - name: 'Export Packages'
+        if: contains(github.event.head_commit.message, 'debug artifacts') || github.event.release
+        run: |
+          & "${env:VCPKG_ROOT}\vcpkg.exe" install `
+            --x-all-installed `
+            --debug `
+            "@overlays.txt" `
+            --7zip `
+            --output=${{ env.ARTIFACT_NAME }}
 
-      # - uses: actions/upload-artifact@v2.2.2
-      #   if: "contains(github.event.head_commit.message, 'debug artifacts')"
-      #   with:
-      #     name: ${{ env.ARTIFACT_NAME }}
-      #     path: ${{ env.ARTIFACT_NAME }}
+      - uses: actions/upload-artifact@v2.2.2
+        if: "contains(github.event.head_commit.message, 'debug artifacts')"
+        with:
+          name: ${{ env.ARTIFACT_NAME }}.7z
+          path: "${env:VCPKG_ROOT}\${{ env.ARTIFACT_NAME }}.7z"
 
       # Only for LLVM-10 right now...
       # - name: 'Build Packaged Lifting Tools'
@@ -143,11 +146,6 @@ jobs:
       #       --debug \
       #       "@overlays.txt" \
       #       remill
-
-      # - name: 'Install build dependencies'
-      #   shell: 'bash'
-      #   run: |
-      #     brew install ninja ccache
 
       - name: 'Test rellic build'
         run: |
@@ -240,17 +238,17 @@ jobs:
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-      # - name: Publish Release Assets
-      #   if: |
-      #     github.event.release
-      #   uses: actions/upload-release-asset@v1.0.2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ github.event.release.upload_url }}
-      #     asset_path: ${{ env.ARTIFACT_NAME }}
-      #     asset_name: ${{ env.ARTIFACT_NAME }}
-      #     asset_content_type: application/x-xz
+      - name: Publish Release Assets
+        if: |
+          github.event.release
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: "${env.VCPKG_ROOT}\${{ env.ARTIFACT_NAME }}.7z"
+          asset_name: ${{ env.ARTIFACT_NAME }}.7z
+          asset_content_type: application/x-7z-compressed
 
       - name: Cache cleanup
         run: |
