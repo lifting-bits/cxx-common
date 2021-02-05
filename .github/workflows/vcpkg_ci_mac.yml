@@ -12,21 +12,17 @@ on:
   pull_request:
     paths-ignore:
       - 'docker/**'
-      - '.github/workflows/vcpkg_docker.yml'
-      - '.github/workflows/vcpkg_ci_linux.yml'
-      - '.github/workflows/vcpkg_release.yml'
-      - '.github/workflows/ci.yml'
+      - '.github/**'
       - '**.md'
       - 'old/**'
+      - '!.github/workflows/vcpkg_ci_mac.yml'
   push:
     paths-ignore:
       - 'docker/**'
-      - '.github/workflows/vcpkg_docker.yml'
-      - '.github/workflows/vcpkg_ci_linux.yml'
-      - '.github/workflows/vcpkg_release.yml'
-      - '.github/workflows/ci.yml'
+      - '.github/**'
       - '**.md'
       - 'old/**'
+      - '!.github/workflows/vcpkg_ci_mac.yml'
     tags-ignore:
       - 'v*'
     branches:
