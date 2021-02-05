@@ -54,13 +54,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          submodules: true
-
+          ref: ${{ github.event.after }}
       - name: Get commit message
         run: |
           echo 'COMMIT_MESSAGE<<EOF' >> $GITHUB_ENV
-            git log --format=%B -n 1 ${{ github.event.after }} >> $GITHUB_ENV
-            echo 'EOF' >> $GITHUB_ENV
+          echo $(git log --format=%B -n 1 ${{ github.event.after }}) >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - name: Print commit message
         run: echo ${{ env.COMMIT_MESSAGE }}
