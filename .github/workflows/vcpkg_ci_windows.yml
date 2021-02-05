@@ -131,7 +131,7 @@ jobs:
         if: "contains(github.event.head_commit.message, 'debug artifacts')"
         with:
           name: ${{ env.ARTIFACT_NAME }}.7z
-          path: "${env:VCPKG_ROOT}\${{ env.ARTIFACT_NAME }}.7z"
+          path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
 
       # Only for LLVM-10 right now...
       # - name: 'Build Packaged Lifting Tools'
@@ -246,7 +246,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: "${env.VCPKG_ROOT}\${{ env.ARTIFACT_NAME }}.7z"
+          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z"
           asset_name: ${{ env.ARTIFACT_NAME }}.7z
           asset_content_type: application/x-7z-compressed
 
