@@ -56,6 +56,15 @@ jobs:
         with:
           submodules: true
 
+      - name: Get commit message
+        run: |
+          echo 'COMMIT_MESSAGE<<EOF' >> $GITHUB_ENV
+            git log --format=%B -n 1 ${{ github.event.after }} >> $GITHUB_ENV
+            echo 'EOF' >> $GITHUB_ENV
+
+      - name: Print commit message
+        run: echo ${{ env.COMMIT_MESSAGE }}
+
       - uses: actions/setup-dotnet@v1.7.2
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
@@ -118,7 +127,7 @@ jobs:
             "@dependencies.txt"
 
       - name: 'Export Packages'
-        if: contains(github.event.head_commit.message, 'debug artifacts') || github.event.release
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         run: |
           & "${env:VCPKG_ROOT}\vcpkg.exe" install `
             --x-all-installed `
@@ -128,7 +137,7 @@ jobs:
             --output=${{ env.ARTIFACT_NAME }}
 
       - uses: actions/upload-artifact@v2.2.2
-        if: "contains(github.event.head_commit.message, 'debug artifacts')"
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
         with:
           name: ${{ env.ARTIFACT_NAME }}.7z
           path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
@@ -180,8 +189,8 @@ jobs:
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch amd64 --ir_out CON --bytes c704ba01000000
-          & ( Get-ChildItem | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch aarch64 --ir_out CON --address 0x400544 --bytes FD7BBFA90000009000601891FD030091B7FFFF97E0031F2AFD7BC1A8C0035FD6
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch amd64 --ir_out CON --bytes c704ba01000000
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch aarch64 --ir_out CON --address 0x400544 --bytes FD7BBFA90000009000601891FD030091B7FFFF97E0031F2AFD7BC1A8C0035FD6
 
           # TODO Testing on Windows
           # cmake --build . --target test_dependencies
@@ -222,7 +231,7 @@ jobs:
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         if: ${{ matrix.llvm != 'llvm-11' }}
