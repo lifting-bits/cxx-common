@@ -67,7 +67,7 @@ jobs:
           submodules: true
 
       - name: Print commit message
-        run: echo ${{ env.COMMIT_MESSAGE }}
+        run: echo "${{ env.COMMIT_MESSAGE }}"
 
       - uses: actions/setup-dotnet@v1.7.2
         with:
@@ -133,7 +133,7 @@ jobs:
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         run: |
-          & "${env:VCPKG_ROOT}\vcpkg.exe" install `
+          & "${env:VCPKG_ROOT}\vcpkg.exe" export `
             --x-all-installed `
             --debug `
             "@overlays.txt" `
