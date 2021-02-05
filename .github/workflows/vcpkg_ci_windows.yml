@@ -55,11 +55,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.after }}
+          submodules: false
       - name: Get commit message
         run: |
-          echo 'COMMIT_MESSAGE<<EOF' >> $GITHUB_ENV
-          echo $(git log --format=%B -n 1 ${{ github.event.after }}) >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'COMMIT_MESSAGE<<EOF'
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value "$(git log --format=%B -n 1 ${{ github.event.after }})"
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'EOF'
 
       - uses: actions/checkout@v2
         with:
