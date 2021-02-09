@@ -33,10 +33,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # LLVM 9 can't compile latest MSVC C++ implementation
+        # LLVM 9 can't compile latest VS 2019 MSVC C++ implementation
+        # LLVM 10 has heap error in remill that appears only in Release builds
+        #   during destructor of DominatorTree
         llvm: [
           # 'llvm-9',
-          'llvm-10',
+          # 'llvm-10',
           'llvm-11'
           ]
 
