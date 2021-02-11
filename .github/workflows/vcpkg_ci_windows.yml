@@ -258,7 +258,7 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z"
           asset_name: ${{ env.ARTIFACT_NAME }}.7z
-          asset_content_type: application/x-7z-compressed
+          asset_content_type: application/octet-stream
 
       - name: Cache cleanup
         run: |
