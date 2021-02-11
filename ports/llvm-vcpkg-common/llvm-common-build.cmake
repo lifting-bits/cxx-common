@@ -260,6 +260,8 @@ vcpkg_configure_cmake(
         -DLLVM_ENABLE_LIBXML2=OFF
         -DLLVM_ENABLE_ZLIB=OFF
         -DLLVM_ENABLE_LIBEDIT=OFF
+        # Disable linking to Windows PDB analysis library (hard-coded path in LLVMExports.cmake)
+        -DLLVM_ENABLE_DIA_SDK=OFF
         # Force TableGen to be built with optimization. This will significantly improve build time.
         -DLLVM_OPTIMIZED_TABLEGEN=ON
         "-DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}"
