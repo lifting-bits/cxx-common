@@ -232,7 +232,6 @@ jobs:
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
-        if: ${{ matrix.llvm != 'llvm-11' }}
         run: |
           cd mcsema
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
