@@ -41,7 +41,7 @@ fi
 if [[ ! -v "CXX" || -z "${CXX}" ]]; then
   if type clang++ &>/dev/null; then
     export CXX="${CXX:-$(which clang++)}"
-    msg "Using default clang++ as CXX=${CC}"
+    msg "Using default clang++ as CXX=${CXX}"
   else
     msg "Using default C++ compiler"
   fi
@@ -62,40 +62,51 @@ triplet=""
 extra_vcpkg_args=()
 extra_cmake_usage_args=()
 
+# System triplet info
+os="$(uname -s)"
+arch="$(uname -m)"
+# default to linux on amd64
+triplet_os="linux"
+triplet_arch="x64"
+
+if [[ "${arch}" = "aarch64" ]]; then
+  triplet_arch="arm64"
+elif [[ "${arch}" = "x86_64" ]]; then
+  triplet_arch="x64"
+else
+  die "Unknown system architecture: ${arch}"
+fi
+
+if [[ "${os}" = "Linux" ]]; then
+  msg "Detected Linux OS"
+  triplet_os="linux"
+elif [[ "${os}" = "Darwin" ]]; then
+  msg "Detected Darwin OS"
+  triplet_os="osx"
+else
+  die "Could not detect OS. OS detection required for release-only builds."
+fi
+
+triplet="${triplet_arch}-${triplet_os}"
+
+# Build-Type triplet
 if [ $# -ge 1 ] && [ "$1" = "--release" ]; then
   msg "Only building release versions"
-
-  os="$(uname -s)"
-  arch="$(uname -m)"
-  # default to linux on amd64
-  triplet_os="linux"
-  triplet_arch="x64"
-
-  if [[ "${arch}" = "aarch64" ]]; then
-    triplet_arch="arm64"
-  elif [[ "${arch}" = "x86_64" ]]; then
-    triplet_arch="x64"
-  else
-    die "Unknown system architecture: ${arch}"
-  fi
-
-  if [[ "${os}" = "Linux" ]]; then
-    msg "Detected Linux OS"
-    triplet_os="linux"
-  elif [[ "${os}" = "Darwin" ]]; then
-    msg "Detected Darwin OS"
-    triplet_os="osx"
-  else
-    die "Could not detect OS. OS detection required for release-only builds."
-  fi
-
-  triplet="${triplet_arch}-${triplet_os}-rel"
-  extra_vcpkg_args+=("--triplet=${triplet}")
-  extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
+  triplet="${triplet}-rel"
   shift
 else
   msg "Building Release and Debug versions"
 fi
+
+# ASAN triplet
+if [ $# -ge 1 ] && [ "$1" = "--asan" ]; then
+  msg "Building with asan"
+  triplet="${triplet}-asan"
+  shift
+fi
+
+extra_vcpkg_args+=("--triplet=${triplet}")
+extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 vcpkg_info_file="${repo_dir}/vcpkg_info.txt"

@@ -75,6 +75,12 @@ if(VCPKG_TARGET_IS_WINDOWS)
         )
 endif()
 
+if(VCPKG_USE_SANITIZER)
+    list(APPEND FEATURE_OPTIONS
+        -DLLVM_USE_SANITIZER=${VCPKG_USE_SANITIZER}
+        )
+endif()
+
 # By default assertions are enabled for Debug configuration only.
 if("enable-assertions" IN_LIST FEATURES)
     # Force enable assertions for all configurations.
