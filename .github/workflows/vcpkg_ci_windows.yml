@@ -1,0 +1,267 @@
+name: Windows Continuous Integration
+
+env:
+  # "Source" is set in the setup-dotnet action
+  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
+  TRIPLET: 'x64-windows-static-md-rel'
+
+on:
+  release:
+    types:
+      - published
+  pull_request:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - 'old/**'
+      - '!.github/workflows/vcpkg_ci_windows.yml'
+  push:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - 'old/**'
+      - '!.github/workflows/vcpkg_ci_windows.yml'
+    tags-ignore:
+      - 'v*'
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # LLVM 9 can't compile latest VS 2019 MSVC C++ implementation
+        # LLVM 10 has heap error in remill that appears only in Release builds
+        #   during destructor of DominatorTree
+        llvm: [
+          # 'llvm-9',
+          # 'llvm-10',
+          'llvm-11'
+          ]
+
+    runs-on: ['self-hosted', 'Windows', 'X64']
+
+    env:
+      ARTIFACT_NAME: vcpkg_windows-vs2019_${{ matrix.llvm }}_amd64
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.after }}
+          submodules: false
+      - name: Get commit message
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'COMMIT_MESSAGE<<EOF'
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value "$(git log --format=%B -n 1 ${{ github.event.after }})"
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'EOF'
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: '3.1.x' # SDK Version to use.
+          # Sets as "Source"
+          source-url: https://nuget.pkg.github.com/trailofbits/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read vcpkg Info
+        id: vcpkg_info
+        shell: bash
+        run: |
+          { read -r vcpkg_repo_url && read -r vcpkg_commit; } < ./vcpkg_info.txt || exit 1
+          echo ::set-output name=repo_url::${vcpkg_repo_url}
+          echo ::set-output name=commit::${vcpkg_commit}
+
+        # Setup Visual Studio Dev Environment (x64, default version/toolset)
+      - uses: ilammy/msvc-dev-cmd@v1.5.0
+
+      - name: Clear prior vcpkg directory
+        run: |
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ github.workspace }}\vcpkg"
+
+      # Needed for caching the actual vcpkg executable
+      - name: 'Restore from cache and install vcpkg'
+        uses: lukka/run-vcpkg@v7.0
+        with:
+          vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
+          vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
+          appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-new'
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          # Caching is flaky with slow upload speeds
+          doNotCache: true
+          setupOnly: true
+        env:
+          VCPKG_DISABLE_METRICS: 1
+
+      - name: 'Workaround for flaky vcpkg bootstrap'
+        run: |
+          for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
+          {
+            & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
+          }
+
+        # Omit this step if using manifests
+      - name: 'vcpkg install dependencies'
+        env:
+          VCPKG_DISABLE_METRICS: 1
+        run: |
+          # Setup NuGet authentication
+          & "$(& "${env:VCPKG_ROOT}\vcpkg.exe" fetch nuget | select -last 1)" setapikey `
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
+            "${{ secrets.GITHUB_TOKEN }}"
+
+          & "${env:VCPKG_ROOT}\vcpkg.exe" install `
+            --triplet "${env:TRIPLET}" `
+            --debug `
+            ${{ matrix.llvm }} `
+            "@overlays.txt" `
+            "@dependencies.txt"
+
+      - name: 'Export Packages'
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
+        run: |
+          & "${env:VCPKG_ROOT}\vcpkg.exe" export `
+            --x-all-installed `
+            --debug `
+            "@overlays.txt" `
+            --7zip `
+            --output=${{ env.ARTIFACT_NAME }}
+
+      - uses: actions/upload-artifact@v2.2.2
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
+        with:
+          name: ${{ env.ARTIFACT_NAME }}.7z
+          path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
+
+      # Only for LLVM-11 right now...
+      # TODO: remill only compilable with clang-cl, but not sure how force
+      #   vcpkg to use it instead of msvc cl. Should probably be in portfile
+      # - name: 'Build Packaged Lifting Tools'
+      #   if: ${{ matrix.llvm == 'llvm-11' }}
+      #   env:
+      #     VCPKG_DISABLE_METRICS: 1
+      #   shell: 'bash'
+      #   # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
+      #   run: |
+      #     ${VCPKG_ROOT}/vcpkg install \
+      #       --triplet "${TRIPLET}" \
+      #       --debug \
+      #       "@overlays.txt" \
+      #       remill
+
+      - name: 'Test rellic build'
+        run: |
+          cd rellic
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
+          cd build
+          cmake -T ClangCl `
+            -DCMAKE_VERBOSE_MAKEFILE=ON `
+            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            ..
+          cmake --build . --config Release -j
+          cmake --build . --config Release --target install
+
+          # TODO Testing on Windows
+          # python ../scripts/roundtrip.py ( Get-ChildItem tools | Where-Object {$_.name -match "rellic-decomp-.*.exe"} ) ..\tests\tools\decomp "${env:VCPKG_ROOT}\installed\${env:TRIPLET}\tools\${{ matrix.llvm }}\clang.exe"
+
+      - name: 'Test remill build'
+        run: |
+          cd remill
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
+          cd build
+          cmake -T ClangCl `
+            -DCMAKE_VERBOSE_MAKEFILE=ON `
+            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            ..
+          cmake --build . --config Release -j
+          cmake --build . --config Release --target install
+
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch amd64 --ir_out CON --bytes c704ba01000000
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch aarch64 --ir_out CON --address 0x400544 --bytes FD7BBFA90000009000601891FD030091B7FFFF97E0031F2AFD7BC1A8C0035FD6
+
+          # TODO Testing with CMake on Windows
+          # cmake --build . --target test_dependencies
+          # env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
+
+      # TODO: remill only compilable with clang-cl, but not sure how force
+      #   vcpkg to use it instead of msvc cl. Should probably be in portfile
+      # Only for LLVM-11 right now...
+      # - name: 'Anvill build - vcpkg remill'
+      #   if: ${{ matrix.llvm == 'llvm-11' }}
+      #   shell: 'bash'
+      #   run: |
+      #     cd anvill
+      #     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+      #     New-Item -Path .\build -ItemType Directory
+      #     cd build
+      #     cmake -T ClangCl `
+      #       -DCMAKE_VERBOSE_MAKEFILE=ON `
+      #       -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
+      #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
+      #       -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+      #       ..
+      #     cmake --build . --config Release -j
+      #     cmake --build . --config Release --target install
+      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+
+      - name: 'Anvill build - custom remill'
+        run: |
+          cd anvill
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
+          cd build
+          cmake -T ClangCl `
+            -DCMAKE_VERBOSE_MAKEFILE=ON `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
+            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
+            ..
+          cmake --build . --config Release -j
+          cmake --build . --config Release --target install
+
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+
+      - name: 'Test mcsema build'
+        run: |
+          cd mcsema
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
+          New-Item -Path .\build -ItemType Directory
+          cd build
+          cmake -T ClangCl `
+            -DCMAKE_VERBOSE_MAKEFILE=ON `
+            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DMCSEMA_INSTALL_PYTHON2_LIBS=OFF `
+            -DMCSEMA_INSTALL_PYTHON3_LIBS=OFF `
+            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
+            -Danvill_DIR="$(pwd)\..\..\anvill\build\install\lib\cmake\anvill" `
+            ..
+          cmake --build . --config Release -j
+          cmake --build . --config Release --target install
+
+      - name: Publish Release Assets
+        if: |
+          github.event.release
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z"
+          asset_name: ${{ env.ARTIFACT_NAME }}.7z
+          asset_content_type: application/octet-stream
+
+      - name: Cache cleanup
+        run: |
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\buildtrees"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\installed"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${env:VCPKG_ROOT}\packages"

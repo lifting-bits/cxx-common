@@ -16,6 +16,22 @@ index d233f552f01..26f502ad2d2 100644
  set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
  
  get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
+diff --git a/llvm/cmake/modules/AddLLVM.cmake b/llvm/cmake/modules/AddLLVM.cmake
+index 211f9551271..2abe3803f91 100644
+--- a/llvm/cmake/modules/AddLLVM.cmake
++++ b/llvm/cmake/modules/AddLLVM.cmake
+@@ -926,10 +926,10 @@
+   if(ARG_GEN_CONFIG)
+ 
+       ## Part 1: Extension header to be included whenever we need extension
+       #  processing.
+-      set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
++      set(LLVM_INSTALL_PACKAGE_DIR share/llvm)
+       set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+       file(WRITE
+           "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
+           "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
+       install(FILES
 diff --git a/llvm/cmake/modules/CMakeLists.txt b/llvm/cmake/modules/CMakeLists.txt
 index 9cf22b436fa..8eeb27d1794 100644
 --- a/llvm/cmake/modules/CMakeLists.txt
