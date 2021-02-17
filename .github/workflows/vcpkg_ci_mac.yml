@@ -33,13 +33,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Two latest released stable Xcode versions
         os:
-          - { runner: 'macos-10.15', xcode: '12.1.0' }
           - { runner: 'macos-11.0', xcode: '12.2.0' }
         llvm: [
-          'llvm-9',
-          'llvm-10',
           'llvm-11'
           ]
 
@@ -49,6 +45,17 @@ jobs:
       ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64.tar.xz
 
     steps:
+      # Used to get commit message since PRs are on a merge commit
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.after }}
+          submodules: false
+      - name: Get commit message
+        run: |
+          echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
+          echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v2
         with:
           submodules: true
@@ -113,9 +120,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-10 right now...
       - name: 'Build Packaged Lifting Tools'
-        if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
         run: |
@@ -183,9 +188,7 @@ jobs:
           cmake --build . --target test_dependencies
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      # Only for LLVM-10 right now...
       - name: 'Anvill build - vcpkg remill'
-        if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
         run: |
           cd anvill
@@ -214,7 +217,6 @@ jobs:
           ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
-        if: ${{ matrix.llvm != 'llvm-11' }}
         shell: 'bash'
         run: |
           cd mcsema

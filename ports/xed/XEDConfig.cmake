@@ -13,15 +13,20 @@ GET_FILENAME_COMPONENT(ROOT "${CMAKE_CURRENT_LIST_FILE}" PATH)
 GET_FILENAME_COMPONENT(ROOT "${ROOT}" PATH)
 GET_FILENAME_COMPONENT(ROOT "${ROOT}" PATH)
 
-set(XED_STATIC_DEBUG_LIB "${ROOT}/debug/lib/libxed${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(XED_SHARE_DEBUG_LIB "${ROOT}/debug/lib/libxed${CMAKE_SHARED_LIBRARY_SUFFIX}")
-set(ILD_STATIC_DEBUG_LIB "${ROOT}/debug/lib/libxed-ild${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(ILD_SHARE_DEBUG_LIB "${ROOT}/debug/lib/libxed-ild${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(_xed_lib_prefix "lib")
+if (WIN32)
+    set(_xed_lib_prefix "")
+endif ()
 
-set(XED_STATIC_RELEASE_LIB "${ROOT}/lib/libxed${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(XED_SHARE_RELEASE_LIB "${ROOT}/lib/libxed${CMAKE_SHARED_LIBRARY_SUFFIX}")
-set(ILD_STATIC_RELEASE_LIB "${ROOT}/lib/libxed-ild${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(ILD_SHARE_RELEASE_LIB "${ROOT}/lib/libxed-ild${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(XED_STATIC_DEBUG_LIB "${ROOT}/debug/lib/${_xed_lib_prefix}xed${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(XED_SHARE_DEBUG_LIB "${ROOT}/debug/lib/${_xed_lib_prefix}xed${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(ILD_STATIC_DEBUG_LIB "${ROOT}/debug/lib/${_xed_lib_prefix}xed-ild${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(ILD_SHARE_DEBUG_LIB "${ROOT}/debug/lib/${_xed_lib_prefix}xed-ild${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+set(XED_STATIC_RELEASE_LIB "${ROOT}/lib/${_xed_lib_prefix}xed${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(XED_SHARE_RELEASE_LIB "${ROOT}/lib/${_xed_lib_prefix}xed${CMAKE_SHARED_LIBRARY_SUFFIX}")
+set(ILD_STATIC_RELEASE_LIB "${ROOT}/lib/${_xed_lib_prefix}xed-ild${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(ILD_SHARE_RELEASE_LIB "${ROOT}/lib/${_xed_lib_prefix}xed-ild${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 # Check for existence of debug libs
 if (NOT EXISTS "${XED_STATIC_DEBUG_LIB}")
@@ -41,3 +46,5 @@ endif()
 
 SET_LIBRARY_TARGET("XED" "XED" "STATIC" "${XED_STATIC_DEBUG_LIB}" "${XED_STATIC_RELEASE_LIB}" "${ROOT}/include/xed")
 SET_LIBRARY_TARGET("ILD" "XED" "STATIC" "${ILD_STATIC_DEBUG_LIB}" "${ILD_STATIC_RELEASE_LIB}" "${ROOT}/include/xed")
+
+SET(XED_FOUND 1)
