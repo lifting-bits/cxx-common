@@ -33,13 +33,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Two latest released stable Xcode versions
         os:
-          - { runner: 'macos-10.15', xcode: '12.1.0' }
           - { runner: 'macos-11.0', xcode: '12.2.0' }
         llvm: [
-          'llvm-9',
-          'llvm-10',
           'llvm-11'
           ]
 
@@ -124,9 +120,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-10 right now...
       - name: 'Build Packaged Lifting Tools'
-        if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
         run: |
@@ -194,9 +188,7 @@ jobs:
           cmake --build . --target test_dependencies
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      # Only for LLVM-10 right now...
       - name: 'Anvill build - vcpkg remill'
-        if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
         run: |
           cd anvill
