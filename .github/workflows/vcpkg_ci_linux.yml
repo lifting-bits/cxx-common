@@ -134,6 +134,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y pixz
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
           ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
 
       - uses: actions/upload-artifact@v2.2.2
