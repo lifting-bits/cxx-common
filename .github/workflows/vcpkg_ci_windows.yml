@@ -256,7 +256,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z"
+          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
           asset_name: ${{ env.ARTIFACT_NAME }}.7z
           asset_content_type: application/octet-stream
 
