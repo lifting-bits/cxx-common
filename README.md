@@ -62,6 +62,8 @@ If you don't want to compile a debug version of the tools, just pass `--release`
 ./build_dependencies.sh --release llvm-10
 ```
 
+Use `--help` to see more options.
+
 ## Additional Packages
 
 Just add another package name to the script

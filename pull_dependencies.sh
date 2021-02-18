@@ -5,7 +5,7 @@
 
 set -x -euo pipefail
 
-echo "Untested..."
+echo "Old and untested..."
 exit 1
 
 usage()
