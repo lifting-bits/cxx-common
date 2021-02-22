@@ -233,7 +233,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         shell: 'bash'
@@ -249,7 +249,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         shell: 'bash'
