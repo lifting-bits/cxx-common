@@ -228,6 +228,7 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
@@ -243,6 +244,7 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .

@@ -206,6 +206,7 @@ jobs:
       #     cd build
       #     cmake -T ClangCl `
       #       -DCMAKE_VERBOSE_MAKEFILE=ON `
+      #       -DANVILL_ENABLE_INSTALL_TARGET=ON `
       #       -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
       #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
       #       -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
@@ -223,6 +224,7 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DANVILL_ENABLE_INSTALL_TARGET=ON `
             -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
             -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             ..
