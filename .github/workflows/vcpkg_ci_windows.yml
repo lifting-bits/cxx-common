@@ -206,13 +206,14 @@ jobs:
       #     cd build
       #     cmake -T ClangCl `
       #       -DCMAKE_VERBOSE_MAKEFILE=ON `
+      #       -DANVILL_ENABLE_INSTALL_TARGET=ON `
       #       -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
       #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
       #       -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
       #       ..
       #     cmake --build . --config Release -j
       #     cmake --build . --config Release --target install
-      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         run: |
@@ -223,13 +224,14 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DANVILL_ENABLE_INSTALL_TARGET=ON `
             -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
             -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             ..
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         run: |
