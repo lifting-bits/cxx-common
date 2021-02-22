@@ -213,7 +213,7 @@ jobs:
       #       ..
       #     cmake --build . --config Release -j
       #     cmake --build . --config Release --target install
-      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         run: |
@@ -231,7 +231,7 @@ jobs:
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         run: |
