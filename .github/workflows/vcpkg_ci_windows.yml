@@ -3,8 +3,6 @@ name: Windows Continuous Integration
 env:
   # "Source" is set in the setup-dotnet action
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
-  # Self-hosted runners can hopefully reuse already downloaded packages
-  VCPKG_USE_NUGET_CACHE: 1
   TRIPLET: 'x64-windows-static-md-rel'
 
 on:
