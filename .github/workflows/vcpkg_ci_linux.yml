@@ -3,6 +3,8 @@ name: Linux Continuous Integration
 env:
   # "Source" is set in the vcpkg install step
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
+  # Self-hosted runners can hopefully reuse already downloaded packages
+  VCPKG_USE_NUGET_CACHE: 1
 
 on:
   release:
@@ -84,7 +86,7 @@ jobs:
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v7.0
+        uses: lukka/run-vcpkg@v7.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
@@ -134,6 +136,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y pixz
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
           ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
 
       - uses: actions/upload-artifact@v2.2.2
@@ -225,11 +230,12 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         shell: 'bash'
@@ -240,11 +246,12 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         shell: 'bash'

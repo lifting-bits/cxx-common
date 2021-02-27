@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-11.0', xcode: '12.2.0' }
+          - { runner: 'macos-10.15', xcode: '12.4' }
         llvm: [
           'llvm-11'
           ]
@@ -68,10 +68,10 @@ jobs:
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: maxim-lobanov/setup-xcode@v1.2.1
-        # 'latest-stable' has some bugs... Keep explicit for now
-        with:
-          xcode-version: ${{ matrix.os.xcode }}
+      - name: Select the XCode version
+        run: |
+          echo "Selecting XCode Version ${{ matrix.os.xcode }}"
+          sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
       - name: Read vcpkg Info
         id: vcpkg_info
@@ -83,7 +83,7 @@ jobs:
 
         # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v7.0
+        uses: lukka/run-vcpkg@v7.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
@@ -128,7 +128,7 @@ jobs:
             --triplet "${TRIPLET}" \
             --debug \
             @overlays.txt \
-            remill
+            remill[core,${{ matrix.llvm }}]
 
       - name: 'Install build dependencies'
         shell: 'bash'
@@ -171,7 +171,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/bin/clang" || true
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/${{ matrix.llvm }}/clang" || true
 
       - name: 'Test remill build'
         shell: 'bash'
@@ -196,11 +196,12 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         shell: 'bash'
@@ -210,11 +211,12 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .
           cmake --build . --target install
-          ./anvill-decompile-json-* -spec ../examples/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         shell: 'bash'

@@ -84,27 +84,18 @@ jobs:
       - name: Clear prior vcpkg directory
         run: |
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ github.workspace }}\vcpkg"
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'VCPKG_ROOT=${{ github.workspace }}\vcpkg'
 
-      # Needed for caching the actual vcpkg executable
-      - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v7.0
-        with:
-          vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
-          vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: 'windows-2019-${{ matrix.llvm }}-new'
-          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          # Caching is flaky with slow upload speeds
-          doNotCache: true
-          setupOnly: true
-        env:
-          VCPKG_DISABLE_METRICS: 1
-
-      - name: 'Workaround for flaky vcpkg bootstrap'
+      - name: 'Checkout and Bootstrap vcpkg'
         run: |
+          git clone ${{ steps.vcpkg_info.outputs.repo_url }} "${env:VCPKG_ROOT}"
+          git -C "${env:VCPKG_ROOT}" checkout ${{ steps.vcpkg_info.outputs.commit }}
           for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
           {
             & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
           }
+        env:
+          VCPKG_DISABLE_METRICS: 1
 
         # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
@@ -206,13 +197,14 @@ jobs:
       #     cd build
       #     cmake -T ClangCl `
       #       -DCMAKE_VERBOSE_MAKEFILE=ON `
+      #       -DANVILL_ENABLE_INSTALL_TARGET=ON `
       #       -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
       #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
       #       -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
       #       ..
       #     cmake --build . --config Release -j
       #     cmake --build . --config Release --target install
-      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
         run: |
@@ -223,13 +215,14 @@ jobs:
           cmake -T ClangCl `
             -DCMAKE_VERBOSE_MAKEFILE=ON `
             -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
+            -DANVILL_ENABLE_INSTALL_TARGET=ON `
             -DANVILL_INSTALL_PYTHON3_LIBS=OFF `
             -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
             ..
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\examples\ret0.json -bc_out ret0.bc -ir_out ret0.ir
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
         run: |
@@ -256,7 +249,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z"
+          asset_path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
           asset_name: ${{ env.ARTIFACT_NAME }}.7z
           asset_content_type: application/octet-stream
 

@@ -1,4 +1,4 @@
-set(LLVM_VERSION "11.0.0")
+set(LLVM_VERSION "11.0.1")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,8 +6,8 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 b6d38871ccce0e086e27d35e42887618d68e57d8274735c59e3eabc42dee352412489296293f8d5169fe0044936345915ee7da61ebdc64ec10f7737f6ecd90f2
-    HEAD_REF master
+    SHA512 f5e6ef0b3111aae08a89cd01adb2ff4abfa9ef779c68b9190421d0447efd25c2cc00e5aae9f4764805f5fa31434866043d1510ae7389817e28ae53a5442e2fdf
+    HEAD_REF main
     PATCHES
         0001-add-msvc-options.patch
         0002-fix-install-paths.patch
