@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./build_dependencies.sh [--release] [...]
-#   --release   Optional, build only release versions with triplet as detected in this script
-#   [...]       Optional, extra args to pass to 'vcpkg install'. Like LLVM version, other ports, etc.
-
 function msg {
   echo "[+]" "$@"
 }
@@ -13,6 +9,45 @@ function die {
   echo "[!]" "$@"
   exit 1
 }
+
+function Help
+{
+  echo "Usage: ./build_dependencies.sh [--release] [--asan] [...]"
+  echo ""
+  echo "Options:"
+  echo "  --release   Build only release versions with triplet as detected in"
+  echo "              this script"
+  echo "  --asan      Build with ASAN triplet as detected in this script"
+  echo "  [...]       Extra args to pass to 'vcpkg install'. Like LLVM version,"
+  echo "              other ports, etc."
+}
+
+RELEASE="false"
+ASAN="false"
+VCPKG_ARGS=()
+while [[ $# -gt 0 ]] ; do
+  key="$1"
+
+  case $key in
+    -h|--help)
+      Help
+      exit 0
+    ;;
+    --release)
+      RELEASE="true"
+      msg "Building Release-only binaries"
+    ;;
+    --asan)
+      ASAN="true"
+      msg "Building ASAN binaries"
+    ;;
+    *)
+      VCPKG_ARGS+=("$1")
+  esac
+  shift
+done
+msg "Passing extra args to 'vcpkg install':"
+msg " " "${VCPKG_ARGS[@]}"
 
 function die_if_not_installed {
   if ! type $1 &>/dev/null; then
@@ -41,7 +76,7 @@ fi
 if [[ ! -v "CXX" || -z "${CXX}" ]]; then
   if type clang++ &>/dev/null; then
     export CXX="${CXX:-$(which clang++)}"
-    msg "Using default clang++ as CXX=${CC}"
+    msg "Using default clang++ as CXX=${CXX}"
   else
     msg "Using default C++ compiler"
   fi
@@ -62,40 +97,49 @@ triplet=""
 extra_vcpkg_args=()
 extra_cmake_usage_args=()
 
-if [ $# -ge 1 ] && [ "$1" = "--release" ]; then
-  msg "Only building release versions"
+# System triplet info
+os="$(uname -s)"
+arch="$(uname -m)"
+# default to linux on amd64
+triplet_os="linux"
+triplet_arch="x64"
 
-  os="$(uname -s)"
-  arch="$(uname -m)"
-  # default to linux on amd64
-  triplet_os="linux"
+if [[ "${arch}" = "aarch64" ]]; then
+  triplet_arch="arm64"
+elif [[ "${arch}" = "x86_64" ]]; then
   triplet_arch="x64"
+else
+  die "Unknown system architecture: ${arch}"
+fi
 
-  if [[ "${arch}" = "aarch64" ]]; then
-    triplet_arch="arm64"
-  elif [[ "${arch}" = "x86_64" ]]; then
-    triplet_arch="x64"
-  else
-    die "Unknown system architecture: ${arch}"
-  fi
+if [[ "${os}" = "Linux" ]]; then
+  msg "Detected Linux OS"
+  triplet_os="linux"
+elif [[ "${os}" = "Darwin" ]]; then
+  msg "Detected Darwin OS"
+  triplet_os="osx"
+else
+  die "Could not detect OS. OS detection required for release-only builds."
+fi
 
-  if [[ "${os}" = "Linux" ]]; then
-    msg "Detected Linux OS"
-    triplet_os="linux"
-  elif [[ "${os}" = "Darwin" ]]; then
-    msg "Detected Darwin OS"
-    triplet_os="osx"
-  else
-    die "Could not detect OS. OS detection required for release-only builds."
-  fi
+triplet="${triplet_arch}-${triplet_os}"
 
-  triplet="${triplet_arch}-${triplet_os}-rel"
-  extra_vcpkg_args+=("--triplet=${triplet}")
-  extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
-  shift
+# Build-Type triplet
+if [[ ${RELEASE} == "true" ]]; then
+  msg "Only building release versions"
+  triplet="${triplet}-rel"
 else
   msg "Building Release and Debug versions"
 fi
+
+# ASAN triplet
+if [[ ${ASAN} == "true" ]]; then
+  msg "Building with asan"
+  triplet="${triplet}-asan"
+fi
+
+extra_vcpkg_args+=("--triplet=${triplet}")
+extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 vcpkg_info_file="${repo_dir}/vcpkg_info.txt"
@@ -125,7 +169,7 @@ msg "Boostrapping vcpkg"
 
 msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
-msg " " "$@"
+msg " " "${VCPKG_ARGS[@]}"
 (
   cd "${repo_dir}"
   (
@@ -135,7 +179,7 @@ msg " " "$@"
     # install for specified triplet? Need this because different LLVM versions
     # conflict when installed at the same time
     rm -rf "${vcpkg_dir:?}/installed" || true
-    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "$@"
+    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
     "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run
 
     find "${vcpkg_dir}"/installed/*/tools/protobuf/ -type f -exec chmod 755 {} +

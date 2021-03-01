@@ -53,7 +53,6 @@ The script will be verbose about what it is doing and will clone the correct ver
 
 At the end it will print how to use the library.
 
-
 ## Just release builds
 
 If you don't want to compile a debug version of the tools, just pass `--release` to the script.
@@ -62,12 +61,40 @@ If you don't want to compile a debug version of the tools, just pass `--release`
 ./build_dependencies.sh --release llvm-10
 ```
 
+## Address Sanitizer
+
+:warning: **Not tested on all vcpkg packages.** Open an issue if a tool's dependency cannot be built with sanitizers.
+
+There is experimental support for compiling dependencies with address sanitizer using the `*-asan` suffix for OSX and Linux triplets.
+
+These dependencies can be built with the script by passing `--asan` to the script, and it should work whether building only Release or both Debug and Release:
+
+```bash
+./build_dependencies.sh [--release] --asan llvm-10
+```
+
+Just because your dependencies were built with a sanitizer, you'll still need to manually add support for sanitizer usage within your own project. A quick and dirty way involves specifying the extra compilation flags during the build process:
+
+```bash
+CXXFLAGS="-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Wl,-undefined,dynamic_lookup" \
+  CFLAGS="-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Wl,-undefined,dynamic_lookup" \
+  LDFLAGS="-fsanitize=address -Wl,-undefined,dynamic_lookup" \
+  cmake \
+  -DVCPKG_ROOT="<path_to_vcpkg>" \
+  -DVCPKG_TARGET_TRIPLET=x64-linux-rel-asan \
+  ..
+```
+
+**NOTE:** it is important to specify the `VCPKG_TARGET_TRIPLET` based on what platform and build configuration was used while compiling your dependencies with the sanitizers.
+
 ## Additional Packages
 
 Just add another package name to the script
+
 ```bash
 ./build_dependencies.sh --release llvm-10 fmt
 ```
+
 or add it to `dependencies.txt`.
 
 # Dependency Versioning
