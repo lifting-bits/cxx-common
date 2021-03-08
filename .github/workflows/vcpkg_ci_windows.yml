@@ -179,6 +179,7 @@ jobs:
 
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch amd64 --ir_out CON --bytes c704ba01000000
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch aarch64 --ir_out CON --address 0x400544 --bytes FD7BBFA90000009000601891FD030091B7FFFF97E0031F2AFD7BC1A8C0035FD6
+          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "remill-lift-.*.exe"} ) --arch aarch32 -ir_out /dev/stderr --bytes 0cd04de208008de504108de500208de508309de504009de500109de5903122e0c20fa0e110109fe5001091e5002081e5040081e50cd08de21eff2fe14000000000000000
 
           # TODO Testing with CMake on Windows
           # cmake --build . --target test_dependencies
