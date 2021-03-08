@@ -12,18 +12,24 @@ function die {
 
 function Help
 {
-  echo "Usage: ./build_dependencies.sh [--release] [--asan] [...]"
+  echo "Usage: ./build_dependencies.sh [--release] [--asan] [--export-dir DIR] [...]"
   echo ""
   echo "Options:"
-  echo "  --release   Build only release versions with triplet as detected in"
-  echo "              this script"
-  echo "  --asan      Build with ASAN triplet as detected in this script"
-  echo "  [...]       Extra args to pass to 'vcpkg install'. Like LLVM version,"
-  echo "              other ports, etc."
+  echo "  --release"
+  echo "     Build only release versions with triplet as detected in"
+  echo "     this script"
+  echo "  --asan"
+  echo "     Build with ASAN triplet as detected in this script"
+  echo "  --export-dir <DIR>"
+  echo "     Export built dependencies to directory path"
+  echo "  [...]"
+  echo "     Extra args to pass to 'vcpkg install'. Like LLVM version,"
+  echo "     other ports, vcpkg-specific options, etc."
 }
 
 RELEASE="false"
 ASAN="false"
+EXPORT_DIR=""
 VCPKG_ARGS=()
 while [[ $# -gt 0 ]] ; do
   key="$1"
@@ -40,6 +46,11 @@ while [[ $# -gt 0 ]] ; do
     --asan)
       ASAN="true"
       msg "Building ASAN binaries"
+    ;;
+    --export-dir)
+      EXPORT_DIR=$(python3 -c "import os; import sys; sys.stdout.write(os.path.abspath('${2}'))")
+      echo "[+] Exporting to directory ${EXPORT_DIR}"
+      shift # past argument
     ;;
     *)
       VCPKG_ARGS+=("$1")
@@ -186,11 +197,19 @@ msg " " "${VCPKG_ARGS[@]}"
   )
 )
 
+if [[ -n ${EXPORT_DIR} ]]; then
+  tmp_export_dir=temp-export
+  "${vcpkg_dir}/vcpkg" export --x-all-installed "@overlays.txt" --raw --output=${tmp_export_dir}
+  mv "${vcpkg_dir}/${tmp_export_dir}" "${EXPORT_DIR}"
+else
+  EXPORT_DIR="${vcpkg_dir}"
+fi
+
 echo ""
 msg "Set the following in your CMake configure command to use these dependencies!"
-msg "  -DVCPKG_ROOT=\"${vcpkg_dir}\" ${extra_cmake_usage_args[*]}"
+msg "  -DVCPKG_ROOT=\"${EXPORT_DIR}\" ${extra_cmake_usage_args[*]}"
 msg "or"
-msg "  -DCMAKE_TOOLCHAIN_FILE=\"${vcpkg_dir}/scripts/buildsystems/vcpkg.cmake\" ${extra_cmake_usage_args[*]}"
+msg "  -DCMAKE_TOOLCHAIN_FILE=\"${EXPORT_DIR}/scripts/buildsystems/vcpkg.cmake\" ${extra_cmake_usage_args[*]}"
 
 if [[ "$(uname -m)" = "aarch64" ]]; then
   echo ""

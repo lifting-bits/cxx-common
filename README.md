@@ -41,6 +41,12 @@ If you aren't running a supported operating system, or you just want to build it
 
 By default, the script will install the dependencies listed in `dependencies.txt`, which doesn't include an LLVM version, so passing an `llvm-10` string as an argument will actually be passed to `vcpkg install`. Any other strings are also passed to the `vcpkg install` command.
 
+By passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can store the required dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself and overwritten the next time you run the script.
+
+You can pass `--help` to the script to look at all options.
+
+Note that vcpkg will use binary caching to store built dependency packages (usually at `~/.cache/vcpkg` or manually set with environment variable `VCPKG_DEFAULT_BINARY_CACHE`) so that upon reinstallation/building (re-running the script) you won't have to rebuild everything from scratch, unless the package itself has been updated, you are using a different vcpkg triplet, or any of the vcpkg scripts have changed (updated vcpkg repo). If you'd like to turn off binary caching (not recommended), then you can either pass `--no-binarycaching` to the build script after the main options listed in `--help` or add `-binarycaching` to the `VCPKG_FEATURE_FLAGS` environment variable.
+
 ## Debug and Release
 
 To build both debug and release versions with llvm-10, just run the following
@@ -99,7 +105,7 @@ or add it to `dependencies.txt`.
 
 # Dependency Versioning
 
-The version of each dependency is influenced by the git checkout of vcpkg, contained in `vcpkg_info.txt`. Currently, the only way to upgrade is to push the commit in that file up, **_or_** to create (likely copy) a port definition for the required version and place it in our local `ports` ([overlay](https://github.com/microsoft/vcpkg/blob/master/docs/specifications/ports-overlay.md)) directory.
+The version of each dependency is influenced by the git checkout of vcpkg, contained in `vcpkg_info.txt`. Currently, the only way to upgrade is to push the commit in that file up, **_or_** to create (likely copy) a port definition for the required version and place it in our local `ports` ([overlay](https://github.com/microsoft/vcpkg/blob/master/docs/specifications/ports-overlay.md)) directory. While we do support multiple LLVM versions, it is not easy or well-supported (yet) to have different versions installed simultaneously; you should remove the unwanted version before installing another, which is why the `./build_dependencies.sh` script always reinstalls packages to ensure we are starting from nothing.
 
 See [here](https://github.com/microsoft/vcpkg/blob/master/docs/examples/packaging-github-repos.md) for how to package a new library.
 
