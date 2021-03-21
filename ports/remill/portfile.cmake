@@ -1,8 +1,9 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO lifting-bits/remill
-    REF v4.0.22
-    SHA512 47472c60ae951a1ca244b2a516da51c90dcbc5647b890887020bed748e1888cfa51cf06a2085f9f3e455024ef028bfdb5180d43c8c18fd0aa9192380e3d9bc61
+    # Latest commit after v4.0.22 at this time
+    REF 021b799efc07a38d5f910bb41bdb7e60e4406f23
+    SHA512 10a33d785be69bda54f08ab9f89ccfd9e71bab632d90541eef2ce1122b1161b690cfb5068ee4ae036152a5ebefe8d53dde7f8bb5f99310f678365e9962a417ff
     HEAD_REF master
 )
 
