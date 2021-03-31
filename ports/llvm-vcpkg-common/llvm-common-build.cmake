@@ -38,6 +38,7 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     utils LLVM_INCLUDE_UTILS
     enable-rtti LLVM_ENABLE_RTTI
     enable-z3 LLVM_ENABLE_Z3_SOLVER
+    enable-eh LLVM_ENABLE_EH
 )
 
 # Linking with gold is better than /bin/ld
