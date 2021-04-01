@@ -5,7 +5,7 @@ Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
 Build-Depends: llvm-vcpkg-common
-Default-Features: tools, clang, enable-rtti, enable-z3, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
+Default-Features: tools, clang, enable-rtti, enable-z3, enable-eh, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
 
 Feature: tools
 Description: Build LLVM tools.
@@ -126,3 +126,6 @@ Description: Build libcxx runtime
 
 Feature: libcxxabi
 Description: Build libcxxabi runtime
+
+Feature: enable-eh
+Description: Build LLVM with exception handler turned on.
