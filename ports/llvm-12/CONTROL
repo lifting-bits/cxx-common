@@ -1,6 +1,5 @@
-Source: llvm-9
-Version: 9.0.1
-Port-Version: 1
+Source: llvm-12
+Version: 12.0.0-rc2
 Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
@@ -15,11 +14,11 @@ Description: Build LLVM utils.
 
 Feature: default-targets
 Description: Build with platform-specific default targets
-Build-Depends: llvm-9[core,target-x86] (x86|x64), llvm-9[core,target-arm] (arm&!arm64), llvm-9[core,target-aarch64] (arm64), llvm-9[core,target-all] (!x86&!x64&!arm&!arm64)
+Build-Depends: llvm-12[core,target-x86] (x86|x64), llvm-12[core,target-arm] (arm&!arm64), llvm-12[core,target-aarch64] (arm64), llvm-12[core,target-all] (!x86&!x64&!arm&!arm64)
 
 Feature: target-all
 Description: Build with all backends.
-Build-Depends: llvm-9[core,target-aarch64,target-amdgpu,target-arm,target-bpf,target-hexagon,target-lanai,target-mips,target-msp430,target-nvptx,target-powerpc,target-riscv,target-sparc,target-systemz,target-webassembly,target-x86,target-xcore]
+Build-Depends: llvm-12[core,target-aarch64,target-amdgpu,target-arm,target-bpf,target-hexagon,target-lanai,target-mips,target-msp430,target-nvptx,target-powerpc,target-riscv,target-sparc,target-systemz,target-webassembly,target-x86,target-xcore]
 
 Feature: target-aarch64
 Description: Build with AArch64 backend.
@@ -29,6 +28,9 @@ Description: Build with AMDGPU backend.
 
 Feature: target-arm
 Description: Build with ARM backend.
+
+Feature: target-avr
+Description: Build with AVR backend.
 
 Feature: target-bpf
 Description: Build with BPF backend.
@@ -103,11 +105,18 @@ Description: Build Clang tools.
 Feature: compiler-rt
 Description: Build compiler's runtime libraries.
 
+Feature: flang
+Description: Build Fortran front end.
+Build-Depends: llvm[core,mlir]
+
 Feature: lld
 Description: Build LLVM linker.
 
 Feature: lldb
 Description: Build LLDB debugger.
+
+Feature: mlir
+Description: Build Multi-Level IR Compiler Framework.
 
 Feature: openmp
 Description: Build LLVM OpenMP libraries.
@@ -119,7 +128,7 @@ Build-Depends: llvm[core,utils]
 
 Feature: enable-z3
 Description: Compile with Z3 SMT solver support for Clang static analyzer.
-Build-Depends: z3, llvm-9[core,clang]
+Build-Depends: z3, llvm-12[core,clang]
 
 Feature: libcxx
 Description: Build libcxx runtime
