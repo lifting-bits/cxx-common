@@ -48,7 +48,7 @@ jobs:
 
     runs-on: ${{ matrix.host.name }}
     container:
-      image: ghcr.io/trailofbits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
+      image: ghcr.io/trailofbits/cxx-common-vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
