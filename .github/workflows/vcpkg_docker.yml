@@ -17,6 +17,14 @@ on:
 
 
 jobs:
+  cleanup:
+    runs-on: ['self-hosted', 'Linux', 'ARM64']
+    container:
+      image: ubuntu:latest
+    steps:
+      - name: Cleaning up the $GITHUB_WORKSPACE as root from a Docker image
+        # Volume auto mounted by gh actions pointing to the current working-directory
+        run: find ${{ github.workspace }}/. -name . -o -prune -exec rm -rf -- {} + || true
   build:
     strategy:
       fail-fast: false
@@ -41,10 +49,10 @@ jobs:
 
           docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "${DOCKER_IMAGEID}" .
           # Docker image with NuGet support goes to github packages for CI use only
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            for i in 1 2 3; do docker push "${DOCKER_IMAGEID}" && break || sleep 10; done
-          fi
+          #if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for i in 1 2 3; do docker push "${DOCKER_IMAGEID}" && break || sleep 10; done
+          #fi
 
           # NOTE: Docker Hub only allows one slash in tag
           docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" .
