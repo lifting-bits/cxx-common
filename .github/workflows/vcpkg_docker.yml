@@ -17,14 +17,6 @@ on:
 
 
 jobs:
-  cleanup:
-    runs-on: ['self-hosted', 'Linux', 'ARM64']
-    container:
-      image: ubuntu:latest
-    steps:
-      - name: Cleaning up the $GITHUB_WORKSPACE as root from a Docker image
-        # Volume auto mounted by gh actions pointing to the current working-directory
-        run: find ${{ github.workspace }}/. -name . -o -prune -exec rm -rf -- {} + || true
   build:
     strategy:
       fail-fast: false
@@ -40,6 +32,9 @@ jobs:
     runs-on: ${{ matrix.host.name }}
 
     steps:
+      - name: Cleanup working directory with container root
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:latest find . -name . -o -prune -exec rm -rf -- {} + || true
       - uses: actions/checkout@v2
       - name: Build and Push
         working-directory: docker
