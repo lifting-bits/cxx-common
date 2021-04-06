@@ -39,11 +39,11 @@ jobs:
           # Pull freshest ubuntu Docker image
           docker pull ubuntu:${{ matrix.container.version}}
 
-          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "docker.pkg.github.com/${DOCKER_TAG}" .
+          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "${DOCKER_IMAGEID}" .
           # Docker image with NuGet support goes to github packages for CI use only
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
-            for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            for i in 1 2 3; do docker push "${DOCKER_IMAGEID}" && break || sleep 10; done
           fi
 
           # NOTE: Docker Hub only allows one slash in tag
@@ -54,8 +54,7 @@ jobs:
             for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}" && break || sleep 10; done
           fi
         env:
-          DOCKER_TAG: trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
-          GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
+          DOCKER_IMAGEID: ghcr.io/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
           DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
           DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
 
@@ -65,8 +64,8 @@ jobs:
       # - name: Login to GitHub Container Registry
       #   uses: docker/login-action@v1
       #   with:
-      #     registry: docker.pkg.github.com
-      #     username: ${{ github.repository_owner }}
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
       #     password: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Build and push
@@ -77,5 +76,5 @@ jobs:
       #     target: caching
       #     context: ./docker
       #     push: true
-      #     tags: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+      #     tags: ghcr.io/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
       #     build-args: DISTRO_VERSION=${{ matrix.container.version }}

@@ -48,10 +48,10 @@ jobs:
 
     runs-on: ${{ matrix.host.name }}
     container:
-      image: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
+      image: ghcr.io/trailofbits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
       credentials:
-        username: publisher
-        password: ${{ secrets.GITHUB_PACKAGE_REGISTRY_TOKEN }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     env:
       ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}.tar.xz
