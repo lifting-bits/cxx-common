@@ -21,7 +21,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
       "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" \
       libtinfo-dev libzstd-dev python3.8 python3-pip python3-setuptools python-setuptools \
       build-essential g++ gcc clang-10 lld-10 ninja-build \
-      curl unzip tar git zip python python3 pkg-config && \
+      pixz xz-utils make rpm curl unzip tar git zip python python3 pkg-config && \
     apt-get clean --yes && \
     rm -rf /var/lib/apt/lists/* && \
     \
