@@ -144,7 +144,7 @@ jobs:
       #       --triplet "${TRIPLET}" \
       #       --debug \
       #       "@overlays.txt" \
-      #       remill
+      #       remill[core,${{ matrix.llvm }}]
 
       - name: 'Test rellic build'
         run: |

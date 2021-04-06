@@ -162,7 +162,7 @@ jobs:
             --triplet "${{ matrix.host.triplet }}" \
             --debug \
             @overlays.txt \
-            remill
+            remill[core,${{ matrix.llvm }}]
 
       - name: Prepare ccache
         id: ccache_prep
