@@ -147,9 +147,9 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-10 right now...
+      # Only for latest (LLVM-11)
       - name: 'Build Packaged Lifting Tools'
-        if: ${{ matrix.llvm == 'llvm-10' }}
+        if: ${{ matrix.llvm == 'llvm-11' }}
         shell: 'bash'
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files in remill
         run: |
@@ -219,9 +219,9 @@ jobs:
           cmake --build . --target test_dependencies
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      # Only for LLVM-10 right now...
+      # Only for latest (LLVM-11) right now...
       - name: 'Anvill build - vcpkg remill'
-        if: ${{ matrix.llvm == 'llvm-10' }}
+        if: ${{ matrix.llvm == 'llvm-11' }}
         shell: 'bash'
         run: |
           cd anvill
@@ -238,6 +238,8 @@ jobs:
           ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
+        # Only supports LLVM-11 right now
+        if: ${{ matrix.llvm == 'llvm-11' }}
         shell: 'bash'
         run: |
           cd anvill
@@ -255,6 +257,8 @@ jobs:
           ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
+        # Only supports LLVM-11 right now
+        if: ${{ matrix.llvm == 'llvm-11' }}
         shell: 'bash'
         run: |
           cd mcsema
