@@ -210,8 +210,9 @@ jobs:
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .
