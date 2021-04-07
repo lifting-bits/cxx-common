@@ -114,7 +114,7 @@ jobs:
           brew install pixz
           ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.2.2
+      - uses: actions/upload-artifact@v2.2.3
         if: "contains(github.event.head_commit.message, 'debug artifacts')"
         with:
           name: ${{ env.ARTIFACT_NAME }}
