@@ -32,7 +32,7 @@ jobs:
         working-directory: old
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/cache@v2.1.4
+    - uses: actions/cache@v2.1.5
       name: Cache build artifact store
       with:
         path: ./old/cache
@@ -91,7 +91,7 @@ jobs:
         working-directory: old
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/cache@v2.1.4
+    - uses: actions/cache@v2.1.5
       name: Cache build artifact store
       with:
         path: ./cache

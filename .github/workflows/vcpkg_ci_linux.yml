@@ -176,7 +176,7 @@ jobs:
           echo ::set-output name=timestamp::$(date +"%Y-%m-%d-%H:%M:%S" --utc)
 
       - name: ccache cache files
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2.1.5
         with:
           path: ${{  github.workspace }}/.ccache
           key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
