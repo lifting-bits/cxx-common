@@ -147,7 +147,7 @@ jobs:
           echo ::set-output name=timestamp::$(python -c 'from datetime import datetime; print(datetime.utcnow().strftime("%Y-%m-%d-%H:%M:%S"))')
 
       - name: ccache cache files
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2.1.5
         with:
           path: ${{  github.workspace }}/.ccache
           key: ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
