@@ -43,7 +43,8 @@ jobs:
         llvm: [
           'llvm-9',
           'llvm-10',
-          'llvm-11'
+          'llvm-11',
+          'llvm-12'
           ]
 
     runs-on: ${{ matrix.host.name }}
