@@ -111,11 +111,11 @@ Description: Build LLDB debugger.
 
 Feature: openmp
 Description: Build LLVM OpenMP libraries.
-Build-Depends: llvm[core,utils]
+Build-Depends: llvm-9[core,utils]
 
 Feature: polly
 Description: Build polyhedral optimizations for LLVM.
-Build-Depends: llvm[core,utils]
+Build-Depends: llvm-9[core,utils]
 
 Feature: enable-z3
 Description: Compile with Z3 SMT solver support for Clang static analyzer.
