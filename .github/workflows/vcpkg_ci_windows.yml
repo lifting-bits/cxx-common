@@ -39,7 +39,8 @@ jobs:
         llvm: [
           # 'llvm-9',
           # 'llvm-10',
-          'llvm-11'
+          'llvm-11',
+          'llvm-12'
           ]
 
     runs-on: ['self-hosted', 'Windows', 'X64']
@@ -147,6 +148,7 @@ jobs:
       #       remill
 
       - name: 'Test rellic build'
+        if: ${{ matrix.llvm != 'llvm-12' }}
         run: |
           cd rellic
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -208,6 +210,7 @@ jobs:
       #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Anvill build - custom remill'
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd anvill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -226,6 +229,7 @@ jobs:
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
       - name: 'Test mcsema build'
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd mcsema
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build

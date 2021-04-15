@@ -210,7 +210,7 @@ jobs:
 
       - name: 'Anvill build - custom remill'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd anvill
           mkdir -p build && cd build
@@ -226,7 +226,7 @@ jobs:
 
       - name: 'Test mcsema build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd mcsema
           mkdir -p build && cd build
