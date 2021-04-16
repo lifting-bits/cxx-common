@@ -3,8 +3,8 @@ Version: 10.0.1
 Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
-Build-Depends: llvm-vcpkg-common
-Default-Features: tools, clang, compiler-rt, enable-rtti, enable-z3, enable-eh, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
+Build-Depends: llvm-vcpkg-common, llvm-10[core, compiler-rt] (linux|osx)
+Default-Features: tools, clang, enable-rtti, enable-z3, enable-eh, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
 
 Feature: tools
 Description: Build LLVM tools.
