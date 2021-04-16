@@ -1,4 +1,4 @@
-set(LLVM_VERSION "12.0.0-rc2")
+set(LLVM_VERSION "12.0.0")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 d8f9b3dfeb0fe9b91eb7f49da393784333044db2653373fbb168afd3c8d50f3e3ec7a7b8f44df522d0facafbfe4cfc4d9e2906d19f1e6feb0bdc569b6c10a17d
+    SHA512 0cff02155c5ac0d6db2b72d60d9819d5b5dd859663b45f721b1c7540239c2fceb1f57d9173f6870c49de851c242ed8e85c5c6d6577a1f8092a7c5dcd12513b26
     HEAD_REF main
     PATCHES
         0001-fix-install-paths.patch

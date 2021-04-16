@@ -43,7 +43,8 @@ jobs:
         llvm: [
           'llvm-9',
           'llvm-10',
-          'llvm-11'
+          'llvm-11',
+          'llvm-12'
           ]
 
     runs-on: ${{ matrix.host.name }}
@@ -147,10 +148,10 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-10 right now...
+      # Only for LLVM-11 right now...
       - name: 'Build Packaged Lifting Tools'
-        if: ${{ matrix.llvm == 'llvm-10' }}
         shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-11' }}
         # NOTE: Cannot use --clean-after-build because of path issue finding semantics files in remill
         run: |
           export VCPKG_DISABLE_METRICS=1
@@ -162,7 +163,7 @@ jobs:
             --triplet "${{ matrix.host.triplet }}" \
             --debug \
             @overlays.txt \
-            remill
+            remill[core,${{ matrix.llvm }}]
 
       - name: Prepare ccache
         id: ccache_prep
@@ -190,6 +191,7 @@ jobs:
 
       - name: 'Test rellic build'
         shell: 'bash'
+        if: ${{ matrix.llvm != 'llvm-12' }}
         run: |
           cd rellic
           rm -rf build
@@ -219,9 +221,9 @@ jobs:
           cmake --build . --target test_dependencies
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      # Only for LLVM-10 right now...
+      # Only for LLVM-11 right now...
       - name: 'Anvill build - vcpkg remill'
-        if: ${{ matrix.llvm == 'llvm-10' }}
+        if: ${{ matrix.llvm == 'llvm-11' }}
         shell: 'bash'
         run: |
           cd anvill
@@ -239,6 +241,7 @@ jobs:
 
       - name: 'Anvill build - custom remill'
         shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd anvill
           rm -rf build
@@ -255,6 +258,7 @@ jobs:
 
       - name: 'Test mcsema build'
         shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-11' }}
         run: |
           cd mcsema
           rm -rf build
