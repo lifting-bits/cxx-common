@@ -18,6 +18,7 @@ vcpkg_from_github(
         0007-remove-FindZ3.cmake.patch
         0008-fix-FindZ3.cmake.patch
         0009-clang-sys-include-dir-path.patch
+        0010-compiler-rt-glibc-2.31.patch
         0020-fix-vs2019-v16.6.patch
 )
 
