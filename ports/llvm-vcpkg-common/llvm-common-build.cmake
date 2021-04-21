@@ -1,44 +1,19 @@
-#####################
-##### ATTENTION #####
-#####################
-# If you modify this file, please update the CONTROL file to indicate a new
-# version, otherwise vcpkg won't know that anything important changed
-#####################
-#####################
-#####################
-
-# set(LLVM_VERSION "11.0.0")
-
-# vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
-
-# vcpkg_from_github(
-#     OUT_SOURCE_PATH SOURCE_PATH
-#     REPO llvm/llvm-project
-#     REF llvmorg-${LLVM_VERSION}
-#     SHA512 b6d38871ccce0e086e27d35e42887618d68e57d8274735c59e3eabc42dee352412489296293f8d5169fe0044936345915ee7da61ebdc64ec10f7737f6ecd90f2
-#     HEAD_REF master
-#     PATCHES
-#         0001-add-msvc-options.patch     # Fixed in LLVM 12.0.0
-#         0002-fix-install-paths.patch    # This patch fixes paths in ClangConfig.cmake, LLVMConfig.cmake, LLDConfig.cmake etc.
-#         0003-fix-openmp-debug.patch
-#         0004-fix-dr-1734.patch
-#         0005-fix-tools-path.patch
-#         0006-workaround-msvc-bug.patch  # Fixed in LLVM 12.0.0
-# )
-
 string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
 list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
 list(GET VERSION_LIST 1 LLVM_VERSION_MINOR)
 list(GET VERSION_LIST 2 LLVM_VERSION_PATCH)
 
-vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
-    tools LLVM_BUILD_TOOLS
-    tools LLVM_INCLUDE_TOOLS
-    utils LLVM_BUILD_UTILS
-    utils LLVM_INCLUDE_UTILS
-    enable-rtti LLVM_ENABLE_RTTI
-    enable-z3 LLVM_ENABLE_Z3_SOLVER
-    enable-eh LLVM_ENABLE_EH
+vcpkg_check_features(
+    OUT_FEATURE_OPTIONS FEATURE_OPTIONS
+    FEATURES
+        tools LLVM_BUILD_TOOLS
+        tools LLVM_INCLUDE_TOOLS
+        utils LLVM_BUILD_UTILS
+        utils LLVM_INCLUDE_UTILS
+        utils LLVM_INSTALL_UTILS
+        enable-rtti LLVM_ENABLE_RTTI
+        enable-z3 LLVM_ENABLE_Z3_SOLVER
+        enable-eh LLVM_ENABLE_EH
 )
 
 # Linking with gold is better than /bin/ld
@@ -66,15 +41,13 @@ if(VCPKG_TARGET_IS_LINUX)
     endif()
 endif()
 
-if(VCPKG_TARGET_IS_WINDOWS)
-    # LLVM generates CMake error due to Visual Studio version 16.4 is known to miscompile part of LLVM.
-    # LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON disables this error.
-    # See https://developercommunity.visualstudio.com/content/problem/845933/miscompile-boolean-condition-deduced-to-be-always.html
-    # and thread "[llvm-dev] Longstanding failing tests - clang-tidy, MachO, Polly" on llvm-dev Jan 21-23 2020.
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
-        )
-endif()
+# LLVM generates CMake error due to Visual Studio version 16.4 is known to miscompile part of LLVM.
+# LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON disables this error.
+# See https://developercommunity.visualstudio.com/content/problem/845933/miscompile-boolean-condition-deduced-to-be-always.html
+# and thread "[llvm-dev] Longstanding failing tests - clang-tidy, MachO, Polly" on llvm-dev Jan 21-23 2020.
+list(APPEND FEATURE_OPTIONS
+    -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
+)
 
 if(VCPKG_USE_SANITIZER)
     list(APPEND FEATURE_OPTIONS
@@ -143,6 +116,10 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DLLVM_CREATE_XCODE_TOOLCHAIN=ON
         )
     endif()
+    # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
+    # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
+    # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
+    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
@@ -153,7 +130,7 @@ endif()
 if("flang" IN_LIST FEATURES)
     # Disable Flang on Windows (see http://lists.llvm.org/pipermail/flang-dev/2020-July/000448.html).
     if(VCPKG_TARGET_IS_WINDOWS)
-        message(FATAL_ERROR "Building Flang with MSVC is not supported.")
+        message(FATAL_ERROR "Building Flang with MSVC is not supported. Disable it until issues are fixed.")
     endif()
     list(APPEND LLVM_ENABLE_PROJECTS "flang")
     list(APPEND FEATURE_OPTIONS
@@ -161,7 +138,9 @@ if("flang" IN_LIST FEATURES)
         -DCMAKE_CXX_STANDARD=17
     )
 endif()
-
+if("libclc" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_PROJECTS "libclc")
+endif()
 if("libcxx" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
     list(APPEND FEATURE_OPTIONS
@@ -181,9 +160,22 @@ if("libcxx" IN_LIST FEATURES)
             -DLIBCXX_ENABLE_SHARED=YES
             )
     endif()
+    if(VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Building libcxx with MSVC is not supported. Disable it until issues are fixed.")
+    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
 endif()
 if("libcxxabi" IN_LIST FEATURES)
+    if(VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Building libcxxabi with MSVC is not supported. Disable it until issues are fixed.")
+    endif()
     list(APPEND LLVM_ENABLE_PROJECTS "libcxxabi")
+endif()
+if("libunwind" IN_LIST FEATURES)
+    if(VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Building libunwind with MSVC is not supported. Disable it until issues are fixed.")
+    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libunwind")
 endif()
 if("lld" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "lld")
@@ -197,7 +189,7 @@ endif()
 if("openmp" IN_LIST FEATURES)
     # Disable OpenMP on Windows (see https://bugs.llvm.org/show_bug.cgi?id=45074).
     if(VCPKG_TARGET_IS_WINDOWS)
-        message(FATAL_ERROR "Building OpenMP with MSVC is not supported.")
+        message(FATAL_ERROR "Building OpenMP with MSVC is not supported. Disable it until issues are fixed.")
     endif()
     list(APPEND LLVM_ENABLE_PROJECTS "openmp")
     # Perl is required for the OpenMP run-time
@@ -211,8 +203,17 @@ if("openmp" IN_LIST FEATURES)
         )
     endif()
 endif()
+if("parallel-libs" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_PROJECTS "parallel-libs")
+endif()
 if("polly" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "polly")
+endif()
+if("pstl" IN_LIST FEATURES)
+    if(VCPKG_TARGET_IS_WINDOWS)
+        message(FATAL_ERROR "Building pstl with MSVC is not supported. Disable it until issues are fixed.")
+    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "pstl")
 endif()
 
 set(known_llvm_targets
@@ -263,7 +264,7 @@ vcpkg_configure_cmake(
         -DLLVM_BUILD_EXAMPLES=OFF
         -DLLVM_INCLUDE_TESTS=OFF
         -DLLVM_BUILD_TESTS=OFF
-        # Disable optional dependencies to libxml2, zlib, and libedit
+        # Disable optional dependencies to libxml2, zlib, and libedit.
         -DLLVM_ENABLE_LIBXML2=OFF
         -DLLVM_ENABLE_ZLIB=OFF
         -DLLVM_ENABLE_LIBEDIT=OFF
@@ -279,12 +280,16 @@ vcpkg_configure_cmake(
         # Disable build LLVM-C.dll (Windows only) due to doesn't compile with CMAKE_DEBUG_POSTFIX
         -DLLVM_BUILD_LLVM_C_DYLIB=OFF
         # Path for binary subdirectory (defaults to 'bin')
-        -DLLVM_TOOLS_INSTALL_DIR=tools/${PORT}
+        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm
     OPTIONS_DEBUG
         -DCMAKE_DEBUG_POSTFIX=d
 )
 
 vcpkg_install_cmake()
+
+vcpkg_fixup_cmake_targets(CONFIG_PATH "share/llvm" TARGET_PATH "share/llvm")
+file(INSTALL ${SOURCE_PATH}/llvm/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+
 
 if("clang" IN_LIST FEATURES)
     vcpkg_fixup_cmake_targets(CONFIG_PATH "share/clang" TARGET_PATH "share/clang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
@@ -321,28 +326,15 @@ endif()
 
 if("polly" IN_LIST FEATURES)
     vcpkg_fixup_cmake_targets(CONFIG_PATH "share/polly" TARGET_PATH "share/polly" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/polly/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/polly RENAME copyright)
+    file(INSTALL ${SOURCE_PATH}/polly/LICENSE.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/polly RENAME copyright)
 endif()
 
-vcpkg_fixup_cmake_targets(CONFIG_PATH "share/llvm" TARGET_PATH "share/llvm")
-file(INSTALL ${SOURCE_PATH}/llvm/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
-
-if(VCPKG_TARGET_IS_WINDOWS)
-    set(LLVM_EXECUTABLE_REGEX [[^([^.]*|[^.]*\.lld)\.exe$]])
-else()
-    set(LLVM_EXECUTABLE_REGEX [[^([^.]*|[^.]*\.lld)$]])
+if("pstl" IN_LIST FEATURES)
+    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/ParallelSTL" TARGET_PATH "share/ParallelSTL" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+    file(INSTALL ${SOURCE_PATH}/pstl/LICENSE.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/ParallelSTL RENAME copyright)
 endif()
 
-file(GLOB LLVM_TOOL_FILES "${CURRENT_PACKAGES_DIR}/bin/*")
-set(LLVM_TOOLS)
-foreach(tool_file IN LISTS LLVM_TOOL_FILES)
-    get_filename_component(tool_file "${tool_file}" NAME)
-    if(tool_file MATCHES "${LLVM_EXECUTABLE_REGEX}")
-        list(APPEND LLVM_TOOLS "${CMAKE_MATCH_1}")
-    endif()
-endforeach()
-
-vcpkg_copy_tools(TOOL_NAMES ${LLVM_TOOLS} AUTO_CLEAN)
+vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)
 
 if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
     file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)

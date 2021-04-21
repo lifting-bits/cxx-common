@@ -109,6 +109,7 @@ Feature: lldb
 Description: Build LLDB debugger.
 
 Feature: mlir
+Build-Depends: llvm-10[core,utils]
 Description: Build Multi-Level IR Compiler Framework.
 
 Feature: openmp

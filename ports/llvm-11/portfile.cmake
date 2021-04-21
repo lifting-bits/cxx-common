@@ -15,9 +15,12 @@ vcpkg_from_github(
         0004-fix-dr-1734.patch
         0005-fix-tools-path.patch
         0006-workaround-msvc-bug.patch
-        0007-remove-FindZ3.cmake.patch
-        0008-fix-FindZ3.cmake.patch
-        0009-clang-sys-include-dir-path.patch
+        0007-fix-compiler-rt-install-path.patch
+        0008-fix-libcxx-install.patch
+        0009-fix-tools-install-path.patch
+        0020-remove-FindZ3.cmake.patch
+        0021-fix-FindZ3.cmake.patch
+        0022-llvm-config-bin-path.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")

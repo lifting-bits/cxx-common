@@ -133,3 +133,16 @@ index 000000000..2c55ba7d6
 +  printf("%u.%u.%u", major, minor, build);
 +  return 0;
 +}
+diff --git a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
+index 17bef0230789..edc3ec046cff 100644
+--- a/llvm/lib/Support/CMakeLists.txt
++++ b/llvm/lib/Support/CMakeLists.txt
+@@ -46,7 +46,7 @@ endif()
+ 
+ # Link Z3 if the user wants to build it.
+ if(LLVM_WITH_Z3)
+-  set(Z3_LINK_FILES ${Z3_LIBRARIES})
++  set(Z3_LINK_FILES Z3)
+ else()
+   set(Z3_LINK_FILES "")
+ endif()
