@@ -21,8 +21,9 @@ vcpkg_from_github(
         0020-remove-FindZ3.cmake.patch
         0021-fix-FindZ3.cmake.patch
         0022-llvm-config-bin-path.patch
-        0023-compiler-rt-glibc-2.31.patch
+        0023-clang-sys-include-dir-path.patch
         0024-fix-vs2019-v16.6.patch
+        0025-compiler-rt-glibc-2.31.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")
