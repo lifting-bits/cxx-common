@@ -1,5 +1,12 @@
+ clang/cmake/modules/CMakeLists.txt | 4 ++--
+ llvm/cmake/modules/AddLLVM.cmake   | 2 +-
+ llvm/cmake/modules/CMakeLists.txt  | 2 +-
+ polly/cmake/CMakeLists.txt         | 4 ++--
+ pstl/CMakeLists.txt                | 4 ++--
+ 5 files changed, 8 insertions(+), 8 deletions(-)
+
 diff --git a/clang/cmake/modules/CMakeLists.txt b/clang/cmake/modules/CMakeLists.txt
-index d233f552f01..26f502ad2d2 100644
+index d233f552f01f..26f502ad2d23 100644
 --- a/clang/cmake/modules/CMakeLists.txt
 +++ b/clang/cmake/modules/CMakeLists.txt
 @@ -1,11 +1,11 @@
@@ -17,11 +24,10 @@ index d233f552f01..26f502ad2d2 100644
  
  get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
 diff --git a/llvm/cmake/modules/AddLLVM.cmake b/llvm/cmake/modules/AddLLVM.cmake
-index 211f9551271..2abe3803f91 100644
+index f5a1b0d6f238..cb70a42d3312 100644
 --- a/llvm/cmake/modules/AddLLVM.cmake
 +++ b/llvm/cmake/modules/AddLLVM.cmake
-@@ -926,10 +926,10 @@
-   if(ARG_GEN_CONFIG)
+@@ -927,7 +927,7 @@ function(process_llvm_pass_plugins)
  
        ## Part 1: Extension header to be included whenever we need extension
        #  processing.
@@ -30,10 +36,8 @@ index 211f9551271..2abe3803f91 100644
        set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
        file(WRITE
            "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
-           "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
-       install(FILES
 diff --git a/llvm/cmake/modules/CMakeLists.txt b/llvm/cmake/modules/CMakeLists.txt
-index 9cf22b436fa..8eeb27d1794 100644
+index af757d6199a8..7e7c34df0dc5 100644
 --- a/llvm/cmake/modules/CMakeLists.txt
 +++ b/llvm/cmake/modules/CMakeLists.txt
 @@ -1,4 +1,4 @@
@@ -43,7 +47,7 @@ index 9cf22b436fa..8eeb27d1794 100644
  
  # First for users who use an installed LLVM, create the LLVMExports.cmake file.
 diff --git a/polly/cmake/CMakeLists.txt b/polly/cmake/CMakeLists.txt
-index 211f9551271..2abe3803f91 100644
+index 211f95512717..2abe3803f910 100644
 --- a/polly/cmake/CMakeLists.txt
 +++ b/polly/cmake/CMakeLists.txt
 @@ -1,7 +1,7 @@
@@ -56,3 +60,20 @@ index 211f9551271..2abe3803f91 100644
  if (CMAKE_CONFIGURATION_TYPES)
    set(POLLY_EXPORTS_FILE_NAME "PollyExports-$<LOWER_CASE:$<CONFIG>>.cmake")
  else()
+diff --git a/pstl/CMakeLists.txt b/pstl/CMakeLists.txt
+index dd601bc58a4f..96a7e4e5ae82 100644
+--- a/pstl/CMakeLists.txt
++++ b/pstl/CMakeLists.txt
+@@ -81,10 +81,10 @@ install(TARGETS ParallelSTL
+ install(EXPORT ParallelSTLTargets
+         FILE ParallelSTLTargets.cmake
+         NAMESPACE pstl::
+-        DESTINATION lib/cmake/ParallelSTL)
++        DESTINATION share/ParallelSTL)
+ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
+               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
+-        DESTINATION lib/cmake/ParallelSTL)
++        DESTINATION share/ParallelSTL)
+ install(DIRECTORY include/
+         DESTINATION include)
+ install(FILES "${PSTL_CONFIG_SITE_PATH}"

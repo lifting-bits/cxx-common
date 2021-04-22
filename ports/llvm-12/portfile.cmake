@@ -13,9 +13,12 @@ vcpkg_from_github(
         0002-fix-openmp-debug.patch
         0003-fix-dr-1734.patch
         0004-fix-tools-path.patch
-        0005-remove-FindZ3.cmake.patch
-        0006-fix-FindZ3.cmake.patch
-        0007-clang-sys-include-dir-path.patch
+        0005-fix-compiler-rt-install-path.patch
+        0006-fix-libcxx-install.patch
+        0007-fix-tools-install-path.patch
+        0020-remove-FindZ3.cmake.patch
+        0021-fix-FindZ3.cmake.patch
+        0022-llvm-config-bin-path.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")

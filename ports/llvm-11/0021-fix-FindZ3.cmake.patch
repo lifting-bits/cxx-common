@@ -3,25 +3,36 @@ new file mode 100644
 index 000000000..32f6f4160
 --- /dev/null
 +++ b/llvm/cmake/modules/FindZ3.cmake
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,127 @@
 +INCLUDE(CheckCXXSourceRuns)
 +
 +# Function to check Z3's version
 +function(check_z3_version z3_include z3_lib)
-+  # Get lib path
-+  get_filename_component(z3_lib_path ${z3_lib} PATH)
++  # The program that will be executed to print Z3's version.
++  file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/testz3.c
++       "#include <assert.h>
++        #include <z3.h>
++        int main() {
++          unsigned int major, minor, build, rev;
++          Z3_get_version(&major, &minor, &build, &rev);
++          printf(\"%u.%u.%u\", major, minor, build);
++          return 0;
++       }")
 +
 +  # Try to find a threading module in case Z3 was built with threading support.
 +  # Threads are required elsewhere in LLVM, but not marked as required here because
 +  # Z3 could have been compiled without threading support.
 +  find_package(Threads)
-+  set(z3_link_libs "-lz3" "${CMAKE_THREAD_LIBS_INIT}")
++  set(z3_link_libs ${z3_lib} "${CMAKE_THREAD_LIBS_INIT}")
++
++  # Get lib path
++  get_filename_component(z3_lib_path ${z3_lib} PATH)
 +
 +  try_run(
 +    Z3_RETURNCODE
 +    Z3_COMPILED
 +    ${CMAKE_BINARY_DIR}
-+    ${CMAKE_SOURCE_DIR}/cmake/modules/testz3.cpp
++    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/testz3.c
 +    COMPILE_DEFINITIONS -I"${z3_include}"
 +    LINK_LIBRARIES -L${z3_lib_path} ${z3_link_libs}
 +    RUN_OUTPUT_VARIABLE SRC_OUTPUT
@@ -77,17 +88,17 @@ index 000000000..32f6f4160
 +  # Z3 4.8.1+ has the version is in a public header.
 +  file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
 +       z3_version_str REGEX "^#define[\t ]+Z3_MAJOR_VERSION[\t ]+.*")
-+  string(REGEX REPLACE "^.*Z3_MAJOR_VERSION[\t ]+([0-9]).*$" "\\1"
++  string(REGEX REPLACE "^.*Z3_MAJOR_VERSION[\t ]+([0-9]+).*$" "\\1"
 +         Z3_MAJOR "${z3_version_str}")
 +
 +  file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
 +       z3_version_str REGEX "^#define[\t ]+Z3_MINOR_VERSION[\t ]+.*")
-+  string(REGEX REPLACE "^.*Z3_MINOR_VERSION[\t ]+([0-9]).*$" "\\1"
++  string(REGEX REPLACE "^.*Z3_MINOR_VERSION[\t ]+([0-9]+).*$" "\\1"
 +         Z3_MINOR "${z3_version_str}")
 +
 +  file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
 +       z3_version_str REGEX "^#define[\t ]+Z3_BUILD_NUMBER[\t ]+.*")
-+  string(REGEX REPLACE "^.*Z3_BUILD_NUMBER[\t ]+([0-9]).*$" "\\1"
++  string(REGEX REPLACE "^.*Z3_BUILD_NUMBER[\t ]+([0-9]+).*$" "\\1"
 +         Z3_BUILD "${z3_version_str}")
 +
 +  set(Z3_VERSION_STRING ${Z3_MAJOR}.${Z3_MINOR}.${Z3_BUILD})
@@ -107,6 +118,7 @@ index 000000000..32f6f4160
 +FIND_PACKAGE_HANDLE_STANDARD_ARGS(Z3
 +                                  REQUIRED_VARS Z3_LIBS Z3_INCLUDE_DIR
 +                                  VERSION_VAR Z3_VERSION_STRING)
++
 +if(Z3_FOUND AND NOT TARGET Z3)
 +  add_library(Z3 UNKNOWN IMPORTED)
 +  set_target_properties(Z3 PROPERTIES
@@ -119,30 +131,21 @@ index 000000000..32f6f4160
 +  target_link_libraries(Z3 INTERFACE Threads::Threads)
 +endif()
 +mark_as_advanced(Z3_INCLUDE_DIR Z3_LIBS Z3_LIBRARIES)
-diff --git a/llvm/cmake/modules/testz3.cpp b/llvm/cmake/modules/testz3.cpp
-new file mode 100644
-index 000000000..2c55ba7d6
---- /dev/null
-+++ b/llvm/cmake/modules/testz3.cpp
-@@ -0,0 +1,8 @@
-+#include <assert.h>
-+#include <z3.h>
-+int main() {
-+  unsigned int major, minor, build, rev;
-+  Z3_get_version(&major, &minor, &build, &rev);
-+  printf("%u.%u.%u", major, minor, build);
-+  return 0;
-+}
-diff --git a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
-index 17bef0230789..edc3ec046cff 100644
---- a/llvm/lib/Support/CMakeLists.txt
-+++ b/llvm/lib/Support/CMakeLists.txt
-@@ -46,7 +46,7 @@ endif()
+diff --git a/llvm/cmake/modules/LLVMConfig.cmake.in b/llvm/cmake/modules/LLVMConfig.cmake.in
+index 4d8e33711d27..400c2e7b8e33 100644
+--- a/llvm/cmake/modules/LLVMConfig.cmake.in
++++ b/llvm/cmake/modules/LLVMConfig.cmake.in
+@@ -55,6 +55,13 @@ set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
+ set(LLVM_LIBXML2_ENABLED @LLVM_LIBXML2_ENABLED@)
  
- # Link Z3 if the user wants to build it.
- if(LLVM_WITH_Z3)
--  set(Z3_LINK_FILES ${Z3_LIBRARIES})
-+  set(Z3_LINK_FILES Z3)
- else()
-   set(Z3_LINK_FILES "")
- endif()
+ set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
++if(LLVM_WITH_Z3)
++  # Need to use our FindModule instead of another one (like the one included
++  # with later versions of Z3
++  list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
++  find_package(Z3 4.7.1 REQUIRED)
++  list(POP_FRONT CMAKE_MODULE_PATH)
++endif()
+ 
+ set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)
+ 
