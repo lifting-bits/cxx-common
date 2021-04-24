@@ -4,7 +4,7 @@ Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
 Build-Depends: llvm-vcpkg-common, llvm-11[core, compiler-rt] (linux|osx)
-Default-Features: tools, clang, enable-rtti, enable-z3, enable-eh, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
+Default-Features: tools, clang, mlir, enable-rtti, enable-z3, enable-eh, enable-assertions, disable-abi-breaking-checks, disable-terminfo, libcxx, libcxxabi, target-aarch64, target-arm, target-nvptx, target-sparc, target-x86
 
 Feature: tools
 Description: Build LLVM tools.
@@ -116,6 +116,7 @@ Feature: lldb
 Description: Build LLDB debugger.
 
 Feature: mlir
+Build-Depends: llvm-11[core,utils]
 Description: Build Multi-Level IR Compiler Framework.
 
 Feature: openmp

@@ -1,5 +1,11 @@
+ clang/cmake/modules/CMakeLists.txt | 4 ++--
+ llvm/cmake/modules/CMakeLists.txt  | 2 +-
+ polly/cmake/CMakeLists.txt         | 4 ++--
+ pstl/CMakeLists.txt                | 4 ++--
+ 4 files changed, 7 insertions(+), 7 deletions(-)
+
 diff --git a/clang/cmake/modules/CMakeLists.txt b/clang/cmake/modules/CMakeLists.txt
-index d233f552f01..26f502ad2d2 100644
+index d233f552f01f..26f502ad2d23 100644
 --- a/clang/cmake/modules/CMakeLists.txt
 +++ b/clang/cmake/modules/CMakeLists.txt
 @@ -1,11 +1,11 @@
@@ -17,7 +23,7 @@ index d233f552f01..26f502ad2d2 100644
  
  get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
 diff --git a/llvm/cmake/modules/CMakeLists.txt b/llvm/cmake/modules/CMakeLists.txt
-index 9cf22b436fa..8eeb27d1794 100644
+index 9cf22b436fa7..8eeb27d17940 100644
 --- a/llvm/cmake/modules/CMakeLists.txt
 +++ b/llvm/cmake/modules/CMakeLists.txt
 @@ -1,4 +1,4 @@
@@ -27,7 +33,7 @@ index 9cf22b436fa..8eeb27d1794 100644
  
  # First for users who use an installed LLVM, create the LLVMExports.cmake file.
 diff --git a/polly/cmake/CMakeLists.txt b/polly/cmake/CMakeLists.txt
-index 211f9551271..2abe3803f91 100644
+index 211f95512717..2abe3803f910 100644
 --- a/polly/cmake/CMakeLists.txt
 +++ b/polly/cmake/CMakeLists.txt
 @@ -1,7 +1,7 @@
@@ -40,3 +46,20 @@ index 211f9551271..2abe3803f91 100644
  if (CMAKE_CONFIGURATION_TYPES)
    set(POLLY_EXPORTS_FILE_NAME "PollyExports-$<LOWER_CASE:$<CONFIG>>.cmake")
  else()
+diff --git a/pstl/CMakeLists.txt b/pstl/CMakeLists.txt
+index 5fb7504ad525..906211a19b64 100644
+--- a/pstl/CMakeLists.txt
++++ b/pstl/CMakeLists.txt
+@@ -72,10 +72,10 @@ install(TARGETS ParallelSTL
+ install(EXPORT ParallelSTLTargets
+         FILE ParallelSTLTargets.cmake
+         NAMESPACE pstl::
+-        DESTINATION lib/cmake/ParallelSTL)
++        DESTINATION share/ParallelSTL)
+ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
+               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
+-        DESTINATION lib/cmake/ParallelSTL)
++        DESTINATION share/ParallelSTL)
+ install(DIRECTORY include/pstl
+         DESTINATION include)
+ 

@@ -1,16 +1,3 @@
-diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
-index ece8222dc..3a0db51b6 100644
---- a/clang/lib/Driver/Driver.cpp
-+++ b/clang/lib/Driver/Driver.cpp
-@@ -101,7 +101,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
-   // exact same string ("a/../b/" and "b/" get different hashes, for example).
- 
-   // Dir is bin/ or lib/, depending on where BinaryPath is.
--  std::string Dir = std::string(llvm::sys::path::parent_path(BinaryPath));
-+  std::string Dir = std::string(llvm::sys::path::parent_path(llvm::sys::path::parent_path(BinaryPath)));
- 
-   SmallString<128> P(Dir);
-   if (CustomResourceDir != "") {
 diff --git a/clang/lib/Driver/ToolChains/Darwin.cpp b/clang/lib/Driver/ToolChains/Darwin.cpp
 index 7b879f8cb652..f4ff380b7e75 100644
 --- a/clang/lib/Driver/ToolChains/Darwin.cpp
@@ -28,3 +15,16 @@ index 7b879f8cb652..f4ff380b7e75 100644
        llvm::sys::path::append(P, "..", "include", "c++", "v1");
        addSystemInclude(DriverArgs, CC1Args, P);
      }
+diff --git a/clang/lib/Driver/ToolChains/Gnu.cpp b/clang/lib/Driver/ToolChains/Gnu.cpp
+index c8a7fce07ef1..72d735334c4c 100644
+--- a/clang/lib/Driver/ToolChains/Gnu.cpp
++++ b/clang/lib/Driver/ToolChains/Gnu.cpp
+@@ -2904,7 +2904,7 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+   // Android never uses the libc++ headers installed alongside the toolchain,
+   // which are generally incompatible with the NDK libraries anyway.
+   if (!getTriple().isAndroid())
+-    if (AddIncludePath(getDriver().Dir + "/../include/c++"))
++    if (AddIncludePath(getDriver().Dir + "/../../include/c++"))
+       return;
+   // If this is a development, non-installed, clang, libcxx will
+   // not be found at ../include/c++ but it likely to be found at
