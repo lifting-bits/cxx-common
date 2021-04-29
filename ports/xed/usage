@@ -1,4 +1,4 @@
 The package xed is compatible with built-in CMake targets:
 
-    FIND_PACKAGE(XED REQUIRED)
-    TARGET_LINK_LIBRARIES(main PRIVATE XED::XED)
+    find_package(XED REQUIRED)
+    target_link_libraries(main PRIVATE XED::XED XED::ILD)
