@@ -90,14 +90,6 @@ index 0d9e471ec07096de402dfd23a2bc0aa2b3b51bd2..c847be9ee266fd6b6b22eeff23e08638
      break;
    }
  
-diff --git a/clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/include/c++/v1/.keep b/clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/include/c++/v1/.keep
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-diff --git a/clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/lib/.keep b/clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/lib/.keep
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-diff --git a/clang/test/Driver/darwin-header-search-libcxx.cpp b/clang/test/Driver/darwin-header-search-libcxx.cpp
-index 6bdbbd11908a1fd87ce285c7cb04ae3df4d3f2fa..4824525f1cf414aa70f9e9d3cb9af661cccbb5a1 100644
 --- a/clang/test/Driver/darwin-header-search-libcxx.cpp
 +++ b/clang/test/Driver/darwin-header-search-libcxx.cpp
 @@ -13,39 +13,57 @@

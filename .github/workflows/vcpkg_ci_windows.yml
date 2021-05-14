@@ -103,9 +103,6 @@ jobs:
         env:
           VCPKG_DISABLE_METRICS: 1
         run: |
-          # Fix some git patch errors
-          git config --global diff.noprefix false
-
           # Setup NuGet authentication
           & "$(& "${env:VCPKG_ROOT}\vcpkg.exe" fetch nuget | select -last 1)" setapikey `
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
