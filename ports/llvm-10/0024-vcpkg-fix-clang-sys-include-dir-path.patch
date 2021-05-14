@@ -1,20 +1,21 @@
 diff --git a/clang/lib/Driver/ToolChains/Darwin.cpp b/clang/lib/Driver/ToolChains/Darwin.cpp
-index 46265c1b9f1a..f15a4078e8b9 100644
+index b1fafaeb727a..a0aeb507d3b1 100644
 --- a/clang/lib/Driver/ToolChains/Darwin.cpp
 +++ b/clang/lib/Driver/ToolChains/Darwin.cpp
-@@ -1958,10 +1958,11 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
-   switch (GetCXXStdlibType(DriverArgs)) {
-   case ToolChain::CST_Libcxx: {
-     // On Darwin, libc++ is installed alongside the compiler in
--    // include/c++/v1, so get from '<install>/bin' to '<install>/include/c++/v1'.
-+    // include/c++/v1, so get from '<install>/tools/llvm' to '<install>/include/c++/v1'.
-     {
-       llvm::SmallString<128> P = llvm::StringRef(getDriver().getInstalledDir());
-       // Note that P can be relative, so we have to '..' and not parent_path.
-+      llvm::sys::path::append(P, "..");
-       llvm::sys::path::append(P, "..", "include", "c++", "v1");
-       addSystemInclude(DriverArgs, CC1Args, P);
-     }
+@@ -1967,11 +1967,12 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
+     // include_next could break).
+ 
+     // Check for (1)
+-    // Get from '<install>/bin' to '<install>/include/c++/v1'.
++    // Get from '<install>/tools/llvm' to '<install>/include/c++/v1'.
+     // Note that InstallBin can be relative, so we use '..' instead of
+     // parent_path.
+     llvm::SmallString<128> InstallBin =
+         llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
++    llvm::sys::path::append(InstallBin, "..");
+     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+     if (getVFS().exists(InstallBin)) {
+       addSystemInclude(DriverArgs, CC1Args, InstallBin);
 diff --git a/clang/lib/Driver/ToolChains/Gnu.cpp b/clang/lib/Driver/ToolChains/Gnu.cpp
 index e8ef881e89ac..6711ebb12e06 100644
 --- a/clang/lib/Driver/ToolChains/Gnu.cpp

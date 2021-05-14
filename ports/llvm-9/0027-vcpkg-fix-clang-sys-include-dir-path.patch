@@ -1,0 +1,18 @@
+diff --git a/clang/lib/Driver/ToolChains/Darwin.cpp b/clang/lib/Driver/ToolChains/Darwin.cpp
+index ca259f50199e..a31f3cc65977 100644
+--- a/clang/lib/Driver/ToolChains/Darwin.cpp
++++ b/clang/lib/Driver/ToolChains/Darwin.cpp
+@@ -1934,11 +1934,12 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
+     // include_next could break).
+ 
+     // Check for (1)
+-    // Get from '<install>/bin' to '<install>/include/c++/v1'.
++    // Get from '<install>/tools/llvm' to '<install>/include/c++/v1'.
+     // Note that InstallBin can be relative, so we use '..' instead of
+     // parent_path.
+     llvm::SmallString<128> InstallBin =
+         llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
++    llvm::sys::path::append(InstallBin, "..");
+     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+     if (getVFS().exists(InstallBin)) {
+       addSystemInclude(DriverArgs, CC1Args, InstallBin);
