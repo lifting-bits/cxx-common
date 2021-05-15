@@ -31,7 +31,7 @@ jobs:
         shell: bash
         working-directory: old
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.3.4
     - uses: actions/cache@v2.1.5
       name: Cache build artifact store
       with:
@@ -90,7 +90,7 @@ jobs:
         shell: bash
         working-directory: old
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.3.4
     - uses: actions/cache@v2.1.5
       name: Cache build artifact store
       with:
