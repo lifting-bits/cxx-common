@@ -182,12 +182,6 @@ msg "Boostrapping vcpkg"
   fi
 
   "${vcpkg_dir}/bootstrap-vcpkg.sh"
-
-  if command -v ccache &> /dev/null
-  then
-    unset CMAKE_C_COMPILER_LAUNCHER
-    unset CMAKE_CXX_COMPILER_LAUNCHER
-  fi
 )
 
 msg "Building dependencies"
