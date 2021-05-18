@@ -1,0 +1,92 @@
+From a3a24316087d0e1b4db0b8fee19cdee8b7968032 Mon Sep 17 00:00:00 2001
+From: Louis Dionne <ldionne@apple.com>
+Date: Wed, 7 Oct 2020 14:27:55 -0400
+Subject: [PATCH] [clang] Don't look into <sysroot> for C++ headers if they are
+ found alongside the toolchain
+
+Currently, Clang looks for libc++ headers alongside the installation
+directory of Clang, and it also adds a search path for headers in the
+-isysroot. This is problematic if headers are found in both the toolchain
+and in the sysroot, since #include_next will end up finding the libc++
+headers in the sysroot instead of the intended system headers.
+
+This patch changes the logic such that if the toolchain contains libc++
+headers, no C++ header paths are added in the sysroot. However, if the
+toolchain does *not* contain libc++ headers, the sysroot is searched as
+usual.
+
+This should not be a breaking change, since any code that previously
+relied on some libc++ headers being found in the sysroot suffered from
+the #include_next issue described above, which renders any libc++ header
+basically useless.
+
+Differential Revision: https://reviews.llvm.org/D89001
+---
+ clang/lib/Driver/ToolChains/Darwin.cpp        |  47 +++++---
+ .../usr/include/c++/v1/.keep                  |   0
+ .../basic_darwin_sdk_usr_cxx_v1/usr/lib/.keep |   0
+ .../Driver/darwin-header-search-libcxx.cpp    | 101 ++++++++++++++----
+ 4 files changed, 112 insertions(+), 36 deletions(-)
+ create mode 100644 clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/include/c++/v1/.keep
+ create mode 100644 clang/test/Driver/Inputs/basic_darwin_sdk_usr_cxx_v1/usr/lib/.keep
+
+diff --git a/clang/lib/Driver/ToolChains/Darwin.cpp b/clang/lib/Driver/ToolChains/Darwin.cpp
+index 5de7d7132df8..ca259f50199e 100644
+--- a/clang/lib/Driver/ToolChains/Darwin.cpp
++++ b/clang/lib/Driver/ToolChains/Darwin.cpp
+@@ -1924,21 +1924,42 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
+ 
+   switch (GetCXXStdlibType(DriverArgs)) {
+   case ToolChain::CST_Libcxx: {
+-    // On Darwin, libc++ is installed alongside the compiler in
+-    // include/c++/v1, so get from '<install>/bin' to '<install>/include/c++/v1'.
+-    {
+-      llvm::SmallString<128> P = llvm::StringRef(getDriver().getInstalledDir());
+-      // Note that P can be relative, so we have to '..' and not parent_path.
+-      llvm::sys::path::append(P, "..", "include", "c++", "v1");
+-      addSystemInclude(DriverArgs, CC1Args, P);
++    // On Darwin, libc++ can be installed in one of the following two places:
++    // 1. Alongside the compiler in         <install>/include/c++/v1
++    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
++    //
++    // The precendence of paths is as listed above, i.e. we take the first path
++    // that exists. Also note that we never include libc++ twice -- we take the
++    // first path that exists and don't send the other paths to CC1 (otherwise
++    // include_next could break).
++
++    // Check for (1)
++    // Get from '<install>/bin' to '<install>/include/c++/v1'.
++    // Note that InstallBin can be relative, so we use '..' instead of
++    // parent_path.
++    llvm::SmallString<128> InstallBin =
++        llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
++    llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
++    if (getVFS().exists(InstallBin)) {
++      addSystemInclude(DriverArgs, CC1Args, InstallBin);
++      return;
++    } else if (DriverArgs.hasArg(options::OPT_v)) {
++      llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
++                   << "\"\n";
+     }
+-    // Also add <sysroot>/usr/include/c++/v1 unless -nostdinc is used,
+-    // to match the legacy behavior in CC1.
+-    if (!DriverArgs.hasArg(options::OPT_nostdinc)) {
+-      llvm::SmallString<128> P = Sysroot;
+-      llvm::sys::path::append(P, "usr", "include", "c++", "v1");
+-      addSystemInclude(DriverArgs, CC1Args, P);
++
++    // Otherwise, check for (2)
++    llvm::SmallString<128> SysrootUsr = Sysroot;
++    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
++    if (getVFS().exists(SysrootUsr)) {
++      addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
++      return;
++    } else if (DriverArgs.hasArg(options::OPT_v)) {
++      llvm::errs() << "ignoring nonexistent directory \"" << SysrootUsr
++                   << "\"\n";
+     }
++
++    // Otherwise, don't add any path.
+     break;
+   }
+ 

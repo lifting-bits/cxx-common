@@ -1,0 +1,28 @@
+Tests cause failure on Mac when compiling NATIVE tablegen due to removing some
+compiler-rt architectures
+
+diff --git a/compiler-rt/CMakeLists.txt b/compiler-rt/CMakeLists.txt
+index 8d768a404f21..b6185e55e6fc 100644
+--- a/compiler-rt/CMakeLists.txt
++++ b/compiler-rt/CMakeLists.txt
+@@ -506,20 +506,4 @@ pythonize_bool(COMPILER_RT_HAS_LLD)
+ 
+ add_subdirectory(lib)
+ 
+-if(COMPILER_RT_INCLUDE_TESTS)
+-  add_subdirectory(unittests)
+-  add_subdirectory(test)
+-  if (COMPILER_RT_STANDALONE_BUILD)
+-    # If we have a valid source tree, generate llvm-lit into the bin directory.
+-    # The user can still choose to have the check targets *use* a different lit
+-    # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.
+-    if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+-      add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+-    elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
+-      message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"
+-                       "point to a valid file.  You will not be able to run tests.")
+-    endif()
+-  endif()
+-endif()
+-
+ add_subdirectory(tools)

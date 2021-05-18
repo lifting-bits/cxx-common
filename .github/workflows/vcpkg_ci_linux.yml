@@ -36,7 +36,6 @@ jobs:
       matrix:
         host:
           - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
-          - { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
         image:
           - { name: 'ubuntu', tag: '18.04' }
           - { name: 'ubuntu', tag: '20.04' }
@@ -46,6 +45,14 @@ jobs:
           'llvm-11',
           'llvm-12'
           ]
+        # Only some LLVM versions for ARM CI
+        include:
+          - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
+            llvm: 'llvm-11'
+            image: { name: 'ubuntu', tag: '18.04' }
+          - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
+            llvm: 'llvm-11'
+            image: { name: 'ubuntu', tag: '20.04' }
 
     runs-on: ${{ matrix.host.name }}
     container:

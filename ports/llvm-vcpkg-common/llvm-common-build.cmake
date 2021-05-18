@@ -126,6 +126,12 @@ if("clang-tools-extra" IN_LIST FEATURES)
 endif()
 if("compiler-rt" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "compiler-rt")
+    if(VCPKG_TARGET_IS_OSX AND LLVM_VERSION_MAJOR LESS_EQUAL 10)
+        # prevent compiler_rt from opportunistically trying to build arm64, which fails
+        # See:  https://trac.macports.org/ticket/61477
+        # and https://github.com/macports/macports-ports/pull/9139
+        list(APPEND FEATURE_OPTIONS "-DDARWIN_osx_ARCHS=x86_64\;x86_64h")
+    endif()
 endif()
 if("flang" IN_LIST FEATURES)
     # Disable Flang on Windows (see http://lists.llvm.org/pipermail/flang-dev/2020-July/000448.html).
