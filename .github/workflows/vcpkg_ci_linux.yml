@@ -257,6 +257,7 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DANVILL_INSTALL_PYTHON3_LIBS=OFF \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
@@ -275,6 +276,7 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
@@ -292,6 +294,7 @@ jobs:
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             -Danvill_DIR="$(pwd)/../../anvill-mcsema/build/install/lib/cmake/anvill" \
             ..
