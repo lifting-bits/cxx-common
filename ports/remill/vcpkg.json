@@ -1,6 +1,6 @@
 {
   "name": "remill",
-  "version-string": "4.0.22",
+  "version-string": "4.0.24",
   "description": "Library for lifting of x86, amd64, and aarch64 machine code to LLVM bitcode",
   "homepage": "https://github.com/lifting-bits/remill",
   "default-features": [
@@ -23,6 +23,12 @@
       "description": "Use LLVM 11",
       "dependencies": [
           "llvm-11"
+      ]
+    },
+    "llvm-12": {
+      "description": "Use LLVM 12",
+      "dependencies": [
+          "llvm-12"
       ]
     }
   },
