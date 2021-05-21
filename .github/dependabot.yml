@@ -12,3 +12,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # McSema has a pinned version of anvill
+      - dependency-name: "anvill-mcsema"

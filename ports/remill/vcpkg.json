@@ -27,6 +27,8 @@
     }
   },
   "dependencies": [
+    "glog",
+    "gflags",
     "xed"
   ]
 }
