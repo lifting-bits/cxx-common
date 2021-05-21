@@ -229,7 +229,7 @@ jobs:
 
       - name: 'Anvill-McSema build - custom remill'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+        if: ${{ matrix.llvm != 'llvm-12' }}
         run: |
           cd anvill
           mkdir -p build && cd build
@@ -245,7 +245,7 @@ jobs:
 
       - name: 'Test mcsema build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+        if: ${{ matrix.llvm != 'llvm-12' }}
         run: |
           cd mcsema
           mkdir -p build && cd build
@@ -257,6 +257,10 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
+
+          ./install/bin/mcsema-lift-* --version
+          ./install/bin/mcsema-lift-* --arch amd64 --os linux --cfg ../tests/test_suite_generator/generated/prebuilt_cfg/amd64/linux/cfg/hello_world --output hello_world.bc
+          ./install/bin/mcsema-lift-* --arch x86 --os linux --cfg ../tests/test_suite_generator/generated/prebuilt_cfg/x86/linux/cfg/hello_world --output hello_world.bc
 
       - name: Publish Release Assets
         if: |
