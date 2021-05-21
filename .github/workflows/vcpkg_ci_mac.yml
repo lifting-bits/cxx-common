@@ -177,7 +177,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/${{ matrix.llvm }}/clang" || true
+          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
 
       - name: 'Test remill build'
         shell: 'bash'
@@ -192,6 +192,7 @@ jobs:
           cmake --build .
           cmake --build . --target install
           cmake --build . --target test_dependencies
+          # Sometimes fails on a flaky test
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
       - name: 'Anvill build - vcpkg remill'
