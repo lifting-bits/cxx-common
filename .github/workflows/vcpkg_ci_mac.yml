@@ -205,7 +205,7 @@ jobs:
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
-            -DANVILL_INSTALL_PYTHON3_LIBS=OFF \
+            -DANVILL_BUILD_PYTHON3_LIBS=OFF \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
@@ -223,7 +223,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
-            -DANVILL_INSTALL_PYTHON3_LIBS=OFF \
+            -DANVILL_BUILD_PYTHON3_LIBS=OFF \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .
