@@ -234,7 +234,7 @@ jobs:
         shell: 'bash'
         if: ${{ matrix.llvm != 'llvm-12' }}
         run: |
-          cd anvill
+          cd anvill-mcsema
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
