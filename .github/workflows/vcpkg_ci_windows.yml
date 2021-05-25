@@ -268,9 +268,9 @@ jobs:
           cmake --build . --config Release -j
           cmake --build . --config Release --target install
 
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --version
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch amd64 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\amd64\linux\cfg\hello_world --output hello_world.bc
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch x86 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\x86\linux\cfg\hello_world --output hello_world.bc
+          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --version
+          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch amd64 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\amd64\linux\cfg\hello_world --output hello_world.bc
+          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch x86 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\x86\linux\cfg\hello_world --output hello_world.bc
 
       - name: Publish Release Assets
         if: |
