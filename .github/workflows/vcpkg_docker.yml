@@ -44,18 +44,18 @@ jobs:
 
           docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "docker.pkg.github.com/${DOCKER_TAG}" .
           # Docker image with NuGet support goes to github packages for CI use only
-          # if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-          docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
-          for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
-          # fi
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+            docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+            for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
+          fi
 
           # NOTE: Docker Hub only allows one slash in tag
           docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.version }}" -t "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" .
           # Smaller Docker image without NuGet support goes to Docker Hub for users
-          # if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-          docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
-          for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" && break || sleep 10; done
-          # fi
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+            docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
+            for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" && break || sleep 10; done
+          fi
         env:
           DOCKER_TAG: lifting-bits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
