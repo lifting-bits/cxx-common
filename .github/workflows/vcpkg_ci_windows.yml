@@ -67,7 +67,7 @@ jobs:
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
           # Sets as "Source"
-          source-url: https://nuget.pkg.github.com/trailofbits/index.json
+          source-url: https://nuget.pkg.github.com/lifting-bits/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
