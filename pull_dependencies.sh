@@ -53,14 +53,14 @@ export VCPKG_BINARY_SOURCES='clear;nuget,Source,read'
 # Password stored in cleartext
 # TODO(ekilmer): Parameterize llvm version
 mono "$(./vcpkg/vcpkg fetch nuget | tail -n 1)" sources add \
-  -source "https://nuget.pkg.github.com/trailofbits/index.json" \
+  -source "https://nuget.pkg.github.com/lifting-bits/index.json" \
   -storepasswordincleartext \
   -name "Source" \
   -username "${GITHUB_USERNAME}" \
   -password "${GITHUB_TOKEN}" || true
 
 mono "$(./vcpkg/vcpkg fetch nuget | tail -n 1)" setapikey \
-  -source "https://nuget.pkg.github.com/trailofbits/index.json" \
+  -source "https://nuget.pkg.github.com/lifting-bits/index.json" \
   "${GITHUB_TOKEN}"
 
 #### Pulling dependencies with correct triplet

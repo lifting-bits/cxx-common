@@ -8,7 +8,7 @@ Curated dependencies that are compatible with the [lifting-bits](https://github.
 
 # Pre-built
 
-Every [release](https://github.com/trailofbits/cxx-common/releases), we publish compressed archives of the pre-built dependencies built by [vcpkg](https://github.com/microsoft/vcpkg).
+Every [release](https://github.com/lifting-bits/cxx-common/releases), we publish compressed archives of the pre-built dependencies built by [vcpkg](https://github.com/microsoft/vcpkg).
 
 We only officially support and test the libraries built for the OSes that appear in CI, which includes Ubuntu 18.04, 20.04, and Mac OS 10.15, 11.0.
 
@@ -19,7 +19,7 @@ Many of the lifting-bits tools have support for using the vcpkg binaries written
 For example:
 
 ```bash
-curl -LO https://github.com/trailofbits/cxx-common/releases/latest/download/vcpkg_ubuntu-20.04_llvm-10_amd64.tar.xz
+curl -LO https://github.com/lifting-bits/cxx-common/releases/latest/download/vcpkg_ubuntu-20.04_llvm-10_amd64.tar.xz
 tar -xJf vcpkg_ubuntu-20.04_llvm-10_amd64.tar.xz
 ```
 

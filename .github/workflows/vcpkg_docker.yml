@@ -57,7 +57,7 @@ jobs:
             for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" && break || sleep 10; done
           fi
         env:
-          DOCKER_TAG: trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
+          DOCKER_TAG: lifting-bits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
           DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
           DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
@@ -80,5 +80,5 @@ jobs:
       #     target: caching
       #     context: ./docker
       #     push: true
-      #     tags: docker.pkg.github.com/trailofbits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
+      #     tags: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}
       #     build-args: DISTRO_VERSION=${{ matrix.container.version }}
