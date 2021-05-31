@@ -80,7 +80,7 @@ jobs:
           echo ::set-output name=commit::${vcpkg_commit}
 
         # Setup Visual Studio Dev Environment (x64, default version/toolset)
-      - uses: ilammy/msvc-dev-cmd@v1.8.1
+      - uses: ilammy/msvc-dev-cmd@v1.9.0
 
       - name: Clear prior vcpkg directory
         run: |
