@@ -1,8 +1,4 @@
-ATTENTION: This repo was recently updated to use [`vcpkg`](https://github.com/microsoft/vcpkg) for managing dependencies.
-
-Until all of the `lifting-bits` tools are updated to mention something about `vcpkg`, you can find the original way to install dependencies in the [`old`](./old) directory.
-
-# VCPKG Ports Registry for common C/C++ packages
+# VCPKG Ports for lifting-bits C/C++ projects
 
 Curated dependencies that are compatible with the [lifting-bits](https://github.com/lifting-bits) tools.
 
