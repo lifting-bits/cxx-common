@@ -37,13 +37,43 @@ If you aren't running a supported operating system, or you just want to build it
 
 By default, the script will install the dependencies listed in `dependencies.txt`, which doesn't include an LLVM version, so passing an `llvm-10` string as an argument will actually be passed to `vcpkg install`. Any other strings are also passed to the `vcpkg install` command.
 
-By passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can store the required dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself and overwritten the next time you run the script.
+```bash
+./build_dependencies.sh llvm-10
+```
 
 You can pass `--help` to the script to look at all options.
 
 Note that vcpkg will use binary caching to store built dependency packages (usually at `~/.cache/vcpkg` or manually set with environment variable `VCPKG_DEFAULT_BINARY_CACHE`) so that upon reinstallation/building (re-running the script) you won't have to rebuild everything from scratch, unless the package itself has been updated, you are using a different vcpkg triplet, or any of the vcpkg scripts have changed (updated vcpkg repo). If you'd like to turn off binary caching (not recommended), then you can either pass `--no-binarycaching` to the build script after the main options listed in `--help` or add `-binarycaching` to the `VCPKG_FEATURE_FLAGS` environment variable.
 
-## Debug and Release
+**ATTENTION**: If you are having issues or want to start with a fresh installation directory, pass the `--clean` option to clear the installation directories and, if specified, the export directory.
+
+## Export Directories (recommended)
+
+By default, vcpkg will install all of your dependencies to its own in-repo `installed` directory. Passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can store the required dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself. It is preferred to create a new export directory to keep track of different LLVM versions, since they cannot coexist within the same export (read: installation) directory.
+
+```bash
+./build_dependencies.sh --export-dir vcpkg-llvm-10-install llvm-10
+```
+
+will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 10 and install into a local directory named `vcpkg-llvm-10-install`.
+
+### Installing additional packages
+
+**NOTE** If you download the pre-built binaries, this also applies.
+
+To install more packages to an existing vcpkg installation, just run the script without specifying any extra build configuration arguments, unless you have an export directory, and list the packages you'd like to install or add them to `dependencies.txt`:
+
+```bash
+./build_dependencies.sh --export-dir vcpkg-llvm-10-install fmt
+```
+
+will install `fmt` into a local directory named `vcpkg-llvm-10-install` with whatever triplet is found within that vcpkg export directory. If multiple triplets are found in the export directory, the script will build `fmt` for each of those triplets.
+
+## Updating
+
+Updating dependencies is the same as installing them. Just run the script again (without any packages listed) and make sure to point it to your exported directory, if necessary. Do not specify anything regarding the triplet, like `--release` or `--asan`---the triplet(s) are detected automatically.
+
+## Debug and Release Builds
 
 To build both debug and release versions with llvm-10, just run the following
 
@@ -88,16 +118,6 @@ CXXFLAGS="-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls
 ```
 
 **NOTE:** it is important to specify the `VCPKG_TARGET_TRIPLET` based on what platform and build configuration was used while compiling your dependencies with the sanitizers.
-
-## Additional Packages
-
-Just add another package name to the script
-
-```bash
-./build_dependencies.sh --release llvm-10 fmt
-```
-
-or add it to `dependencies.txt`.
 
 # Dependency Versioning
 
