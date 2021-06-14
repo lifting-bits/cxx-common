@@ -43,6 +43,26 @@ You can pass `--help` to the script to look at all options.
 
 Note that vcpkg will use binary caching to store built dependency packages (usually at `~/.cache/vcpkg` or manually set with environment variable `VCPKG_DEFAULT_BINARY_CACHE`) so that upon reinstallation/building (re-running the script) you won't have to rebuild everything from scratch, unless the package itself has been updated, you are using a different vcpkg triplet, or any of the vcpkg scripts have changed (updated vcpkg repo). If you'd like to turn off binary caching (not recommended), then you can either pass `--no-binarycaching` to the build script after the main options listed in `--help` or add `-binarycaching` to the `VCPKG_FEATURE_FLAGS` environment variable.
 
+## Export Directories
+
+By default, vcpkg will install all of your dependencies to its own in-repo `installed` directory. It is preferred to create a new export directory to keep track of different LLVM versions.
+
+```bash
+./build_dependencies.sh --export-dir vcpkg-llvm-10-install llvm-10
+```
+
+to build all of the dependencies listed in `dependencies.txt` _and_ LLVM 10 and place them into a local directory named `vcpkg-llvm-10-install`.
+
+### Installing additional packages to an export directory
+
+**NOTE** If you download the pre-built binaries, this also applies.
+
+To install more packages to an existing vcpkg export directory, just run the following, making sure to note the triplet, which can be found by looking in `${export_dir}/installed` and a directory name of the triplet used will appear, e.g. `x64-linux-rel`. Use this triplet name like so to install another dependency for consumption:
+
+```bash
+./build_dependencies.sh --export-dir vcpkg-llvm-10-install --triplet=x64-linux-rel fmt
+```
+
 ## Debug and Release
 
 To build both debug and release versions with llvm-10, just run the following

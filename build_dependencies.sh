@@ -22,6 +22,10 @@ function Help
   echo "     Build with ASAN triplet as detected in this script"
   echo "  --export-dir <DIR>"
   echo "     Export built dependencies to directory path"
+  echo "  --clean"
+  echo "     Clean the installation directory and/or remove an existing export"
+  echo "     directory if it exists. Use this or specify a new export directory"
+  echo "     if you want to install different LLVM versions"
   echo "  [...]"
   echo "     Extra args to pass to 'vcpkg install'. Like LLVM version,"
   echo "     other ports, vcpkg-specific options, etc."
@@ -30,6 +34,7 @@ function Help
 RELEASE="false"
 ASAN="false"
 EXPORT_DIR=""
+CLEAN="false"
 VCPKG_ARGS=()
 while [[ $# -gt 0 ]] ; do
   key="$1"
@@ -51,6 +56,10 @@ while [[ $# -gt 0 ]] ; do
       EXPORT_DIR=$(python3 -c "import os; import sys; sys.stdout.write(os.path.abspath('${2}'))")
       echo "[+] Exporting to directory ${EXPORT_DIR}"
       shift # past argument
+    ;;
+    --clean)
+      CLEAN="true"
+      msg "Cleaning installation and specified export directory"
     ;;
     *)
       VCPKG_ARGS+=("$1")
@@ -149,7 +158,10 @@ if [[ ${ASAN} == "true" ]]; then
   triplet="${triplet}-asan"
 fi
 
-extra_vcpkg_args+=("--triplet=${triplet}")
+# Check if triplet was user-specified
+if echo "${VCPKG_ARGS[@]}" | grep -w -v -q '--triplet=' ; then
+  extra_vcpkg_args+=("--triplet=${triplet}")
+fi
 extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}")
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -187,15 +199,26 @@ msg "Boostrapping vcpkg"
 msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
+
+# Handle cleaning or additional package installation to our installation root
+if [[ -n ${EXPORT_DIR} ]]; then
+  if [[ ${CLEAN} == "true" ]]; then
+    rm -rf "${EXPORT_DIR:?}" || true
+  else
+    # Install additional packages to an existing installation directory
+    extra_vcpkg_args+=("--x-install-root=${EXPORT_DIR}/installed")
+  fi
+fi
+
+# Run the vcpkg installation of our packages
 (
   cd "${repo_dir}"
   (
     set -x
 
-    # TODO: Better way to remove all unspecified packages that we're about to
-    # install for specified triplet? Need this because different LLVM versions
-    # conflict when installed at the same time
-    rm -rf "${vcpkg_dir:?}/installed" || true
+    if [[ ${CLEAN} == "true" ]]; then
+      rm -rf "${vcpkg_dir:?}/installed" || true
+    fi
     "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
     "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run
 
@@ -203,15 +226,23 @@ msg " " "${VCPKG_ARGS[@]}"
   )
 )
 
-if [[ -n ${EXPORT_DIR} ]]; then
+# Don't export if we've already installed to an existing EXPORT_DIR
+if [[ -n "${EXPORT_DIR}" && ! -d "${EXPORT_DIR}" ]]; then
   tmp_export_dir=temp-export
   "${vcpkg_dir}/vcpkg" export --x-all-installed "@overlays.txt" --raw --output=${tmp_export_dir}
-  mv "${vcpkg_dir}/${tmp_export_dir}" "${EXPORT_DIR}"
-else
+  extra_mv_arg=()
+  if [[ ${CLEAN} == "true" ]]; then
+    extra_mv_arg+=("-f")
+  fi
+  mv "${extra_mv_arg[@]}" "${vcpkg_dir}/${tmp_export_dir}" "${EXPORT_DIR}"
+elif [[ -z ${EXPORT_DIR} ]]; then
+  # Set default export directory variable. Used for printing end message
   EXPORT_DIR="${vcpkg_dir}"
 fi
 
 echo ""
+msg "The following packages are now available for your use:"
+"${vcpkg_dir}/vcpkg" "${extra_vcpkg_args[@]}" '@overlays.txt' list
 msg "Set the following in your CMake configure command to use these dependencies!"
 msg "  -DVCPKG_ROOT=\"${EXPORT_DIR}\" ${extra_cmake_usage_args[*]}"
 msg "or"
