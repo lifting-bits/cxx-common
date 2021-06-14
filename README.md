@@ -59,7 +59,7 @@ will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 10 an
 
 ### Installing additional packages
 
-**NOTE** If you download the pre-built binaries, this also applies.
+**NOTE** If you download the pre-built binaries, this does not apply.
 
 To install more packages to an existing vcpkg installation, just run the script without specifying any extra build configuration arguments, unless you have an export directory, and list the packages you'd like to install or add them to `dependencies.txt`:
 
@@ -71,7 +71,7 @@ will install `fmt` into a local directory named `vcpkg-llvm-10-install` with wha
 
 ## Updating
 
-Updating dependencies is the same as installing them. Just run the script again (without any packages listed) and make sure to point it to your exported directory, if necessary. Do not specify anything regarding the triplet, like `--release` or `--asan`---the triplet(s) are detected automatically.
+Updating dependencies is the same as installing them from source. Just run the script again (without any packages listed) and make sure to point it to your exported directory, if necessary. Do not specify anything regarding the triplet, like `--release` or `--asan`---the triplet(s) are detected automatically.
 
 ## Debug and Release Builds
 
