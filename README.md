@@ -43,6 +43,8 @@ You can pass `--help` to the script to look at all options.
 
 Note that vcpkg will use binary caching to store built dependency packages (usually at `~/.cache/vcpkg` or manually set with environment variable `VCPKG_DEFAULT_BINARY_CACHE`) so that upon reinstallation/building (re-running the script) you won't have to rebuild everything from scratch, unless the package itself has been updated, you are using a different vcpkg triplet, or any of the vcpkg scripts have changed (updated vcpkg repo). If you'd like to turn off binary caching (not recommended), then you can either pass `--no-binarycaching` to the build script after the main options listed in `--help` or add `-binarycaching` to the `VCPKG_FEATURE_FLAGS` environment variable.
 
+If you are having issues or want to start with a fresh installation directory, pass the `--clean` option to clear the installation directories and, if specified, the export directory.
+
 ## Export Directories
 
 By default, vcpkg will install all of your dependencies to its own in-repo `installed` directory. It is preferred to create a new export directory to keep track of different LLVM versions.
