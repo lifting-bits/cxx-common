@@ -38,7 +38,7 @@ If you aren't running a supported operating system, or you just want to build it
 By default, the script will install the dependencies listed in `dependencies.txt`, which doesn't include an LLVM version, so passing an `llvm-10` string as an argument will actually be passed to `vcpkg install`. Any other strings are also passed to the `vcpkg install` command.
 
 ```bash
-./build_dependencies.sh --export-dir vcpkg-llvm-10-install llvm-10
+./build_dependencies.sh llvm-10
 ```
 
 You can pass `--help` to the script to look at all options.
@@ -47,9 +47,9 @@ Note that vcpkg will use binary caching to store built dependency packages (usua
 
 **ATTENTION**: If you are having issues or want to start with a fresh installation directory, pass the `--clean` option to clear the installation directories and, if specified, the export directory.
 
-## Export Directories
+## Export Directories (recommended)
 
-By default, vcpkg will install all of your dependencies to its own in-repo `installed` directory. Passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can store the required dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself and overwritten the next time you run the script. It is preferred to create a new export directory to keep track of different LLVM versions.
+By default, vcpkg will install all of your dependencies to its own in-repo `installed` directory. Passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can store the required dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself. It is preferred to create a new export directory to keep track of different LLVM versions, since they cannot coexist within the same export (read: installation) directory.
 
 ```bash
 ./build_dependencies.sh --export-dir vcpkg-llvm-10-install llvm-10
