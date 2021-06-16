@@ -1,2 +1,2 @@
 https://github.com/trailofbits/vcpkg.git
-4592a93cc4ca82f1963dba08413c43639662d7ae
+13ec23f9749fd68bfe2b91271bb7bfc876ab339e
