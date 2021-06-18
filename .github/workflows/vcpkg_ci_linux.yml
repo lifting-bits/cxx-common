@@ -149,7 +149,7 @@ jobs:
           fi
           ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.2.3
+      - uses: actions/upload-artifact@v2.2.4
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         with:
           name: ${{ env.ARTIFACT_NAME }}
