@@ -93,7 +93,7 @@ jobs:
           git -C "${env:VCPKG_ROOT}" checkout ${{ steps.vcpkg_info.outputs.commit }}
           for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
           {
-            & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
+            Write-Output 'Y' | & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
           }
         env:
           VCPKG_DISABLE_METRICS: 1
