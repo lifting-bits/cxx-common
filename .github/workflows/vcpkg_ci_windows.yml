@@ -94,7 +94,9 @@ jobs:
           # Keep trying to bootstrap until we see the executable
           for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
           {
-            $proc = Start-Process "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" -PassThru
+            echo "Attempting to bootstrap vcpkg tool"
+            # Start and kill process if timeout exceeded https://stackoverflow.com/a/36934083
+            $proc = Start-Process "cmd.exe" -ArgumentList "/c","${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" -PassThru
             # keep track of timeout event
             $timeouted = $null # reset any previously set timeout
             # wait up to 360 seconds for normal termination
@@ -102,8 +104,9 @@ jobs:
 
             if ($timeouted)
             {
-                # terminate the process
-                $proc | kill
+              echo "Killing vcpkg tool bootstrap due to timeout!"
+              # terminate the process
+              $proc | kill
             }
           }
         env:
