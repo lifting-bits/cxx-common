@@ -8,8 +8,8 @@ vcpkg_add_to_path("${PYTHON3_DIR}")
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO Z3Prover/z3
-  REF 39af2a188da198b87037fe4fad2bd5da67386c86 # z3-4.8.11
-  SHA512 b5617a98f77b9a912016978bb6d51d50334f1452bf340f3e12addaeac8fdc7704f4d85c1eecadbf3ef87b3018929427ffd8bba10835e87fd7d06e30fb6bd975b
+  REF 3a402ca2c14c3891d24658318406f80ce59b719f # z3-4.8.12
+  SHA512 1db5a840239bdce5141286cb13944fd755c16b0681560934b9f9f98121cdc1224db49dab130eeaf2ee160fba5de660edd0a3d0ac2a8ae6a32de2c88e8388ae2d
   HEAD_REF master
   PATCHES
          fix-install-path.patch
