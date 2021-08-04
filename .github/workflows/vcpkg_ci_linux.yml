@@ -2,7 +2,7 @@ name: Linux Continuous Integration
 
 env:
   # "Source" is set in the vcpkg install step
-  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
+  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
   # Self-hosted runners can hopefully reuse already downloaded packages
   VCPKG_USE_NUGET_CACHE: 1
 

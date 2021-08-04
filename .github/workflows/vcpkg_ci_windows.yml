@@ -2,7 +2,7 @@ name: Windows Continuous Integration
 
 env:
   # "Source" is set in the setup-dotnet action
-  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite'
+  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
   TRIPLET: 'x64-windows-static-md-rel'
 
 on:
@@ -91,10 +91,7 @@ jobs:
         run: |
           git clone ${{ steps.vcpkg_info.outputs.repo_url }} "${env:VCPKG_ROOT}"
           git -C "${env:VCPKG_ROOT}" checkout ${{ steps.vcpkg_info.outputs.commit }}
-          for (($i = 0); $i -lt 3 -and !(Test-Path "${env:VCPKG_ROOT}\vcpkg.exe"); $i++)
-          {
-            Write-Output 'Y' | & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat" || true
-          }
+          & "${env:VCPKG_ROOT}\bootstrap-vcpkg.bat"
         env:
           VCPKG_DISABLE_METRICS: 1
 
