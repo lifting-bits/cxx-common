@@ -13,7 +13,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install --yes apt-utils && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
     apt-add-repository ppa:git-core/ppa --yes && \
-    wget "https://github.com/Kitware/CMake/releases/download/v3.19.3/cmake-3.19.3-Linux-$(uname -m).sh" && \
+    wget "https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     apt-get update && \
     apt-get install --yes --no-install-recommends \
