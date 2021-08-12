@@ -11,8 +11,8 @@ vcpkg_from_github(
 vcpkg_from_github(
     OUT_SOURCE_PATH MBUILD_SOURCE_PATH
     REPO intelxed/mbuild
-    REF f01087a20b6ac4bd99f7a7018ac467c2d54d3d2b
-    SHA512 1f2ea4f1622907bd4aa63329b1b557a75f10dd68b7d22cbb2f4b674e50a7fc643fe2e4e9d0101c0d7dbae280ad559c2d4a3f7f84cf2f491efeffec77f823c3d2
+    REF 3e8eb33aada4153c21c4261b35e5f51f6e2019e8
+    SHA512 ed3a705204a5f9526473280fdb64820aeec23b2da850dc3c78b83e6ccc7cd72961990fab0a0188c249d967b59f3d2cb00f6dcd3f9cceb7c30aa13e378e26ccd5
     HEAD_REF master
 )
 
