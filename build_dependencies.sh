@@ -124,7 +124,7 @@ arch="$(uname -m)"
 triplet_os="linux"
 triplet_arch="x64"
 
-if [[ "${arch}" = "aarch64" ]]; then
+if [[ "${arch}" = "aarch64" || "${arch}" = "arm64" ]]; then
   triplet_arch="arm64"
 elif [[ "${arch}" = "x86_64" ]]; then
   triplet_arch="x64"
