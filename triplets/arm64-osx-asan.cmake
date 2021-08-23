@@ -8,9 +8,9 @@ set(VCPKG_USE_SANITIZER "Address")
 # If the following flags cause errors during build, you might need to manually
 # ignore the PORT and check VCPKG_USE_SANITIZER
 if(NOT PORT MATCHES "(llvm-*)")
-  set(VCPKG_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Wl,-undefined,dynamic_lookup")
-  set(VCPKG_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Wl,-undefined,dynamic_lookup")
-  set(VCPKG_LINKER_FLAGS "-fsanitize=address -Wl,-undefined,dynamic_lookup")
+  set(VCPKG_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
+  set(VCPKG_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
+  set(VCPKG_LINKER_FLAGS "-fsanitize=address")
 endif()
 
 set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
