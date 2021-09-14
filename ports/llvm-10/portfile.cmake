@@ -24,6 +24,7 @@ vcpkg_from_github(
         0023-fix-macos-libcxx-header-handling.patch
         0024-vcpkg-fix-clang-sys-include-dir-path.patch
         0025-remove-compiler-rt-tests.patch
+        0026-fix-missing-header-limits.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")
