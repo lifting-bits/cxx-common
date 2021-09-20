@@ -184,7 +184,7 @@ fi
 triplets_array=()
 if echo "${VCPKG_ARGS[@]}" | grep -w -v -q -- '--triplet=' ; then
   # Check if triplet exists in export directory
-  if [ -d "${EXPORT_DIR}" ]; then
+  if [ -d "${EXPORT_DIR}/installed" ]; then
     for f in "${EXPORT_DIR}/installed/"* ; do
       dirname="${f##*/}"
       if [ "$dirname" != "vcpkg" ]; then
