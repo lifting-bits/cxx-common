@@ -40,7 +40,8 @@ jobs:
           # 'llvm-9',
           # 'llvm-10',
           'llvm-11',
-          'llvm-12'
+          'llvm-12',
+          'llvm-13'
           ]
 
     runs-on: ['self-hosted', 'Windows', 'X64']

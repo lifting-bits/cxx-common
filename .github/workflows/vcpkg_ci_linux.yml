@@ -43,7 +43,8 @@ jobs:
           'llvm-9',
           'llvm-10',
           'llvm-11',
-          'llvm-12'
+          'llvm-12',
+          'llvm-13'
           ]
         # Only some LLVM versions for ARM CI
         include:
