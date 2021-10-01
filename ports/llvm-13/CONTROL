@@ -1,5 +1,5 @@
 Source: llvm-13
-Version: 13.0.0-rc3
+Version: 13.0.0
 Homepage: https://llvm.org/
 Description: The LLVM Compiler Infrastructure
 Supports: !uwp
