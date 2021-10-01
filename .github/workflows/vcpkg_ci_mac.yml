@@ -167,7 +167,7 @@ jobs:
 
       - name: 'Test rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd rellic
           mkdir -p build && cd build
@@ -182,6 +182,7 @@ jobs:
 
       - name: 'Test remill build'
         shell: 'bash'
+        if: ${{ matrix.llvm != 'llvm-13' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -233,7 +234,7 @@ jobs:
 
       - name: 'Anvill-McSema build - custom remill'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd anvill-mcsema
           mkdir -p build && cd build
@@ -250,7 +251,7 @@ jobs:
 
       - name: 'Test mcsema build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd mcsema
           mkdir -p build && cd build
