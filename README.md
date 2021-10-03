@@ -129,4 +129,4 @@ See [here](https://github.com/microsoft/vcpkg/blob/master/docs/examples/packagin
 
 This repo is under the Apache-2.0 LICENSE, unless where specified. See below.
 
-The LLVM version port directories (ports/llvm-{9,10,11}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.
+The LLVM version port directories (ports/llvm-{9,10,11,12,13}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.

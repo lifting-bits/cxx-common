@@ -43,7 +43,8 @@ jobs:
           'llvm-9',
           'llvm-10',
           'llvm-11',
-          'llvm-12'
+          'llvm-12',
+          'llvm-13'
           ]
         # Only some LLVM versions for ARM CI
         include:
@@ -198,7 +199,7 @@ jobs:
 
       - name: 'Test rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd rellic
           rm -rf build
@@ -214,6 +215,7 @@ jobs:
 
       - name: 'Test remill build'
         shell: 'bash'
+        if: ${{ matrix.llvm != 'llvm-13' }}
         run: |
           cd remill
           rm -rf build
@@ -274,7 +276,7 @@ jobs:
 
       - name: 'Anvill-McSema build - custom remill'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd anvill-mcsema
           rm -rf build
@@ -292,7 +294,7 @@ jobs:
 
       - name: 'Test mcsema build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' }}
+        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
         run: |
           cd mcsema
           rm -rf build

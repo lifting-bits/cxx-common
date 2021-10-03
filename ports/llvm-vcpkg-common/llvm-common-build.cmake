@@ -2,6 +2,10 @@ string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
 list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
 list(GET VERSION_LIST 1 LLVM_VERSION_MINOR)
 list(GET VERSION_LIST 2 LLVM_VERSION_PATCH)
+# Remove anything after the first patch number (removes suffix like `-rc3`)
+if("${LLVM_VERSION_PATCH}" MATCHES "^([0-9]+).*")
+    set(LLVM_VERSION_PATCH "${CMAKE_MATCH_1}")
+endif()
 
 vcpkg_check_features(
     OUT_FEATURE_OPTIONS FEATURE_OPTIONS
@@ -119,7 +123,8 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
     # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
     # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
     # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
-    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION})
+    # This needs to not include version suffixes like '-rc3'
+    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
