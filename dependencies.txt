@@ -4,3 +4,4 @@ glog
 gtest
 gflags
 protobuf
+grpc
