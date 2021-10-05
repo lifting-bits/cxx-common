@@ -34,11 +34,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # - { runner: 'macos-10.15', xcode: '12.4' }
           - { runner: 'macos-11', xcode: '13.0' }
         llvm: [
-          'llvm-10',
-          'llvm-11',
           'llvm-12',
           'llvm-13'
           ]
@@ -124,18 +121,6 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-11 right now...
-      - name: 'Build Packaged Lifting Tools'
-        shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
-        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
-        run: |
-          ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
-            --debug \
-            @overlays.txt \
-            remill[core,${{ matrix.llvm }}]
-
       - name: 'Install build dependencies'
         shell: 'bash'
         run: |
@@ -165,9 +150,9 @@ jobs:
         run: |
           ccache --show-stats
 
-      - name: 'Test rellic build'
+      - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd rellic
           mkdir -p build && cd build
@@ -180,9 +165,9 @@ jobs:
           cmake --build . --target install
           ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
 
-      - name: 'Test remill build'
+      - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -197,26 +182,9 @@ jobs:
           # Sometimes fails on a flaky test
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      - name: 'Anvill build - vcpkg remill'
+      - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
-        run: |
-          cd anvill
-          mkdir -p build-vcpkg && cd build-vcpkg
-          cmake -G Ninja \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
-            -DANVILL_ENABLE_INSTALL_TARGET=ON \
-            -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
-
-      - name: 'Anvill build - custom remill'
-        shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd anvill
           mkdir -p build && cd build

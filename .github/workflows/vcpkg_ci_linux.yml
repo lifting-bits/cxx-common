@@ -40,19 +40,16 @@ jobs:
           - { name: 'ubuntu', tag: '18.04' }
           - { name: 'ubuntu', tag: '20.04' }
         llvm: [
-          'llvm-9',
-          'llvm-10',
-          'llvm-11',
           'llvm-12',
           'llvm-13'
           ]
         # Only some LLVM versions for ARM CI
         include:
           - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-            llvm: 'llvm-11'
+            llvm: 'llvm-12'
             image: { name: 'ubuntu', tag: '18.04' }
           - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-            llvm: 'llvm-11'
+            llvm: 'llvm-12'
             image: { name: 'ubuntu', tag: '20.04' }
 
     runs-on: ${{ matrix.host.name }}
@@ -156,23 +153,6 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}
 
-      # Only for LLVM-11 right now...
-      - name: 'Build Packaged Lifting Tools'
-        shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
-        # NOTE: Cannot use --clean-after-build because of path issue finding semantics files in remill
-        run: |
-          export VCPKG_DISABLE_METRICS=1
-          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            export VCPKG_FORCE_SYSTEM_BINARIES=1
-          fi
-
-          ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${{ matrix.host.triplet }}" \
-            --debug \
-            @overlays.txt \
-            remill[core,${{ matrix.llvm }}]
-
       - name: Prepare ccache
         id: ccache_prep
         shell: bash
@@ -197,9 +177,9 @@ jobs:
         run: |
           ccache --show-stats
 
-      - name: 'Test rellic build'
+      - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd rellic
           rm -rf build
@@ -213,9 +193,9 @@ jobs:
           cmake --build . --target install
           ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
-      - name: 'Test remill build'
+      - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd remill
           rm -rf build
@@ -236,28 +216,9 @@ jobs:
             env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test
           fi
 
-      # Only for LLVM-11 right now...
-      - name: 'Anvill build - vcpkg remill'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+      - name: 'Anvill build'
         shell: 'bash'
-        run: |
-          cd anvill
-          rm -rf build-vcpkg
-          mkdir -p build-vcpkg && cd build-vcpkg
-          cmake -G Ninja \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
-            -DANVILL_ENABLE_INSTALL_TARGET=ON \
-            -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
-
-      - name: 'Anvill build - custom remill'
-        shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd anvill
           rm -rf build
