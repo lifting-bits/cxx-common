@@ -1,7 +1,3 @@
-[submodule "mcsema"]
-	path = mcsema
-	url = https://github.com/lifting-bits/mcsema.git
-	branch = master
 [submodule "remill"]
 	path = remill
 	url = https://github.com/lifting-bits/remill.git
@@ -14,6 +10,3 @@
 	path = rellic
 	url = https://github.com/lifting-bits/rellic.git
 	branch = master
-[submodule "anvill-mcsema"]
-	path = anvill-mcsema
-	url = https://github.com/lifting-bits/anvill.git
