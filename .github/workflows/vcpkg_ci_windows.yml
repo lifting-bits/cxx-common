@@ -229,48 +229,6 @@ jobs:
 
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
 
-      - name: 'Anvill-McSema build - custom remill'
-        if: ${{ matrix.llvm == 'llvm-11' }}
-        run: |
-          cd anvill-mcsema
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
-          New-Item -Path .\build -ItemType Directory
-          cd build
-          cmake -T ClangCl `
-            -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
-            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DANVILL_ENABLE_INSTALL_TARGET=ON `
-            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
-            ..
-          cmake --build . --config Release -j
-          cmake --build . --config Release --target install
-
-          & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
-
-      - name: 'Test mcsema build'
-        if: ${{ matrix.llvm == 'llvm-11' }}
-        run: |
-          cd mcsema
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
-          New-Item -Path .\build -ItemType Directory
-          cd build
-          cmake -T ClangCl `
-            -DCMAKE_VERBOSE_MAKEFILE=ON `
-            -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
-            -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-            -DMCSEMA_INSTALL_PYTHON2_LIBS=OFF `
-            -DMCSEMA_INSTALL_PYTHON3_LIBS=OFF `
-            -Dremill_DIR="$(pwd)\..\..\remill\build\install\lib\cmake\remill" `
-            -Danvill_DIR="$(pwd)\..\..\anvill-mcsema\build\install\lib\cmake\anvill" `
-            ..
-          cmake --build . --config Release -j
-          cmake --build . --config Release --target install
-
-          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --version
-          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch amd64 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\amd64\linux\cfg\hello_world --output hello_world.bc
-          & ( Get-ChildItem install\mcsema\bin | Where-Object {$_.name -match "mcsema-lift-.*.exe"} ) --arch x86 --os linux --cfg ..\tests\test_suite_generator\generated\prebuilt_cfg\x86\linux\cfg\hello_world --output hello_world.bc
-
       - name: Publish Release Assets
         if: |
           github.event.release
