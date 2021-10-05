@@ -4,3 +4,5 @@ glog
 gtest
 gflags
 protobuf
+abseil
+grpc[absl-sync,codegen]
