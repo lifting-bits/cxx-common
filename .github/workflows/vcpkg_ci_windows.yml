@@ -33,13 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # LLVM 9 can't compile latest VS 2019 MSVC C++ implementation
-        # LLVM 10 has heap error in remill that appears only in Release builds
-        #   during destructor of DominatorTree
         llvm: [
-          # 'llvm-9',
-          # 'llvm-10',
-          'llvm-11',
           'llvm-12',
           'llvm-13'
           ]
@@ -129,24 +123,8 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}.7z
           path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
 
-      # Only for LLVM-11 right now...
-      # TODO: remill only compilable with clang-cl, but not sure how force
-      #   vcpkg to use it instead of msvc cl. Should probably be in portfile
-      # - name: 'Build Packaged Lifting Tools'
-      #   if: ${{ matrix.llvm == 'llvm-11' }}
-      #   env:
-      #     VCPKG_DISABLE_METRICS: 1
-      #   shell: 'bash'
-      #   # NOTE: Cannot use --clean-after-build because of path issue finding semantics files
-      #   run: |
-      #     ${VCPKG_ROOT}/vcpkg install \
-      #       --triplet "${TRIPLET}" \
-      #       --debug \
-      #       "@overlays.txt" \
-      #       remill
-
       - name: 'Test rellic build'
-        if: ${{ matrix.llvm != 'llvm-12' && matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd rellic
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -164,7 +142,7 @@ jobs:
           # python ../scripts/roundtrip.py ( Get-ChildItem tools | Where-Object {$_.name -match "rellic-decomp-.*.exe"} ) ..\tests\tools\decomp "${env:VCPKG_ROOT}\installed\${env:TRIPLET}\tools\${{ matrix.llvm }}\clang.exe"
 
       - name: 'Test remill build'
-        if: ${{ matrix.llvm != 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd remill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -186,31 +164,8 @@ jobs:
           # cmake --build . --target test_dependencies
           # env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
-      # TODO: remill only compilable with clang-cl, but not sure how force
-      #   vcpkg to use it instead of msvc cl. Should probably be in portfile
-      # Only for LLVM-11 right now...
-      # - name: 'Anvill build - vcpkg remill'
-      #   if: ${{ matrix.llvm == 'llvm-11' }}
-      #   shell: 'bash'
-      #   run: |
-      #     cd anvill
-      #     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
-      #     New-Item -Path .\build -ItemType Directory
-      #     cd build
-      #     cmake -T ClangCl `
-      #       -DCMAKE_VERBOSE_MAKEFILE=ON `
-      #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-      #       -DANVILL_ENABLE_INSTALL_TARGET=ON `
-      #       -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-      #       -DVCPKG_ROOT="${env:VCPKG_ROOT}" `
-      #       -DCMAKE_INSTALL_PREFIX="$(pwd)\install" `
-      #       ..
-      #     cmake --build . --config Release -j
-      #     cmake --build . --config Release --target install
-      #     # & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json-.*.exe"} ) -spec ..\tools\decompile-json\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
-
-      - name: 'Anvill build - custom remill'
-        if: ${{ matrix.llvm == 'llvm-11' }}
+      - name: 'Anvill build'
+        if: ${{ matrix.llvm == 'llvm-12' }}
         run: |
           cd anvill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
