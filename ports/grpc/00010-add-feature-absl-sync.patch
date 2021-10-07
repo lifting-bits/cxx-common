@@ -1,0 +1,35 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b9954590ee..8ed3313c1b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2180,6 +2180,8 @@ target_link_libraries(grpc
+   ${_gRPC_UPB_LIBRARIES}
+   ${_gRPC_ALLTARGETS_LIBRARIES}
+   absl::flat_hash_map
++  absl::time
++  absl::synchronization
+   absl::inlined_vector
+   absl::bind_front
+   absl::statusor
+@@ -2734,6 +2736,8 @@ target_link_libraries(grpc_unsecure
+   ${_gRPC_ALLTARGETS_LIBRARIES}
+   absl::flat_hash_map
+   absl::inlined_vector
++  absl::time
++  absl::synchronization
+   absl::bind_front
+   absl::statusor
+   absl::variant
+diff --git a/cmake/abseil-cpp.cmake b/cmake/abseil-cpp.cmake
+index c89ba26f61..fe4bd41901 100644
+--- a/cmake/abseil-cpp.cmake
++++ b/cmake/abseil-cpp.cmake
+@@ -33,5 +33,8 @@ if(gRPC_ABSL_PROVIDER STREQUAL "module")
+ elseif(gRPC_ABSL_PROVIDER STREQUAL "package")
+   # Use "CONFIG" as there is no built-in cmake module for absl.
+   find_package(absl REQUIRED CONFIG)
++  if (gRPC_ABSL_SYNC_ENABLE)
++    add_definitions(-DGPR_ABSEIL_SYNC=1)
++  endif()
+ endif()
+ set(_gRPC_FIND_ABSL "if(NOT TARGET absl::strings)\n  find_package(absl CONFIG)\nendif()")
