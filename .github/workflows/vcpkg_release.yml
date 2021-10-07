@@ -10,17 +10,13 @@ jobs:
     name: Publish Release on GitHub
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v2
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1.1.4
-      env:
-        # NOTE: GitHub actions doesn't allow workflows to trigger other
-        # workflows by default. The workaround is to use a PAT instead of the
-        # default GITHUB_TOKEN.
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
         release_name: ${{ github.ref }}
-        draft: false
+        draft: true
         prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
+        token: ${{ secrets.RELEASE_TOKEN }}
