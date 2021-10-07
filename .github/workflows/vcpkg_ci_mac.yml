@@ -206,9 +206,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT_NAME }}
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: true
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
           token: ${{ secrets.RELEASE_TOKEN }}
 
