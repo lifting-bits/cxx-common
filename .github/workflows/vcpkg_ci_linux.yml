@@ -64,7 +64,7 @@ jobs:
 
     steps:
       # Used to get commit message since PRs are on a merge commit
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
         with:
           ref: ${{ github.event.after }}
           submodules: false
@@ -74,7 +74,7 @@ jobs:
           echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.5
         with:
           submodules: recursive
 
