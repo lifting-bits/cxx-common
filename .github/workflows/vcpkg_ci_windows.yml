@@ -44,7 +44,7 @@ jobs:
       ARTIFACT_NAME: vcpkg_windows-vs2019_${{ matrix.llvm }}_amd64
 
     steps:
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
         with:
           ref: ${{ github.event.after }}
           submodules: false
@@ -54,7 +54,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value "$(git log --format=%B -n 1 ${{ github.event.after }})"
           Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'EOF'
 
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
         with:
           submodules: recursive
 
