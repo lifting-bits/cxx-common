@@ -35,7 +35,7 @@ jobs:
       - name: Cleanup working directory with container root
         run: |
           docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:latest find . -name . -o -prune -exec rm -rf -- {} + || true
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
       - name: Build and Push
         working-directory: docker
         run: |
