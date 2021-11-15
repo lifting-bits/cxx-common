@@ -21,7 +21,6 @@
     "default-options",
     "default-targets",
     "libcxx",
-    "lld",
     "mlir",
     "tools"
   ],
