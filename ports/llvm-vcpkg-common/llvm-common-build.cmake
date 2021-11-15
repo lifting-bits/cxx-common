@@ -295,7 +295,7 @@ vcpkg_cmake_configure(
         -DCMAKE_DEBUG_POSTFIX=d
 )
 
-vcpkg_install_cmake(ADD_BIN_TO_PATH)
+vcpkg_cmake_install(ADD_BIN_TO_PATH)
 
 function(llvm_cmake_package_config_fixup package_name)
     cmake_parse_arguments("arg" "DO_NOT_DELETE_PARENT_CONFIG_PATH" "FEATURE_NAME" "" ${ARGN})

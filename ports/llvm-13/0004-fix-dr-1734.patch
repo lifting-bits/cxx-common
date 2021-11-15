@@ -1,3 +1,6 @@
+ llvm/include/llvm/Support/type_traits.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
 diff --git a/llvm/include/llvm/Support/type_traits.h b/llvm/include/llvm/Support/type_traits.h
 index 7b7d5d991f3f..332864c1907e 100644
 --- a/llvm/include/llvm/Support/type_traits.h

@@ -9,13 +9,15 @@ vcpkg_from_github(
     SHA512 6eb0dc18e2c25935fabfdfc48b0114be0939158dfdef7b85b395fe2e71042672446af0e68750aae003c9847d10d1f63316fe95d3df738d18f249174292b1b9e1
     HEAD_REF main
     PATCHES
-        0001-fix-install-paths.patch
-        0002-fix-openmp-debug.patch
-        0003-fix-dr-1734.patch
-        0004-fix-tools-path.patch
-        0005-fix-compiler-rt-install-path.patch
-        0006-fix-libcxx-install.patch
-        0007-fix-tools-install-path.patch
+        0002-fix-install-paths.patch
+        0003-fix-openmp-debug.patch
+        0004-fix-dr-1734.patch
+        0005-fix-tools-path.patch
+        0007-fix-compiler-rt-install-path.patch
+        0008-fix-libcxx-install.patch
+        0009-fix-tools-install-path.patch
+        0010-fix-libffi.patch
+        0011-fix-libxml2.patch
         0020-remove-FindZ3.cmake.patch
         0021-fix-FindZ3.cmake.patch
         0022-llvm-config-bin-path.patch

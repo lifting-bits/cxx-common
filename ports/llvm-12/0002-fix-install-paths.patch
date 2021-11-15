@@ -63,10 +63,10 @@ index fa505a533762..90413be34120 100644
  
  get_property(LLD_EXPORTS GLOBAL PROPERTY LLD_EXPORTS)
 diff --git a/llvm/cmake/modules/AddLLVM.cmake b/llvm/cmake/modules/AddLLVM.cmake
-index 97c9980c7de3..52bb6aac73a6 100644
+index b74adc11ade9..0638aea2f8f6 100644
 --- a/llvm/cmake/modules/AddLLVM.cmake
 +++ b/llvm/cmake/modules/AddLLVM.cmake
-@@ -1015,7 +1015,7 @@ function(process_llvm_pass_plugins)
+@@ -974,7 +974,7 @@ function(process_llvm_pass_plugins)
  
        ## Part 1: Extension header to be included whenever we need extension
        #  processing.
@@ -76,7 +76,7 @@ index 97c9980c7de3..52bb6aac73a6 100644
        file(WRITE
            "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
 diff --git a/llvm/cmake/modules/CMakeLists.txt b/llvm/cmake/modules/CMakeLists.txt
-index 505dc9a29d70..612c3997107e 100644
+index 4b8879f65fe4..9e097ab223b5 100644
 --- a/llvm/cmake/modules/CMakeLists.txt
 +++ b/llvm/cmake/modules/CMakeLists.txt
 @@ -1,4 +1,4 @@
@@ -104,7 +104,7 @@ index b9fb9adce2ea..85a54f699f30 100644
  
  get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
 diff --git a/polly/cmake/CMakeLists.txt b/polly/cmake/CMakeLists.txt
-index 7cc129ba2e90..9776391cd535 100644
+index 211f95512717..2abe3803f910 100644
 --- a/polly/cmake/CMakeLists.txt
 +++ b/polly/cmake/CMakeLists.txt
 @@ -1,7 +1,7 @@
@@ -118,7 +118,7 @@ index 7cc129ba2e90..9776391cd535 100644
    set(POLLY_EXPORTS_FILE_NAME "PollyExports-$<LOWER_CASE:$<CONFIG>>.cmake")
  else()
 diff --git a/pstl/CMakeLists.txt b/pstl/CMakeLists.txt
-index 8bea8843589b..3658c0a4414a 100644
+index 8e6e1354707b..2ae7f7090025 100644
 --- a/pstl/CMakeLists.txt
 +++ b/pstl/CMakeLists.txt
 @@ -81,10 +81,10 @@ install(TARGETS ParallelSTL
