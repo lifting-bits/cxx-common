@@ -1,3 +1,8 @@
+ clang/lib/Headers/CMakeLists.txt       | 2 +-
+ clang/runtime/CMakeLists.txt           | 2 +-
+ compiler-rt/cmake/base-config-ix.cmake | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
 diff --git a/clang/lib/Headers/CMakeLists.txt b/clang/lib/Headers/CMakeLists.txt
 index 8131f6005dc2..9afef2e5a4e7 100644
 --- a/clang/lib/Headers/CMakeLists.txt

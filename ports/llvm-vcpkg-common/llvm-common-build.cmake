@@ -16,8 +16,12 @@ vcpkg_check_features(
         utils LLVM_INCLUDE_UTILS
         utils LLVM_INSTALL_UTILS
         enable-rtti LLVM_ENABLE_RTTI
-        enable-z3 LLVM_ENABLE_Z3_SOLVER
+        enable-ffi LLVM_ENABLE_FFI
+        enable-terminfo LLVM_ENABLE_TERMINFO
+        enable-threads LLVM_ENABLE_THREADS
         enable-eh LLVM_ENABLE_EH
+        enable-bindings LLVM_ENABLE_BINDINGS
+        enable-z3 LLVM_ENABLE_Z3_SOLVER
 )
 
 # Linking with gold is better than /bin/ld
@@ -45,6 +49,12 @@ if(VCPKG_TARGET_IS_LINUX)
     endif()
 endif()
 
+if(VCPKG_USE_SANITIZER)
+    list(APPEND FEATURE_OPTIONS
+        -DLLVM_USE_SANITIZER=${VCPKG_USE_SANITIZER}
+        )
+endif()
+
 # LLVM generates CMake error due to Visual Studio version 16.4 is known to miscompile part of LLVM.
 # LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON disables this error.
 # See https://developercommunity.visualstudio.com/content/problem/845933/miscompile-boolean-condition-deduced-to-be-always.html
@@ -53,11 +63,24 @@ list(APPEND FEATURE_OPTIONS
     -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
 )
 
-if(VCPKG_USE_SANITIZER)
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_USE_SANITIZER=${VCPKG_USE_SANITIZER}
+# Force enable or disable external libraries
+set(llvm_external_libraries
+    zlib
+    libxml2
+)
+foreach(external_library IN LISTS llvm_external_libraries)
+    string(TOLOWER "enable-${external_library}" feature_name)
+    string(TOUPPER "LLVM_ENABLE_${external_library}" define_name)
+    if(feature_name IN_LIST FEATURES)
+        list(APPEND FEATURE_OPTIONS
+            -D${define_name}=FORCE_ON
         )
-endif()
+    else()
+        list(APPEND FEATURE_OPTIONS
+            -D${define_name}=OFF
+        )
+    endif()
+endforeach()
 
 # By default assertions are enabled for Debug configuration only.
 if("enable-assertions" IN_LIST FEATURES)
@@ -69,18 +92,6 @@ elseif("disable-assertions" IN_LIST FEATURES)
     # Force disable assertions for all configurations.
     list(APPEND FEATURE_OPTIONS
         -DLLVM_ENABLE_ASSERTIONS=OFF
-    )
-endif()
-
-if("enable-terminfo" IN_LIST FEATURES)
-    # Force enable terminfo for all configurations.
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_ENABLE_TERMINFO=ON
-    )
-elseif("disable-terminfo" IN_LIST FEATURES)
-    # Force disable terminfo for all configurations.
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_ENABLE_TERMINFO=OFF
     )
 endif()
 
@@ -131,12 +142,6 @@ if("clang-tools-extra" IN_LIST FEATURES)
 endif()
 if("compiler-rt" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "compiler-rt")
-    if(VCPKG_TARGET_IS_OSX AND LLVM_VERSION_MAJOR LESS_EQUAL 10)
-        # prevent compiler_rt from opportunistically trying to build arm64, which fails
-        # See:  https://trac.macports.org/ticket/61477
-        # and https://github.com/macports/macports-ports/pull/9139
-        list(APPEND FEATURE_OPTIONS "-DDARWIN_osx_ARCHS=x86_64\;x86_64h")
-    endif()
 endif()
 if("flang" IN_LIST FEATURES)
     # Disable Flang on Windows (see http://lists.llvm.org/pipermail/flang-dev/2020-July/000448.html).
@@ -171,21 +176,12 @@ if("libcxx" IN_LIST FEATURES)
             -DLIBCXX_ENABLE_SHARED=YES
             )
     endif()
-    #if(VCPKG_TARGET_IS_WINDOWS)
-    #    message(FATAL_ERROR "Building libcxx with MSVC is not supported. Disable it until issues are fixed.")
-    #endif()
     list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
 endif()
 if("libcxxabi" IN_LIST FEATURES)
-    #if(VCPKG_TARGET_IS_WINDOWS)
-    #    message(FATAL_ERROR "Building libcxxabi with MSVC is not supported. Disable it until issues are fixed.")
-    #endif()
     list(APPEND LLVM_ENABLE_PROJECTS "libcxxabi")
 endif()
 if("libunwind" IN_LIST FEATURES)
-    if(VCPKG_TARGET_IS_WINDOWS)
-        message(FATAL_ERROR "Building libunwind with MSVC is not supported. Disable it until issues are fixed.")
-    endif()
     list(APPEND LLVM_ENABLE_PROJECTS "libunwind")
 endif()
 if("lld" IN_LIST FEATURES)
@@ -205,9 +201,8 @@ if("openmp" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "openmp")
     # Perl is required for the OpenMP run-time
     vcpkg_find_acquire_program(PERL)
-    list(APPEND FEATURE_OPTIONS
-        "-DPERL_EXECUTABLE=${PERL}"
-    )
+    get_filename_component(PERL_PATH ${PERL} DIRECTORY)
+    vcpkg_add_to_path(${PERL_PATH})
     if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
         list(APPEND FEATURE_OPTIONS
             -DLIBOMP_DEFAULT_LIB_NAME=libompd
@@ -259,26 +254,41 @@ vcpkg_find_acquire_program(PYTHON3)
 get_filename_component(PYTHON3_DIR ${PYTHON3} DIRECTORY)
 vcpkg_add_to_path(${PYTHON3_DIR})
 
-# Version-specific options
-set(VERSION_OPTIONS)
-if(LLVM_VERSION_MAJOR GREATER_EQUAL 9)
-    list(APPEND VERSION_OPTIONS "-DCMAKE_CXX_STANDARD=14")
+if(NOT VCPKG_TARGET_ARCHITECTURE STREQUAL "${VCPKG_DETECTED_CMAKE_SYSTEM_PROCESSOR}")
+    # TODO: support more targets and OS
+    if(VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+        if(VCPKG_TARGET_IS_OSX)
+            list(APPEND CROSS_OPTIONS -DLLVM_HOST_TRIPLE=arm64-apple-darwin20.3.0)
+            list(APPEND CROSS_OPTIONS -DLLVM_DEFAULT_TARGET_TRIPLE=arm64-apple-darwin20.3.0)
+        elseif(VCPKG_TARGET_IS_WINDOWS)
+            list(APPEND CROSS_OPTIONS -DLLVM_HOST_TRIPLE=arm64-pc-win32)
+            list(APPEND CROSS_OPTIONS -DLLVM_DEFAULT_TARGET_TRIPLE=arm64-pc-win32)
+
+            # Remove if PR #16111 is merged
+            list(APPEND CROSS_OPTIONS -DCMAKE_CROSSCOMPILING=ON)
+            list(APPEND CROSS_OPTIONS -DCMAKE_SYSTEM_PROCESSOR:STRING=ARM64)
+            list(APPEND CROSS_OPTIONS -DCMAKE_SYSTEM_NAME:STRING=Windows)
+        endif()
+        list(APPEND CROSS_OPTIONS -DLLVM_TARGET_ARCH=AArch64)
+    elseif(VCPKG_TARGET_ARCHITECTURE STREQUAL "x64")
+        if(VCPKG_TARGET_IS_OSX)
+            list(APPEND CROSS_OPTIONS -DLLVM_HOST_TRIPLE=x86_64-apple-darwin20.3.0)
+            list(APPEND CROSS_OPTIONS -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-apple-darwin20.3.0)
+        endif()
+        list(APPEND CROSS_OPTIONS -DLLVM_TARGET_ARCH=X86)
+    endif()
 endif()
 
-vcpkg_configure_cmake(
+vcpkg_cmake_configure(
     SOURCE_PATH ${SOURCE_PATH}/llvm
     PREFER_NINJA
     OPTIONS
         ${FEATURE_OPTIONS}
-        ${VERSION_OPTIONS}
+        ${CROSS_OPTIONS}
         -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_BUILD_EXAMPLES=OFF
         -DLLVM_INCLUDE_TESTS=OFF
         -DLLVM_BUILD_TESTS=OFF
-        # Disable optional dependencies to libxml2, zlib, and libedit.
-        -DLLVM_ENABLE_LIBXML2=OFF
-        -DLLVM_ENABLE_ZLIB=OFF
-        -DLLVM_ENABLE_LIBEDIT=OFF
         # Disable linking to Windows PDB analysis library (hard-coded path in LLVMExports.cmake)
         -DLLVM_ENABLE_DIA_SDK=OFF
         # Force TableGen to be built with optimization. This will significantly improve build time.
@@ -296,53 +306,63 @@ vcpkg_configure_cmake(
         -DCMAKE_DEBUG_POSTFIX=d
 )
 
-vcpkg_install_cmake()
+vcpkg_cmake_install(ADD_BIN_TO_PATH)
 
-vcpkg_fixup_cmake_targets(CONFIG_PATH "share/llvm" TARGET_PATH "share/llvm")
-file(INSTALL ${SOURCE_PATH}/llvm/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+function(llvm_cmake_package_config_fixup package_name)
+    cmake_parse_arguments("arg" "DO_NOT_DELETE_PARENT_CONFIG_PATH" "FEATURE_NAME" "" ${ARGN})
+    if(NOT DEFINED arg_FEATURE_NAME)
+        set(arg_FEATURE_NAME ${package_name})
+    endif()
+    if("${arg_FEATURE_NAME}" STREQUAL "${PORT}" OR "${arg_FEATURE_NAME}" IN_LIST FEATURES)
+        set(args)
+        list(APPEND args PACKAGE_NAME "${package_name}")
+        if(arg_DO_NOT_DELETE_PARENT_CONFIG_PATH)
+            list(APPEND args "DO_NOT_DELETE_PARENT_CONFIG_PATH")
+        endif()
+        vcpkg_cmake_config_fixup(${args})
+        file(INSTALL "${SOURCE_PATH}/${package_name}/LICENSE.TXT" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${package_name}" RENAME copyright)
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${package_name}_usage")
+            file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/${package_name}_usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${package_name}" RENAME usage)
+        endif()
+    endif()
+endfunction()
 
+llvm_cmake_package_config_fixup("clang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("flang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("lld" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("mlir" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("polly" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("ParallelSTL" FEATURE_NAME "pstl" DO_NOT_DELETE_PARENT_CONFIG_PATH)
+llvm_cmake_package_config_fixup("llvm")
 
-if("clang" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/clang" TARGET_PATH "share/clang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/clang/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/clang RENAME copyright)
-endif()
+set(empty_dirs)
 
 if("clang-tools-extra" IN_LIST FEATURES)
-    # Remove empty include directory include/clang-tidy/plugin
-    file(GLOB_RECURSE INCLUDE_CLANG_TIDY_PLUGIN_FILES "${CURRENT_PACKAGES_DIR}/include/clang-tidy/plugin/*")
-    if(NOT INCLUDE_CLANG_TIDY_PLUGIN_FILES)
-        file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/include/clang-tidy/plugin")
-    endif()
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/clang-tidy/plugin")
 endif()
 
 if("flang" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/flang" TARGET_PATH "share/flang" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/flang/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/flang RENAME copyright)
-    # Remove empty include directory /include/flang/Config
-    file(GLOB_RECURSE INCLUDE_FLANG_CONFIG_FILES "${CURRENT_PACKAGES_DIR}/include/flang/Config/*")
-    if(NOT INCLUDE_FLANG_CONFIG_FILES)
-        file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/include/flang/Config")
-    endif()
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/Config")
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/CMakeFiles")
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/Optimizer/CMakeFiles")
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/Optimizer/CodeGen/CMakeFiles")
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/Optimizer/Dialect/CMakeFiles")
+    list(APPEND empty_dirs "${CURRENT_PACKAGES_DIR}/include/flang/Optimizer/Transforms/CMakeFiles")
 endif()
 
-if("lld" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/lld" TARGET_PATH "share/lld" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/lld/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/lld RENAME copyright)
-endif()
-
-if("mlir" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/mlir" TARGET_PATH "share/mlir" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/mlir/LICENSE.TXT DESTINATION ${CURRENT_PACKAGES_DIR}/share/mlir RENAME copyright)
-endif()
-
-if("polly" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/polly" TARGET_PATH "share/polly" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/polly/LICENSE.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/polly RENAME copyright)
-endif()
-
-if("pstl" IN_LIST FEATURES)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH "share/ParallelSTL" TARGET_PATH "share/ParallelSTL" DO_NOT_DELETE_PARENT_CONFIG_PATH)
-    file(INSTALL ${SOURCE_PATH}/pstl/LICENSE.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/ParallelSTL RENAME copyright)
+if(empty_dirs)
+    foreach(empty_dir IN LISTS empty_dirs)
+        if(NOT EXISTS "${empty_dir}")
+            message(SEND_ERROR "Directory '${empty_dir}' is not exist. Please remove it from the checking.")
+        else()
+            file(GLOB_RECURSE files_in_dir "${empty_dir}/*")
+            if(files_in_dir)
+                message(SEND_ERROR "Directory '${empty_dir}' is not empty. Please remove it from the checking.")
+            else()
+                file(REMOVE_RECURSE "${empty_dir}")
+            endif()
+        endif()
+    endforeach()
 endif()
 
 vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)

@@ -1,3 +1,13 @@
+ clang/cmake/modules/CMakeLists.txt | 4 ++--
+ flang/cmake/modules/CMakeLists.txt | 4 ++--
+ lld/cmake/modules/CMakeLists.txt   | 4 ++--
+ llvm/cmake/modules/AddLLVM.cmake   | 2 +-
+ llvm/cmake/modules/CMakeLists.txt  | 2 +-
+ mlir/cmake/modules/CMakeLists.txt  | 4 ++--
+ polly/cmake/CMakeLists.txt         | 4 ++--
+ pstl/CMakeLists.txt                | 4 ++--
+ 8 files changed, 14 insertions(+), 14 deletions(-)
+
 diff --git a/clang/cmake/modules/CMakeLists.txt b/clang/cmake/modules/CMakeLists.txt
 index 561665d58cad..3c73878a4483 100644
 --- a/clang/cmake/modules/CMakeLists.txt
