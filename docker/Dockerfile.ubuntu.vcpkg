@@ -12,10 +12,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     if [ "$(uname -m)" = "aarch64" ]; then dpkg --add-architecture armhf; fi && \
     apt-get update && apt-get install --yes apt-utils && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
-    apt-add-repository ppa:git-core/ppa --yes && \
-    wget "https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-$(uname -m).sh" && \
+    wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
-    apt-get update && \
+    apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
       "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" \
