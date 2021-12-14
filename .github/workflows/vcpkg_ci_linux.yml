@@ -168,9 +168,9 @@ jobs:
         uses: actions/cache@v2.1.7
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-bump-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
+            ccache-bump-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
