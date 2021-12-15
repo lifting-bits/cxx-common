@@ -43,12 +43,6 @@ vcpkg_check_features(
         codegen gRPC_BUILD_CODEGEN
 )
 
-if(VCPKG_USE_SANITIZER)
-    list(APPEND FEATURE_OPTIONS
-        -DLLVM_USE_SANITIZER=${VCPKG_USE_SANITIZER}
-        )
-endif()
-
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}
     PREFER_NINJA
