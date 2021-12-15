@@ -12,9 +12,16 @@ vcpkg_from_github(
         add-all-libs-target.patch
 )
 
+if(VCPKG_USE_SANITIZER)
+    list(APPEND FEATURE_OPTIONS
+        -DUPB_ENABLE_ASAN=ON
+        )
+endif()
+
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}/cmake
     PREFER_NINJA
+    OPTIONS ${FEATURE_OPTIONS}
 )
 
 vcpkg_install_cmake()

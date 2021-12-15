@@ -10,6 +10,7 @@
       "name": "c-ares",
       "platform": "!uwp"
     },
+    "gflags",
     {
       "name": "grpc",
       "host": true,

@@ -43,6 +43,12 @@ vcpkg_check_features(
         codegen gRPC_BUILD_CODEGEN
 )
 
+if(VCPKG_USE_SANITIZER)
+    list(APPEND FEATURE_OPTIONS
+        -DLLVM_USE_SANITIZER=${VCPKG_USE_SANITIZER}
+        )
+endif()
+
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}
     PREFER_NINJA
@@ -59,8 +65,9 @@ vcpkg_configure_cmake(
         -DgRPC_RE2_PROVIDER=package
         -DgRPC_PROTOBUF_PACKAGE_TYPE=CONFIG
         -DgRPC_CARES_PROVIDER=${cares_CARES_PROVIDER}
-        -DgRPC_GFLAGS_PROVIDER=none
+        -DgRPC_GFLAGS_PROVIDER=package
         -DgRPC_BENCHMARK_PROVIDER=none
+        -DgRPC_BUILD_CSHARP_EXT=OFF
         -DgRPC_INSTALL_CSHARP_EXT=OFF
         -DgRPC_INSTALL_BINDIR:STRING=bin
         -DgRPC_INSTALL_LIBDIR:STRING=lib
