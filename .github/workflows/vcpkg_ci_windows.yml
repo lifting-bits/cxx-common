@@ -117,7 +117,7 @@ jobs:
             --7zip `
             --output=${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.2.4
+      - uses: actions/upload-artifact@v2.3.1
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
         with:
           name: ${{ env.ARTIFACT_NAME }}.7z
