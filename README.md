@@ -125,6 +125,36 @@ The version of each dependency is influenced by the git checkout of vcpkg, conta
 
 See [here](https://github.com/microsoft/vcpkg/blob/master/docs/examples/packaging-github-repos.md) for how to package a new library.
 
+## Useful manual vcpkg commands
+
+Sometimes it is useful to run vcpkg commands manually for testing a single package. Ideally, someone who wants to do this would read the [vcpkg documentation](https://github.com/microsoft/vcpkg/tree/master/docs), but below we list some commonly used commands.
+
+The following commands should be run from the root of this repo, and they do not apply if you have downloaded pre-built packages.
+
+### Installing
+
+Remember, you must know the triplet you would like to build with if you are using an existing installation after running the build script.
+
+```sh
+./vcpkg/vcpkg install --triplet=x64-osx-rel @overlays.txt --debug grpc
+```
+
+This command will 
+* `install` the `grpc` package
+* using the `x64-osx-rel` triplet to only build x86-64 Release builds for Mac
+* in the context of `@overlays.txt`, which sets up vcpkg package paths using normal vcpkg commands (look at the file if you're interested)
+* and tell vcpkg to print out `--debug` information
+
+### Uninstalling
+
+Remember, you must know the triplet you would like to build with if you are using an existing installation after running the build script.
+
+```sh
+./vcpkg/vcpkg remove --triplet=x64-osx-rel @overlays.txt --debug grpc
+```
+
+This command will do similar things as the above command, except it will `remove` the package from the installation directory instead of installing.
+
 ## LICENSING
 
 This repo is under the Apache-2.0 LICENSE, unless where specified. See below.
