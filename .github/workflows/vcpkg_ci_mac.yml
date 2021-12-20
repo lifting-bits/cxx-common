@@ -152,7 +152,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-12' }} || ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           mkdir -p build && cd build
@@ -167,7 +167,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-12' }} || ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -184,7 +184,7 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-12' }} || ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd anvill
           mkdir -p build && cd build
