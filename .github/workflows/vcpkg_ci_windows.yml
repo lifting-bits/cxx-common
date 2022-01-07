@@ -27,7 +27,8 @@ on:
     tags-ignore:
       - 'v*'
     branches:
-      - 'master'
+      - master
+      - fix-windows
 
 jobs:
   build:
