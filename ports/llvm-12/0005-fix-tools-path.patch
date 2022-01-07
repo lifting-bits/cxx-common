@@ -9,6 +9,6 @@ index 53ba24efc00..0badcafe000 100644
    CurrentExecPrefix =
 -      sys::path::parent_path(sys::path::parent_path(CurrentPath)).str();
 +      sys::path::parent_path(sys::path::parent_path(sys::path::parent_path(CurrentPath))).str();
-
+ 
    // Check to see if we are inside a development tree by comparing to possible
    // locations (prefix style or CMake style).
