@@ -58,6 +58,7 @@ jobs:
 
     env:
       ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}.tar.xz
+      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
 
     steps:
       # Used to get commit message since PRs are on a merge commit

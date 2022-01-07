@@ -4,6 +4,7 @@ env:
   # "Source" is set in the setup-dotnet action
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
   TRIPLET: 'x64-windows-static-md-rel'
+  VCPKG_DEFAULT_HOST_TRIPLET: 'x64-windows-static-md-rel'
 
 on:
   release:
