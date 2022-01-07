@@ -2,7 +2,7 @@ name: Windows Continuous Integration
 
 env:
   # "Source" is set in the setup-dotnet action
-  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
+  VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite;nugettimeout,3601'
   TRIPLET: 'x64-windows-static-md-rel'
   VCPKG_DEFAULT_HOST_TRIPLET: 'x64-windows-static-md-rel'
 
@@ -39,7 +39,7 @@ jobs:
           'llvm-13'
           ]
 
-    runs-on: ['self-hosted', 'Windows', 'X64']
+    runs-on: windows-2019
 
     env:
       ARTIFACT_NAME: vcpkg_windows-vs2019_${{ matrix.llvm }}_amd64
@@ -59,14 +59,6 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-dotnet@v1.9.0
-        with:
-          dotnet-version: '3.1.x' # SDK Version to use.
-          # Sets as "Source"
-          source-url: https://nuget.pkg.github.com/lifting-bits/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Read vcpkg Info
         id: vcpkg_info
         shell: bash
@@ -78,10 +70,10 @@ jobs:
         # Setup Visual Studio Dev Environment (x64, default version/toolset)
       - uses: ilammy/msvc-dev-cmd@v1.10.0
 
-      - name: Clear prior vcpkg directory
+      - name: Set vcpkg directory
         run: |
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ github.workspace }}\vcpkg"
-          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'VCPKG_ROOT=${{ github.workspace }}\vcpkg'
+          mkdir C:\a
+          Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'VCPKG_ROOT=C:\a\vcpkg'
 
       - name: 'Checkout and Bootstrap vcpkg'
         run: |
@@ -96,10 +88,16 @@ jobs:
         env:
           VCPKG_DISABLE_METRICS: 1
         run: |
+          Get-PSDrive
+
           # Setup NuGet authentication
-          & "$(& "${env:VCPKG_ROOT}\vcpkg.exe" fetch nuget | select -last 1)" setapikey `
+          & "$(C:\\a\\vcpkg\\vcpkg.exe fetch nuget | select -last 1)" `
+            sources add `
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
-            "${{ secrets.GITHUB_TOKEN }}"
+            -storepasswordincleartext `
+            -name "GitHub" `
+            -username "${{ github.repository_owner }}" `
+            -password "${{ secrets.GITHUB_TOKEN }}"
 
           & "${env:VCPKG_ROOT}\vcpkg.exe" install `
             --triplet "${env:TRIPLET}" `
