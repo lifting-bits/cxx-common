@@ -102,10 +102,13 @@ jobs:
 
           & "${env:VCPKG_ROOT}\vcpkg.exe" install `
             --triplet "${env:TRIPLET}" `
+            --clean-buildtrees-after-build `
             --debug `
             ${{ matrix.llvm }} `
             "@overlays.txt" `
             "@dependencies.txt"
+
+          Get-PSDrive
 
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
