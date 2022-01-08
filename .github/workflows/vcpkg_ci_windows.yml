@@ -102,6 +102,17 @@ jobs:
 
           & "${env:VCPKG_ROOT}\vcpkg.exe" install `
             --triplet "${env:TRIPLET}" `
+            --debug `
+            ${{ matrix.llvm }} `
+            "@overlays.txt"
+
+          echo "INFO error log"
+          cat C:\a\vcpkg\buildtrees\${{ matrix.llvm }}\install-x64-windows-static-md-rel-rel-out.log
+          echo "INFO error log-1"
+          cat C:\a\vcpkg\buildtrees\${{ matrix.llvm }}\install-x64-windows-static-md-rel-rel-out-1.log
+
+          & "${env:VCPKG_ROOT}\vcpkg.exe" install `
+            --triplet "${env:TRIPLET}" `
             --clean-buildtrees-after-build `
             --debug `
             ${{ matrix.llvm }} `
