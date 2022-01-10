@@ -68,6 +68,13 @@ jobs:
           echo ::set-output name=repo_url::${vcpkg_repo_url}
           echo ::set-output name=commit::${vcpkg_commit}
 
+      - name: Configure PageFile
+        # v1.2
+        uses: al-cheb/configure-pagefile-action@7e234852c937eea04d6ee627c599fb24a5bfffee
+        with:
+          minimum-size: 2GB
+          maximum-size: 4GB
+
         # Setup Visual Studio Dev Environment (x64, default version/toolset)
       - uses: ilammy/msvc-dev-cmd@v1.10.0
 
