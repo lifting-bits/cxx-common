@@ -4,7 +4,8 @@ vcpkg_from_github(
     REF 5976632eeaaaad7890c2109d0cfaf4012eaca3b8 # 12.0.1
     SHA512 9463e669cc273f55829e82d6032763221c2ba73f3c43191be847f694f6fd3609b866cc14101e8b1f88e7e44f04b4f5f7bf61bb9431b72b7e17ded1db34b7757d
     HEAD_REF master
-    PATCHES dont_call_evex_scan_when_error.patch
+    PATCHES 
+      dont_call_evex_scan_when_error.patch
 )
 
 # Last checked Dec 9, 2020
