@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ec782239..57566c5a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -390,7 +390,7 @@
+   if (HAVE_SYMBOLIZE)
+     set (HAVE_STACKTRACE 1)
+   endif (HAVE_SYMBOLIZE)
+-elseif (UNIX OR (APPLE AND HAVE_DLADDR))
++elseif ((UNIX OR (APPLE AND HAVE_DLADDR)) AND NOT EMSCRIPTEN)
+   set (HAVE_SYMBOLIZE 1)
+ endif (WIN32 OR CYGWIN)
+

@@ -11,6 +11,7 @@ vcpkg_from_github(
         no-werror.patch
         fix-uwp-build.patch
         windows-python.patch
+        emscripten-nostdlib.patch
 )
 
 set(OPTIONS)
