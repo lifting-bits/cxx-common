@@ -1,0 +1,69 @@
+diff --git a/llvm/cmake/modules/GetHostTriple.cmake b/llvm/cmake/modules/GetHostTriple.cmake
+index eb7bd4aec898..878a49c3cfb8 100644
+--- a/llvm/cmake/modules/GetHostTriple.cmake
++++ b/llvm/cmake/modules/GetHostTriple.cmake
+@@ -41,6 +41,8 @@
+     else()
+       set( value "powerpc-ibm-aix" )
+     endif()
++  elseif( EMSCRIPTEN )
++    set ( value "wasm32" )
+   else( MSVC )
+     if(CMAKE_HOST_SYSTEM_NAME STREQUAL Windows AND NOT MSYS)
+       message(WARNING "unable to determine host target triple")
+diff --git a/libcxx/CMakeLists.txt b/libcxx/CMakeLists.txt
+index eb7bd4aec898..878a49c3cfb8 100644
+--- a/libcxx/CMakeLists.txt
++++ b/libcxx/CMakeLists.txt
+@@ -89,6 +89,9 @@
+ option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
+ option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
+ option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
++if(EMSCRIPTEN)
++  set(LIBCXX_ENABLE_SHARED OFF)
++endif()
+ set(ENABLE_FILESYSTEM_DEFAULT ON)
+ if (WIN32)
+   set(ENABLE_FILESYSTEM_DEFAULT OFF)
+diff --git a/libcxxabi/CMakeLists.txt b/libcxxabi/CMakeLists.txt
+index eb7bd4aec898..878a49c3cfb8 100644
++++ b/libcxxabi/CMakeLists.txt
+--- a/libcxxabi/CMakeLists.txt
+@@ -129,6 +129,9 @@
+ # system over a static libc++abi from the output directory.
+ option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
+ option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
++if(EMSCRIPTEN)
++  set(LIBCXXABI_ENABLE_SHARED OFF)
++endif()
+ 
+ cmake_dependent_option(LIBCXXABI_INSTALL_STATIC_LIBRARY
+   "Install the static libc++abi library." ON
+diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
+index eb7bd4aec898..878a49c3cfb8 100644
++++ b/llvm/cmake/modules/HandleLLVMOptions.cmake
+--- a/llvm/cmake/modules/HandleLLVMOptions.cmake
+@@ -131,6 +131,10 @@
+     set(LLVM_ON_WIN32 1)
+     set(LLVM_ON_UNIX 0)
+   endif(CYGWIN)
++elseif(EMSCRIPTEN)
++  set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
++  set(LLVM_ON_WIN32 0)
++  set(LLVM_ON_UNIX 1)
+ else(WIN32)
+   if(FUCHSIA OR UNIX)
+     set(LLVM_ON_WIN32 0)
+diff --git a/llvm/cmake/modules/TableGen.cmake b/llvm/cmake/modules/TableGen.cmake
+index eb7bd4aec898..878a49c3cfb8 100644
++++ b/llvm/cmake/modules/TableGen.cmake
+--- a/llvm/cmake/modules/TableGen.cmake
+@@ -176,7 +176,7 @@
+     endif()
+   endif()
+ 
+-  if ((${project} STREQUAL LLVM OR ${project} STREQUAL MLIR) AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
++  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
+     set(export_to_llvmexports)
+     if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+         NOT LLVM_DISTRIBUTION_COMPONENTS)

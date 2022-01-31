@@ -1,0 +1,13 @@
+diff --git a/llvm/cmake/modules/TableGen.cmake b/llvm/cmake/modules/TableGen.cmake
+index eb7bd4aec898..878a49c3cfb8 100644
++++ b/llvm/cmake/modules/TableGen.cmake
+--- a/llvm/cmake/modules/TableGen.cmake
+@@ -176,7 +176,7 @@
+     endif()
+   endif()
+ 
+-  if ((${project} STREQUAL LLVM OR ${project} STREQUAL MLIR) AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
++  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
+     set(export_to_llvmexports)
+     if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+         NOT LLVM_DISTRIBUTION_COMPONENTS)
