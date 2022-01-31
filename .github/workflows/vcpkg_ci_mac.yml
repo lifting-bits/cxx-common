@@ -85,7 +85,7 @@ jobs:
 
         # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v10.0
+        uses: lukka/run-vcpkg@v10.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
