@@ -23,7 +23,8 @@
     "libcxx",
     "libcxxabi",
     "mlir",
-    "tools"
+    "tools",
+    "utils"
   ],
   "features": {
     "clang": {
