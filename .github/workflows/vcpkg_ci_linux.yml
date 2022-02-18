@@ -46,7 +46,7 @@ jobs:
         # Only some LLVM versions for ARM CI
         include:
           - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-            llvm: 'llvm-12'
+            llvm: 'llvm-13'
             image: { name: 'ubuntu', tag: '20.04' }
 
     runs-on: ${{ matrix.host.name }}
