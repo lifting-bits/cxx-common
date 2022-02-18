@@ -58,6 +58,7 @@ jobs:
 
     env:
       ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}.tar.xz
+      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
 
     steps:
       # Used to get commit message since PRs are on a merge commit
@@ -89,7 +90,7 @@ jobs:
 
       # Needed for caching the actual vcpkg executable
       - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v10.0
+        uses: lukka/run-vcpkg@v10.1
         with:
           vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}

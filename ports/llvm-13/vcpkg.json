@@ -1,6 +1,6 @@
 {
   "name": "llvm-13",
-  "version": "13.0.0",
+  "version": "13.0.1",
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "supports": "!uwp & !(arm & windows)",
@@ -19,10 +19,12 @@
     "clang",
     "compiler-rt",
     "default-options",
-    "default-targets",
+    "cxx-common-targets",
     "libcxx",
+    "libcxxabi",
     "mlir",
-    "tools"
+    "tools",
+    "utils"
   ],
   "features": {
     "clang": {
@@ -58,6 +60,22 @@
             "enable-threads",
             "enable-z3",
             "enable-zlib"
+          ]
+        }
+      ]
+    },
+    "cxx-common-targets": {
+      "description": "Build with cxx-common target set",
+      "dependencies": [
+        {
+          "name": "llvm-13",
+          "default-features": false,
+          "features": [
+            "target-aarch64",
+            "target-arm",
+            "target-nvptx",
+            "target-sparc",
+            "target-x86"
           ]
         }
       ]
