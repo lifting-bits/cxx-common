@@ -199,7 +199,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ./install/bin/anvill-decompile-json -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Publish Release Assets
         if: |
