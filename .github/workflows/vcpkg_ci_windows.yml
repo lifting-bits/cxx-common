@@ -140,7 +140,7 @@ jobs:
           cmake --build . --config Release --target install
 
           # TODO Testing on Windows
-          # python ../scripts/roundtrip.py ( Get-ChildItem tools | Where-Object {$_.name -match "rellic-decomp-.*.exe"} ) ..\tests\tools\decomp "${env:VCPKG_ROOT}\installed\${env:TRIPLET}\tools\${{ matrix.llvm }}\clang.exe"
+          # python ../scripts/roundtrip.py ( Get-ChildItem tools | Where-Object {$_.name -match "rellic-decomp.exe"} ) ..\tests\tools\decomp "${env:VCPKG_ROOT}\installed\${env:TRIPLET}\tools\${{ matrix.llvm }}\clang.exe"
 
       - name: 'Test remill build'
         if: ${{ matrix.llvm == 'llvm-13' }}

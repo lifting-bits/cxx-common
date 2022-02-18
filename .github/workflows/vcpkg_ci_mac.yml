@@ -164,7 +164,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
 
       - name: 'Remill build'
         shell: 'bash'
