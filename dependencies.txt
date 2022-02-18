@@ -8,3 +8,4 @@ abseil
 grpc[absl-sync,codegen]
 flatbuffers
 roaring
+rocksdb
