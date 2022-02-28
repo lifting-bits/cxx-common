@@ -96,6 +96,7 @@ jobs:
           vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
           appendedCacheKey: '${{ matrix.host.arch }}-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-clear'
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          doNotCache: true
           setupOnly: true
 
         # Omit this step if using manifests
