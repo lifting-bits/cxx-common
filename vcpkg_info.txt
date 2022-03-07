@@ -1,2 +1,2 @@
 https://github.com/microsoft/vcpkg.git
-03ca9b59af1506a86840e3a3a01a092f3333a29b
+5962cf5a3bfc2124e8de991a4e45a8edcb3b4c69
