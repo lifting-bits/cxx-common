@@ -12,7 +12,7 @@ function die {
 
 function Help
 {
-  echo "Usage: ./build_dependencies.sh [--release] [--asan] [--export-dir DIR] [...]"
+  echo "Usage: ./build_dependencies.sh [--release] [--asan] [--upgrade-ports] [--export-dir DIR] [...]"
   echo ""
   echo "Options:"
   echo "  --release"
@@ -20,6 +20,11 @@ function Help
   echo "     this script"
   echo "  --asan"
   echo "     Build with ASAN triplet as detected in this script"
+  echo "  --upgrade-ports"
+  echo "     Upgrade any outdated packages in the chosen install/export"
+  echo "     directory. Warning, this could cause long rebuild times if your"
+  echo "     compiler has changed or your installation directory hasn't been"
+  echo "     updated in a while."
   echo "  --export-dir <DIR>"
   echo "     Export built dependencies to directory path"
   echo "  [...]"
@@ -27,9 +32,14 @@ function Help
   echo "     other ports, vcpkg-specific options, etc."
 }
 
+if [[ -n "${VCPKG_ROOT+x}" ]]; then
+  unset VCPKG_ROOT
+fi
+
 RELEASE="false"
 ASAN="false"
 EXPORT_DIR=""
+UPGRADE_PORTS="false"
 VCPKG_ARGS=()
 while [[ $# -gt 0 ]] ; do
   key="$1"
@@ -38,6 +48,10 @@ while [[ $# -gt 0 ]] ; do
     -h|--help)
       Help
       exit 0
+    ;;
+    --upgrade-ports)
+      UPGRADE_PORTS="true"
+      msg "Upgrading any outdated ports"
     ;;
     --release)
       RELEASE="true"
@@ -62,11 +76,11 @@ msg " " "${VCPKG_ARGS[@]}"
 
 function die_if_not_installed {
   if ! type $1 &>/dev/null; then
-    die "Please install the package providing [${1}] for your OS"
+    die "Please install the package providing [${1}] command for your OS"
   fi
 }
 
-for pkg in git zip unzip cmake ninja python3 curl tar pkg-config
+for pkg in git zip unzip cmake python3 curl tar pkg-config
 do
   die_if_not_installed ${pkg}
 done
@@ -155,13 +169,10 @@ vcpkg_dir="${repo_dir:?}/vcpkg"
 if [[ -z ${EXPORT_DIR} ]]; then
   # Set default export directory variable. Used for printing end message
   EXPORT_DIR="${vcpkg_dir}"
-else
-  if [[ -d "${EXPORT_DIR}" ]]; then
-    die "Export directory already exists, please delete: '${EXPORT_DIR}'"
-  fi
 fi
+mkdir -p "${EXPORT_DIR}"
 
-extra_vcpkg_args+=("--triplet=${triplet}" "--host-triplet=${triplet}")
+extra_vcpkg_args+=("--triplet=${triplet}" "--host-triplet=${triplet}" "--x-install-root=${EXPORT_DIR}/installed")
 
 extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}" "-DVCPKG_HOST_TRIPLET=${triplet}")
 
@@ -195,6 +206,29 @@ msg "Boostrapping vcpkg"
   "${vcpkg_dir}/bootstrap-vcpkg.sh"
 )
 
+# Copy required buildsystem scripts to export directory (this is what the
+# `vcpkg export` command does).
+# See the following `export_integration_files` function for the list of files.
+# This should be updated when that is updated.
+# https://github.com/microsoft/vcpkg-tool/blob/1533e9db90da0571e29e7ef85c7d5343c7fb7616/src/vcpkg/export.cpp#L259-L279
+if [[ "${EXPORT_DIR}" != "${vcpkg_dir}" ]]; then
+  msg "Copying required vcpkg files to export directory"
+  mkdir -p "${EXPORT_DIR}"
+  touch "${EXPORT_DIR}/.vcpkg-root"
+  integration_files=(
+    "scripts/buildsystems/msbuild/applocal.ps1"
+    "scripts/buildsystems/msbuild/vcpkg.targets"
+    "scripts/buildsystems/msbuild/vcpkg.props"
+    "scripts/buildsystems/msbuild/vcpkg-general.xml"
+    "scripts/buildsystems/vcpkg.cmake"
+    "scripts/cmake/vcpkg_get_windows_sdk.cmake"
+  )
+  for f in "${integration_files[@]}"
+  do
+    cmake -E copy_if_different "${vcpkg_dir}/${f}" "${EXPORT_DIR}/${f}"
+  done
+fi
+
 msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
@@ -206,37 +240,27 @@ msg " " "${VCPKG_ARGS[@]}"
     set -x
 
     "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
-
-    # This forces everyone to be updated but maybe this is too much trouble to
-    # actually rebuild everything that has a mismatching hash.
-    # "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run
-
-    find "${vcpkg_dir}"/installed/*/tools/protobuf/ -type f -exec chmod 755 {} + || true
-    find "${EXPORT_DIR}"/installed/*/tools/protobuf/ -type f -exec chmod 755 {} + || true
   )
 )
 
-# Don't export if we've already installed to an existing EXPORT_DIR
-if [[ ! -d "${EXPORT_DIR}" ]]; then
-  tmp_export_dir=temp-export
-  set -x
-  "${vcpkg_dir}/vcpkg" export --x-all-installed --raw "--output=${tmp_export_dir}"
-  mv "${vcpkg_dir}/${tmp_export_dir}" "${EXPORT_DIR}"
-  set +x
+# Check if we should upgrade ports
+if [[ ${UPGRADE_PORTS} == "true" ]]; then
+  echo ""
+  msg "Checking and upgrading outdated ports"
+  (
+    cd "${repo_dir}"
+    (
+      set -x
+      "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run --allow-unsupported
+    )
+  )
 fi
 
 echo ""
-# TODO: See https://github.com/microsoft/vcpkg/issues/1785
-#msg "The following packages are now available for your use:"
-#if echo "${extra_vcpkg_args[@]}" | grep -w -v -q -- '--x-install-root=' ; then
-#  extra_vcpkg_args+=("--x-install-root=${EXPORT_DIR}/installed")
-#fi
-#set -x
-#"${vcpkg_dir}/vcpkg" "${extra_vcpkg_args[@]}" '@overlays.txt' list
-#set +x
+msg "Investigate the following directory to discover all packages available to you:"
+msg "  ${EXPORT_DIR}/installed/vcpkg"
+echo ""
 msg "Set the following in your CMake configure command to use these dependencies!"
-msg "  -DVCPKG_ROOT=\"${EXPORT_DIR}\" ${extra_cmake_usage_args[*]}"
-msg "or"
 msg "  -DCMAKE_TOOLCHAIN_FILE=\"${EXPORT_DIR}/scripts/buildsystems/vcpkg.cmake\" ${extra_cmake_usage_args[*]}"
 
 if [[ "$(uname -m)" = "aarch64" ]]; then
