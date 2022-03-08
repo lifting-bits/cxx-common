@@ -12,25 +12,29 @@ function die {
 
 function Help
 {
-  echo "Usage: ./build_dependencies.sh [--upgrade-ports] [--release] [--asan] [--export-dir DIR] [...]"
+  echo "Usage: ./build_dependencies.sh [--release] [--asan] [--upgrade-ports] [--export-dir DIR] [...]"
   echo ""
   echo "Options:"
-  echo "  --upgrade-ports"
-  echo "     Upgrade any outdated packages in the chosen install/export"
-  echo "     directory. Warning, this could cause long rebuild times if your"
-  echo "     compiler has changed or your installation directory hasn't been"
-  echo "     updated in a while."
   echo "  --release"
   echo "     Build only release versions with triplet as detected in"
   echo "     this script"
   echo "  --asan"
   echo "     Build with ASAN triplet as detected in this script"
+  echo "  --upgrade-ports"
+  echo "     Upgrade any outdated packages in the chosen install/export"
+  echo "     directory. Warning, this could cause long rebuild times if your"
+  echo "     compiler has changed or your installation directory hasn't been"
+  echo "     updated in a while."
   echo "  --export-dir <DIR>"
   echo "     Export built dependencies to directory path"
   echo "  [...]"
   echo "     Extra args to pass to 'vcpkg install'. Like LLVM version,"
   echo "     other ports, vcpkg-specific options, etc."
 }
+
+if [[ -n "${VCPKG_ROOT+x}" ]]; then
+  unset VCPKG_ROOT
+fi
 
 RELEASE="false"
 ASAN="false"
@@ -202,6 +206,29 @@ msg "Boostrapping vcpkg"
   "${vcpkg_dir}/bootstrap-vcpkg.sh"
 )
 
+# Copy required buildsystem scripts to export directory (this is what the
+# `vcpkg export` command does).
+# See the following `export_integration_files` function for the list of files.
+# This should be updated when that is updated.
+# https://github.com/microsoft/vcpkg-tool/blob/1533e9db90da0571e29e7ef85c7d5343c7fb7616/src/vcpkg/export.cpp#L259-L279
+if [[ "${EXPORT_DIR}" != "${vcpkg_dir}" ]]; then
+  msg "Copying required vcpkg files to export directory"
+  mkdir -p "${EXPORT_DIR}"
+  touch "${EXPORT_DIR}/.vcpkg-root"
+  integration_files=(
+    "scripts/buildsystems/msbuild/applocal.ps1"
+    "scripts/buildsystems/msbuild/vcpkg.targets"
+    "scripts/buildsystems/msbuild/vcpkg.props"
+    "scripts/buildsystems/msbuild/vcpkg-general.xml"
+    "scripts/buildsystems/vcpkg.cmake"
+    "scripts/cmake/vcpkg_get_windows_sdk.cmake"
+  )
+  for f in "${integration_files[@]}"
+  do
+    cmake -E copy_if_different "${vcpkg_dir}/${f}" "${EXPORT_DIR}/${f}"
+  done
+fi
+
 msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
@@ -212,7 +239,7 @@ msg " " "${VCPKG_ARGS[@]}"
   (
     set -x
 
-    "${vcpkg_dir}/vcpkg" install --debug "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
+    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
   )
 )
 
@@ -227,29 +254,6 @@ if [[ ${UPGRADE_PORTS} == "true" ]]; then
       "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run --allow-unsupported
     )
   )
-fi
-
-# Copy required buildsystem scripts to export directory (this is what the
-# `vcpkg export` command does).
-# See the following `export_integration_files` function for the list of files.
-# This should be updated when that is updated.
-# https://github.com/microsoft/vcpkg-tool/blob/1533e9db90da0571e29e7ef85c7d5343c7fb7616/src/vcpkg/export.cpp#L259-L279
-if [[ "${EXPORT_DIR}" != "${vcpkg_dir}" ]]; then
-  touch "${EXPORT_DIR}/.vcpkg-root"
-  mkdir -p "${EXPORT_DIR}/scripts/buildsystems"
-  mkdir -p "${EXPORT_DIR}/scripts/cmake"
-  integration_files=(
-    "scripts/buildsystems/msbuild/applocal.ps1"
-    "scripts/buildsystems/msbuild/vcpkg.targets"
-    "scripts/buildsystems/msbuild/vcpkg.props"
-    "scripts/buildsystems/msbuild/vcpkg-general.xml"
-    "scripts/buildsystems/vcpkg.cmake"
-    "scripts/cmake/vcpkg_get_windows_sdk.cmake"
-  )
-  for f in "${integration_files[@]}"
-  do
-    cmake -E copy_if_different "${vcpkg_dir}/${f}" "${EXPORT_DIR}/${f}"
-  done
 fi
 
 echo ""
