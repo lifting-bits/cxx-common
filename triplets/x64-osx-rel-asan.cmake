@@ -12,8 +12,10 @@ set(VCPKG_USE_SANITIZER "Address")
 if(NOT PORT MATCHES "^((llvm)|(llvm-[0-9]+)|(upb))$")
   set(VCPKG_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
   set(VCPKG_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
-  set(VCPKG_LINKER_FLAGS "-fsanitize=address")
 endif()
+
+# Always apply sanitizer to linker flags
+set(VCPKG_LINKER_FLAGS "-fsanitize=address")
 
 set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
 set(VCPKG_OSX_ARCHITECTURES x86_64)
