@@ -1,5 +1,31 @@
+diff --git a/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h b/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
+index 128c9967a596..9dc2f6cf7f98 100644
+--- a/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
++++ b/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
+@@ -57,6 +57,10 @@ class RuntimeDyldImpl;
+ 
+ class RuntimeDyld {
+ public:
++  
++  // Should there be a hard failure on a relocation or just soft failure?
++  static bool ShouldFailOnRelocationErrors;
++
+   // Change the address associated with a section when resolving relocations.
+   // Any relocations already associated with the symbol will be re-resolved.
+   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
+diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
+index 687fd839805f..2e9e1a2794ac 100644
+--- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
++++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
+@@ -1446,4 +1446,6 @@ void jitLinkForORC(
+                                  std::move(O), std::move(Info));
+ }
+ 
++bool RuntimeDyld::ShouldFailOnRelocationErrors = true;
++
+ } // end namespace llvm
 diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
-index efe0b9cd61cd..8d1f2fa1ccc1 100644
+index efe0b9cd61cd..4f29726b2112 100644
 --- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
 +++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
 @@ -21,6 +21,7 @@
@@ -18,7 +44,7 @@ index efe0b9cd61cd..8d1f2fa1ccc1 100644
 +  std::string message;
 +  llvm::raw_string_ostream ss(message);
 +  ss << "Relocation type not implemented yet: " << ty << "!";
-+  if (RuntimeDyldELF::ShouldFailOnRelocationErrors) {
++  if (RuntimeDyld::ShouldFailOnRelocationErrors) {
 +    report_fatal_error(message);
 +  } else {
 +    dbgs() << message;
@@ -91,23 +117,14 @@ index efe0b9cd61cd..8d1f2fa1ccc1 100644
      break;
    case ELF::R_BPF_NONE:
    case ELF::R_BPF_64_64:
-@@ -2031,4 +2043,6 @@ bool RuntimeDyldELF::relocationNeedsStub(const RelocationRef &R) const {
-   }
- }
- 
-+bool RuntimeDyldELF::ShouldFailOnRelocationErrors = true;
-+
- } // namespace llvm
 diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
-index 31892b7466e6..2e17522fae45 100644
+index 31892b7466e6..4a2cc70f0e96 100644
 --- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
 +++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
-@@ -162,6 +162,9 @@ private:
+@@ -162,6 +162,7 @@ private:
    bool relocationNeedsStub(const RelocationRef &R) const override;
  
  public:
-+
-+  static bool ShouldFailOnRelocationErrors;
 +
    RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                   JITSymbolResolver &Resolver);
