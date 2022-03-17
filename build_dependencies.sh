@@ -170,7 +170,6 @@ if [[ -z ${EXPORT_DIR} ]]; then
   # Set default export directory variable. Used for printing end message
   EXPORT_DIR="${vcpkg_dir}"
 fi
-mkdir -p "${EXPORT_DIR}"
 
 extra_vcpkg_args+=("--triplet=${triplet}" "--host-triplet=${triplet}" "--x-install-root=${EXPORT_DIR}/installed")
 
