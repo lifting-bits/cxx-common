@@ -43,7 +43,7 @@ index efe0b9cd61cd..4f29726b2112 100644
 +static void report_reallocation_error(uint32_t ty) {
 +  std::string message;
 +  llvm::raw_string_ostream ss(message);
-+  ss << "Relocation type not implemented yet: " << ty << "!";
++  ss << "Relocation type not implemented yet: " << ty << "!\n";
 +  if (RuntimeDyld::ShouldFailOnRelocationErrors) {
 +    report_fatal_error(message);
 +  } else {
