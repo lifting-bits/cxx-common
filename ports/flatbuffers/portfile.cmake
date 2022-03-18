@@ -10,6 +10,8 @@ vcpkg_from_github(
         ignore_use_of_cmake_toolchain_file.patch
         no-werror.patch
         fix-uwp-build.patch
+        windows-python.patch
+        emscripten-nostdlib.patch
 )
 
 set(OPTIONS)

@@ -1,0 +1,95 @@
+set(LLVM_VERSION "12.0.1")
+
+vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
+
+vcpkg_from_github(
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO llvm/llvm-project
+    REF llvmorg-${LLVM_VERSION}
+    SHA512 6eb0dc18e2c25935fabfdfc48b0114be0939158dfdef7b85b395fe2e71042672446af0e68750aae003c9847d10d1f63316fe95d3df738d18f249174292b1b9e1
+    HEAD_REF main
+    PATCHES
+        0020-remove-FindZ3.cmake.patch
+        0021-fix-FindZ3.cmake.patch
+        0022-fix-emscripten.patch
+)
+
+set(LLVM_ENABLE_PROJECTS)
+set(LLVM_DISTRIBUTION_COMPONENTS "cmake-exports;llvm-libraries;llvm-headers")
+if("clang" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
+    list(APPEND LLVM_DISTRIBUTION_COMPONENTS "clang-cmake-exports")
+    list(APPEND LLVM_DISTRIBUTION_COMPONENTS "clang-libraries")
+    list(APPEND LLVM_DISTRIBUTION_COMPONENTS "clang-headers")
+endif()
+set(LLVM_ENABLE_Z3_SOLVER OFF)
+if("enable-z3" IN_LIST FEATURES)
+    set(LLVM_ENABLE_Z3_SOLVER ON)
+endif()
+
+vcpkg_find_acquire_program(PYTHON3)
+get_filename_component(PYTHON3_DIR ${PYTHON3} DIRECTORY)
+vcpkg_add_to_path(${PYTHON3_DIR})
+
+set(IGNORE_UNDEFINED_SYMBOLS)
+if(VCPKG_CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    list(APPEND IGNORE_UNDEFINED_SYMBOLS "-DCMAKE_CXX_FLAGS=-s ERROR_ON_UNDEFINED_SYMBOLS=0")
+    list(APPEND IGNORE_UNDEFINED_SYMBOLS "-DCMAKE_C_FLAGS=-s ERROR_ON_UNDEFINED_SYMBOLS=0")
+endif()
+
+vcpkg_cmake_configure(
+    SOURCE_PATH ${SOURCE_PATH}/llvm
+    PREFER_NINJA
+    OPTIONS
+        ${IGNORE_UNDEFINED_SYMBOLS}
+        -DLLVM_DEFAULT_TARGET_TRIPLE=wasm32-unknown-unknown-wasm
+        -DLLVM_ENABLE_THREADS=OFF
+        -DLLVM_ENABLE_Z3_SOLVER=${LLVM_ENABLE_Z3_SOLVER}
+        -DLLVM_USE_SANITIZER=OFF
+        -DLLVM_ENABLE_EXPENSIVE_CHECKS=OFF
+        -DLLVM_ENABLE_BACKTRACES=OFF
+        -DLLVM_ENABLE_DUMP=OFF
+        -DLLVM_INCLUDE_TOOLS=ON
+        -DLLVM_BUILD_LLVM_DYLIB=ON
+        -DLLVM_LINK_LLVM_DYLIB=ON
+        -DLLVM_ENABLE_TERMINFO=OFF
+        -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly
+        -DLLVM_INCLUDE_EXAMPLES=OFF
+        -DLLVM_BUILD_EXAMPLES=OFF
+        -DLLVM_INCLUDE_TESTS=OFF
+        -DLLVM_BUILD_TESTS=OFF
+        "-DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}"
+        "-DLLVM_DISTRIBUTION_COMPONENTS=${LLVM_DISTRIBUTION_COMPONENTS}"
+        -DLLVM_TARGETS_TO_BUILD=
+        -DLLVM_TABLEGEN=${CURRENT_HOST_INSTALLED_DIR}/tools/llvm/llvm-tblgen${VCPKG_HOST_EXECUTABLE_SUFFIX}
+        -DCLANG_TABLEGEN=${CURRENT_HOST_INSTALLED_DIR}/tools/llvm/clang-tblgen${VCPKG_HOST_EXECUTABLE_SUFFIX}
+        -DLLVM_ENABLE_DIA_SDK=OFF
+        -DPACKAGE_VERSION=${LLVM_VERSION}
+        -DLLVM_PARALLEL_LINK_JOBS=2
+        -DLLVM_BUILD_LLVM_C_DYLIB=OFF
+        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm
+    OPTIONS_DEBUG
+        -DCMAKE_DEBUG_POSTFIX=d
+)
+
+vcpkg_cmake_build(
+    TARGET install-distribution
+    ADD_BIN_TO_PATH
+)
+
+file(INSTALL "${SOURCE_PATH}/llvm/LICENSE.TXT" DESTINATION "${CURRENT_PACKAGES_DIR}/share/llvm-12-libs" RENAME copyright)
+
+vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)
+
+if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
+    file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
+    file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
+    file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/tools)
+endif()
+
+# LLVM still generates a few DLLs in the static build:
+# * libclang.dll
+# * LTO.dll
+# * Remarks.dll
+set(VCPKG_POLICY_DLLS_IN_STATIC_LIBRARY enabled)
+

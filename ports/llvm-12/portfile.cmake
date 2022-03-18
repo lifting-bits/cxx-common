@@ -22,6 +22,7 @@ vcpkg_from_github(
         0021-fix-FindZ3.cmake.patch
         0022-llvm-config-bin-path.patch
         0023-clang-sys-include-dir-path.patch
+        0024-install-clang-tblgen.patch
 )
 
 include("${CURRENT_INSTALLED_DIR}/share/llvm-vcpkg-common/llvm-common-build.cmake")

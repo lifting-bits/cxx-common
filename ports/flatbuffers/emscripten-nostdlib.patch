@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ec782239..57566c5a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -262,7 +262,7 @@
+   if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.8)
+     list(APPEND FLATBUFFERS_PRIVATE_CXX_FLAGS "-Wimplicit-fallthrough" "-Wextra-semi" "-Werror=unused-private-field") # enable warning
+   endif()
+-  if(FLATBUFFERS_LIBCXX_WITH_CLANG)
++  if(FLATBUFFERS_LIBCXX_WITH_CLANG AND NOT EMSCRIPTEN)
+     if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+       set(CMAKE_CXX_FLAGS
+           "${CMAKE_CXX_FLAGS} -stdlib=libc++")

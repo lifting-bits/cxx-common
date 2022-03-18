@@ -1,0 +1,13 @@
+diff --git a/src/raw_logging.cc b/src/raw_logging.cc
+index 808330e..de0e477 100644
+--- a/src/raw_logging.cc
++++ b/src/raw_logging.cc
+@@ -59,7 +59,7 @@
+ # include <unistd.h>
+ #endif
+ 
+-#if defined(HAVE_SYSCALL_H) || defined(HAVE_SYS_SYSCALL_H)
++#if (defined(HAVE_SYSCALL_H) || defined(HAVE_SYS_SYSCALL_H)) && !defined(EMSCRIPTEN)
+ # define safe_write(fd, s, len)  syscall(SYS_write, fd, s, len)
+ #else
+   // Not so safe, but what can you do?

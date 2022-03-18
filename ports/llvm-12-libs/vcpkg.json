@@ -1,0 +1,43 @@
+{
+  "name": "llvm-12-libs",
+  "version": "12.0.1",
+  "description": "The LLVM Compiler Infrastructure.",
+  "homepage": "https://llvm.org",
+  "supports": "!uwp & !(arm & windows)",
+  "dependencies": [
+    {
+      "name": "llvm-12",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ],
+  "default-features": [
+    "clang",
+    "enable-z3"
+  ],
+  "features": {
+    "clang": {
+      "description": "Include C Language Family Front-end."
+    },
+    "enable-z3": {
+      "description": "Compile with Z3 SMT solver support for Clang static analyzer.",
+      "dependencies": [
+        "z3",
+        {
+          "name": "llvm-12-libs",
+          "default-features": false,
+          "features": [
+            "clang"
+          ]
+        }
+      ]
+    }
+  }
+}
