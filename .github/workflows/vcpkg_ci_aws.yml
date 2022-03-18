@@ -6,25 +6,26 @@ env:
   # Self-hosted runners can hopefully reuse already downloaded packages
   VCPKG_USE_NUGET_CACHE: 1
 
-release:
-	types:
-		- published
-pull_request:
-	paths-ignore:
-		- 'docker/**'
-		- '.github/**'
-		- '**.md'
-		- '!.github/workflows/vcpkg_ci_linux.yml'
-push:
-	paths-ignore:
-		- 'docker/**'
-		- '.github/**'
-		- '**.md'
-		- '!.github/workflows/vcpkg_ci_linux.yml'
-	tags-ignore:
-		- 'v*'
-	branches:
-		- 'artem/aws-ci' #TODO(artem): change to master
+on:
+  release:
+    types:
+      - published
+  pull_request:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - '!.github/workflows/vcpkg_ci_aws.yml'
+  push:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - '!.github/workflows/vcpkg_ci_aws.yml'
+    tags-ignore:
+      - 'v*'
+    branches:
+      - 'artem/aws-ci' #TODO(artem): change to master
 
 jobs:
   start-runner:
