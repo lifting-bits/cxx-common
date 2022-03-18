@@ -15,14 +15,12 @@ on:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - 'old/**'
       - '!.github/workflows/vcpkg_ci_mac.yml'
   push:
     paths-ignore:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - 'old/**'
       - '!.github/workflows/vcpkg_ci_mac.yml'
     tags-ignore:
       - 'v*'
@@ -44,11 +42,11 @@ jobs:
     runs-on: ${{ matrix.os.runner }}
 
     env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64.tar.xz
+      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64
 
     steps:
       # Used to get commit message since PRs are on a merge commit
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.after }}
           submodules: false
@@ -58,11 +56,11 @@ jobs:
           echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/setup-dotnet@v1.9.0
+      - uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
           # Sets as "Source"
@@ -75,52 +73,42 @@ jobs:
           echo "Selecting XCode Version ${{ matrix.os.xcode }}"
           sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
-      - name: Read vcpkg Info
-        id: vcpkg_info
+      - name: Initialize vcpkg
         shell: bash
         run: |
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
-          echo ::set-output name=repo_url::${vcpkg_repo_url}
-          echo ::set-output name=commit::${vcpkg_commit}
+          git clone "${vcpkg_repo_url}"
+          git -C vcpkg checkout "${vcpkg_commit}"
+          ./vcpkg/bootstrap-vcpkg.sh
+          echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
-        # Needed for caching the actual vcpkg executable
-      - name: 'Restore from cache and install vcpkg'
-        uses: lukka/run-vcpkg@v10.1
-        with:
-          vcpkgGitURL: ${{ steps.vcpkg_info.outputs.repo_url }}
-          vcpkgGitCommitId: ${{ steps.vcpkg_info.outputs.commit }}
-          appendedCacheKey: '${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-clear'
-          setupOnly: true
-
-        # Omit this step if using manifests
       - name: 'vcpkg install dependencies'
         shell: 'bash'
         run: |
+          export VCPKG_DISABLE_METRICS=1
+          brew install bash ninja
+
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ${VCPKG_ROOT}/vcpkg install \
-            --triplet "${TRIPLET}" \
-            --clean-after-build \
-            --debug \
-            ${{ matrix.llvm }} \
-            @overlays.txt \
-            @dependencies.txt
+          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build
+
+          echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
 
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         shell: 'bash'
         run: |
           brew install pixz
-          ./emit_artifacts.sh ${{ env.ARTIFACT_NAME }}
+          tar --use-compress-program pixz -cf "${{ env.ARTIFACT_NAME }}.tar.xz" ./${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.3.1
+      - uses: actions/upload-artifact@v3
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.ARTIFACT_NAME }}
+          name: ${{ env.ARTIFACT_NAME }}.tar.xz
+          path: ${{ env.ARTIFACT_NAME }}.tar.xz
 
       - name: 'Install build dependencies'
         shell: 'bash'
@@ -206,12 +194,12 @@ jobs:
           github.event.release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.ARTIFACT_NAME }}
+          files: ${{ env.ARTIFACT_NAME }}.tar.xz
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
           token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Cache cleanup and reporting
         shell: 'bash'
         run: |
-          rm -rf ${VCPKG_ROOT}/{buildtrees,installed,packages}
+          rm -rf vcpkg/{buildtrees,installed,packages}
           ccache --show-stats

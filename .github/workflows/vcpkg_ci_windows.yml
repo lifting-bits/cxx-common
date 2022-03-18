@@ -45,7 +45,7 @@ jobs:
       ARTIFACT_NAME: vcpkg_windows-vs2019_${{ matrix.llvm }}_amd64
 
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.after }}
           submodules: false
@@ -55,11 +55,11 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value "$(git log --format=%B -n 1 ${{ github.event.after }})"
           Add-Content -Path $env:GITHUB_ENV -Encoding UTF8 -Value 'EOF'
 
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/setup-dotnet@v1.9.0
+      - uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
           # Sets as "Source"
@@ -118,7 +118,7 @@ jobs:
             --7zip `
             --output=${{ env.ARTIFACT_NAME }}
 
-      - uses: actions/upload-artifact@v2.3.1
+      - uses: actions/upload-artifact@v3
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
         with:
           name: ${{ env.ARTIFACT_NAME }}.7z
