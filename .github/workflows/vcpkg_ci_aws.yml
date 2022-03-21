@@ -95,7 +95,7 @@ jobs:
 
       - name: Fetch latest submodule refs
         run: |
-          git submodule update --remote --recursive
+          git submodule update --init --remote --recursive
 
       - name: Clear prior vcpkg directory
         run: |
