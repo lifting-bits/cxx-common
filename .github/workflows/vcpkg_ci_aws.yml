@@ -205,7 +205,7 @@ jobs:
           if [ ${{ matrix.host.arch }} == "arm64" ] ; then
             env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
           else
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test
+            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
           fi
           popd
 
