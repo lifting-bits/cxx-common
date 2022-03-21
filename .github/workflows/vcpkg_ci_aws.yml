@@ -93,10 +93,9 @@ jobs:
           echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          remote: true
+      - name: Fetch latest submodule refs
+        run: |
+          git submodule update --remote --recursive
 
       - name: Clear prior vcpkg directory
         run: |
