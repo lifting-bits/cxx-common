@@ -48,7 +48,7 @@ jobs:
           mode: start
           github-token: ${{ secrets.GHA_PAT }}
           ec2-image-id: ami-0610b26d76319237e
-          ec2-instance-type: m5a.8xlarge
+          ec2-instance-type: m6i.8xlarge
           subnet-id: subnet-0deb935f0bbfe1a5d
           security-group-id: sg-0f6a02eb80fafb982
           aws-resource-tags: > # optional, requires additional permissions
@@ -199,13 +199,13 @@ jobs:
           cd remill
           scripts/build-preset.sh debug
           pushd ${INSTALL_DIR}/build/remill
-          cmake --build . --target test_dependencies
+          cmake --build . --parallel --target test_dependencies
           # See issue https://github.com/lifting-bits/remill/issues/518 for
           # failing aarch64 tests
           if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
+            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
           else
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test
+            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test
           fi
           popd
 
