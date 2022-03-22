@@ -1,0 +1,256 @@
+name: Linux CI on AWS
+
+env:
+  # "Source" is set in the vcpkg install step
+  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
+  # Self-hosted runners can hopefully reuse already downloaded packages
+  VCPKG_USE_NUGET_CACHE: 1
+
+on:
+  release:
+    types:
+      - published
+  pull_request:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - '!.github/workflows/vcpkg_ci_aws*'
+  push:
+    paths-ignore:
+      - 'docker/**'
+      - '.github/**'
+      - '**.md'
+      - '!.github/workflows/vcpkg_ci_aws*'
+    tags-ignore:
+      - 'v*'
+    branches:
+      - 'artem/aws-ci' #TODO(artem): change to master
+
+jobs:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ec2: 
+          - { ami: ami-0128e20cf90406205, instance-type: r6g.8xlarge}
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.GHA_PAT }}
+          ec2-image-id: ${{ matrix.ec2.ami }}
+          ec2-instance-type: ${{ matrix.ec2.instance-type }}
+          subnet-id: subnet-0deb935f0bbfe1a5d
+          security-group-id: sg-0f6a02eb80fafb982
+          aws-resource-tags: > # optional, requires additional permissions
+            [
+              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+  do-the-job:
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - { name: 'ubuntu-20.04', arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
+        image:
+          - { name: 'ubuntu', tag: '20.04' }
+        llvm: [ 'llvm-13' ]
+
+    container:
+      image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    env:
+      ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}
+      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
+
+    name: Do the job on the runner
+    needs: start-runner # required to start the main job when the runner is ready
+    runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
+    steps:
+      # Used to get commit message since PRs are on a merge commit
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.after }}
+          submodules: false
+      - name: Get commit message
+        run: |
+          echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
+          echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Fetch latest submodule refs
+        run: |
+          git submodule update --init --remote --recursive
+
+      - name: Clear prior vcpkg directory
+        run: |
+          rm -rf "${{ github.workspace }}/vcpkg"
+
+      - name: Initialize vcpkg
+        shell: bash
+        run: |
+          { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
+          git clone "${vcpkg_repo_url}"
+          git -C vcpkg checkout "${vcpkg_commit}"
+          ./vcpkg/bootstrap-vcpkg.sh
+          echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
+
+      - name: 'vcpkg install dependencies'
+        shell: 'bash'
+        run: |
+          export VCPKG_DISABLE_METRICS=1
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            export VCPKG_FORCE_SYSTEM_BINARIES=1
+          fi
+
+          # Setup NuGet authentication
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            -storepasswordincleartext \
+            -name "Source" \
+            -username "${{ github.repository_owner }}" \
+            -password "${{ secrets.GITHUB_TOKEN }}" || true
+
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources update \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            -storepasswordincleartext \
+            -name "Source" \
+            -username "${{ github.repository_owner }}" \
+            -password "${{ secrets.GITHUB_TOKEN }}"
+
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
+            -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            "${{ secrets.GITHUB_TOKEN }}"
+
+          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build
+
+          echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
+
+      - name: 'Export Packages'
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
+        shell: 'bash'
+        run: |
+          apt-get update
+          apt-get install -y pixz
+          tar --use-compress-program pixz -cf "${{ env.ARTIFACT_NAME }}.tar.xz" ./${{ env.ARTIFACT_NAME }}
+
+      - uses: actions/upload-artifact@v3
+        if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
+        with:
+          name: ${{ env.ARTIFACT_NAME }}.tar.xz
+          path: ${{ env.ARTIFACT_NAME }}.tar.xz
+
+      - name: Prepare ccache
+        id: ccache_prep
+        shell: bash
+        run: |
+          echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
+          echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo ::set-output name=timestamp::$(date +"%Y-%m-%d-%H:%M:%S" --utc)
+
+      - name: ccache cache files
+        uses: actions/cache@v2.1.7
+        with:
+          path: ${{  github.workspace }}/.ccache
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
+
+      - name: ccache Initial stats
+        shell: bash
+        run: |
+          ccache --show-stats
+
+      - name: 'Make install directory'
+        shell: bash
+        run: |
+          export INSTALL_DIR="${GITHUB_WORKSPACE}/workspace"
+          echo "INSTALL_DIR=${INSTALL_DIR}" >> ${GITHUB_ENV}
+          mkdir -p "${INSTALL_DIR}"
+
+      - name: 'Rellic build'
+        shell: 'bash'
+        run: |
+          cd rellic
+          scripts/build-preset.sh debug
+          scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
+
+      - name: 'Remill build'
+        shell: 'bash'
+        run: |
+          cd remill
+          scripts/build-preset.sh debug
+          pushd ${INSTALL_DIR}/build/remill
+          cmake --build . --parallel --target test_dependencies
+          # See issue https://github.com/lifting-bits/remill/issues/518 for
+          # failing aarch64 tests
+          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
+            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
+          else
+            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
+          fi
+          popd
+
+      - name: 'Anvill build'
+        shell: 'bash'
+        run: |
+          cd anvill
+          scripts/build-preset.sh debug
+          ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+
+      - name: Publish Release Assets
+        if: |
+          github.event.release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT_NAME }}.tar.xz
+          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Cache cleanup and reporting
+        shell: 'bash'
+        run: |
+          rm -rf vcpkg/{buildtrees,installed,packages}
+          ccache --show-stats
+
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - do-the-job # required to wait when the main job is done
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.GHA_PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
