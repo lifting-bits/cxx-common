@@ -141,7 +141,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           mkdir -p build && cd build
@@ -152,11 +152,11 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
 
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -173,7 +173,7 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd anvill
           mkdir -p build && cd build
@@ -187,7 +187,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Publish Release Assets
         if: |

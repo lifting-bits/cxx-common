@@ -44,7 +44,7 @@ jobs:
         # Only some LLVM versions for ARM CI
         include:
           - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-            llvm: 'llvm-12'
+            llvm: 'llvm-13'
             image: { name: 'ubuntu', tag: '20.04' }
 
     runs-on: ${{ matrix.host.name }}
@@ -158,7 +158,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           rm -rf build
@@ -170,11 +170,11 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp-* ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd remill
           rm -rf build
@@ -197,7 +197,7 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-12' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd anvill
           rm -rf build
@@ -212,7 +212,7 @@ jobs:
             ..
           cmake --build .
           cmake --build . --target install
-          ./install/bin/anvill-decompile-json-* -spec ../tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Publish Release Assets
         if: |
