@@ -1,4 +1,4 @@
-name: Linux CI on AWS
+name: Linux CI on AWS (AMD64)
 
 env:
   # "Source" is set in the vcpkg install step
