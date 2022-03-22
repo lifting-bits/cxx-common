@@ -15,13 +15,13 @@ on:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_aws*'
+      - '!.github/workflows/vcpkg_ci_aws_arm64*'
   push:
     paths-ignore:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_aws*'
+      - '!.github/workflows/vcpkg_ci_aws_arm64*'
     tags-ignore:
       - 'v*'
     branches:
