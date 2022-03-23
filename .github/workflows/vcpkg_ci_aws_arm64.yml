@@ -216,7 +216,7 @@ jobs:
         run: |
           cd anvill
           scripts/build-preset.sh debug
-          ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/tools/decompile-json/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Publish Release Assets
         if: |
