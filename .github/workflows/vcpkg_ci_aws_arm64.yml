@@ -25,7 +25,7 @@ on:
     tags-ignore:
       - 'v*'
     branches:
-      - 'artem/aws-ci' #TODO(artem): change to master
+      - 'master'
 
 jobs:
   start-runner:
