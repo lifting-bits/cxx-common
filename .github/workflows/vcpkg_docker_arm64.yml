@@ -56,8 +56,8 @@ jobs:
       matrix:
         host:
           - { name: 'ubuntu-20.04', arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-        image:
-          - { name: 'ubuntu', tag: '20.04' }
+        container:
+          - { distro: 'ubuntu', version: '20.04' }
         llvm: [ 'llvm-13' ]
 
     name: Do the job on the runner
