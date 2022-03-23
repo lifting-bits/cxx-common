@@ -116,9 +116,7 @@ jobs:
         shell: 'bash'
         run: |
           export VCPKG_DISABLE_METRICS=1
-          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            export VCPKG_FORCE_SYSTEM_BINARIES=1
-          fi
+          export VCPKG_FORCE_SYSTEM_BINARIES=1
 
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
@@ -204,11 +202,7 @@ jobs:
           cmake --build . --parallel --target test_dependencies
           # See issue https://github.com/lifting-bits/remill/issues/518 for
           # failing aarch64 tests
-          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
-          else
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
-          fi
+          env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
           popd
 
       - name: 'Anvill build'
