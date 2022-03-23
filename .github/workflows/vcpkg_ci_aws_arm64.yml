@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ec2: 
+        ec2:
           - { ami: ami-0128e20cf90406205, instance-type: r6g.8xlarge}
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
@@ -95,9 +95,9 @@ jobs:
           echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
-      - name: Fetch latest submodule refs
-        run: |
-          git submodule update --init --remote --recursive
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Clear prior vcpkg directory
         run: |
