@@ -1,4 +1,4 @@
-name: Linux Continuous Integration
+name: Linux CI on AWS (ARM64)
 
 env:
   # "Source" is set in the vcpkg install step
@@ -15,39 +15,61 @@ on:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_linux.yml'
+      - '!.github/workflows/vcpkg_ci_aws_arm64*'
   push:
     paths-ignore:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_linux.yml'
+      - '!.github/workflows/vcpkg_ci_aws_arm64*'
     tags-ignore:
       - 'v*'
     branches:
       - 'master'
 
 jobs:
-  build:
+  start-runner:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ec2:
+          - { ami: ami-0128e20cf90406205, instance-type: r6g.8xlarge}
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.GHA_PAT }}
+          ec2-image-id: ${{ matrix.ec2.ami }}
+          ec2-instance-type: ${{ matrix.ec2.instance-type }}
+          subnet-id: subnet-0deb935f0bbfe1a5d
+          security-group-id: sg-0f6a02eb80fafb982
+          aws-resource-tags: > # optional, requires additional permissions
+            [
+              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+  do-the-job:
     strategy:
       fail-fast: false
       matrix:
         host:
-          - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
+          - { name: 'ubuntu-20.04', arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
         image:
-          - { name: 'ubuntu', tag: '18.04' }
           - { name: 'ubuntu', tag: '20.04' }
-        llvm: [
-          'llvm-12',
-          'llvm-13'
-          ]
-        # Only some LLVM versions for ARM CI
-        include:
-          - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
-            llvm: 'llvm-13'
-            image: { name: 'ubuntu', tag: '20.04' }
+        llvm: [ 'llvm-13' ]
 
-    runs-on: ${{ matrix.host.name }}
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
       credentials:
@@ -58,6 +80,9 @@ jobs:
       ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}
       VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
 
+    name: Do the job on the runner
+    needs: start-runner # required to start the main job when the runner is ready
+    runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
     steps:
       # Used to get commit message since PRs are on a merge commit
       - uses: actions/checkout@v3
@@ -91,9 +116,7 @@ jobs:
         shell: 'bash'
         run: |
           export VCPKG_DISABLE_METRICS=1
-          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            export VCPKG_FORCE_SYSTEM_BINARIES=1
-          fi
+          export VCPKG_FORCE_SYSTEM_BINARIES=1
 
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
@@ -156,63 +179,38 @@ jobs:
         run: |
           ccache --show-stats
 
+      - name: 'Make install directory'
+        shell: bash
+        run: |
+          export INSTALL_DIR="${GITHUB_WORKSPACE}/workspace"
+          echo "INSTALL_DIR=${INSTALL_DIR}" >> ${GITHUB_ENV}
+          mkdir -p "${INSTALL_DIR}"
+
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
-          rm -rf build
-          mkdir -p build && cd build
-          cmake -G Ninja \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
+          scripts/build-preset.sh debug
+          scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd remill
-          rm -rf build
-          mkdir -p build && cd build
-          cmake -G Ninja \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          cmake --build . --target test_dependencies
+          scripts/build-preset.sh debug
+          pushd ${INSTALL_DIR}/build/remill
+          cmake --build . --parallel --target test_dependencies
           # See issue https://github.com/lifting-bits/remill/issues/518 for
           # failing aarch64 tests
-          if [ ${{ matrix.host.arch }} == "arm64" ] ; then
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
-          else
-            env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test
-          fi
+          env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
+          popd
 
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd anvill
-          rm -rf build
-          mkdir -p build && cd build
-          cmake -G Ninja \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
-            -DANVILL_ENABLE_INSTALL_TARGET=ON \
-            -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          scripts/build-preset.sh debug
+          ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Publish Release Assets
         if: |
@@ -228,3 +226,25 @@ jobs:
         run: |
           rm -rf vcpkg/{buildtrees,installed,packages}
           ccache --show-stats
+
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - do-the-job # required to wait when the main job is done
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.GHA_PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
