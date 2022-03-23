@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         ec2:
-          - { ami: ami-0128e20cf90406205, instance-type: r6g.8xlarge}
+          - { ami: ami-0610b26d76319237e, instance-type: m6i.8xlarge}
     outputs:
       label: ${{ steps.start-ec2-runner.outputs.label }}
       ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
