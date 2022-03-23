@@ -68,7 +68,19 @@ jobs:
           - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
+<<<<<<< HEAD:.github/workflows/vcpkg_ci_aws_amd64.yml
         llvm: [ 'llvm-13' ]
+=======
+        llvm: [
+          'llvm-12',
+          'llvm-13'
+          ]
+        # Only some LLVM versions for ARM CI
+        include:
+          - host: { name: ['self-hosted', 'Linux', 'ARM64'], arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
+            llvm: 'llvm-13'
+            image: { name: 'ubuntu', tag: '20.04' }
+>>>>>>> master:.github/workflows/vcpkg_ci_linux.yml
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
@@ -169,7 +181,7 @@ jobs:
           echo ::set-output name=timestamp::$(date +"%Y-%m-%d-%H:%M:%S" --utc)
 
       - name: ccache cache files
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
           key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
@@ -190,6 +202,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
+<<<<<<< HEAD:.github/workflows/vcpkg_ci_aws_amd64.yml
         run: |
           cd rellic
           scripts/build-preset.sh debug
@@ -197,6 +210,25 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
+=======
+        if: ${{ matrix.llvm == 'llvm-13' }}
+        run: |
+          cd rellic
+          rm -rf build
+          mkdir -p build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
+
+      - name: 'Remill build'
+        shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-13' }}
+>>>>>>> master:.github/workflows/vcpkg_ci_linux.yml
         run: |
           cd remill
           scripts/build-preset.sh debug
@@ -213,10 +245,29 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
+<<<<<<< HEAD:.github/workflows/vcpkg_ci_aws_amd64.yml
         run: |
           cd anvill
           scripts/build-preset.sh debug
           ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+=======
+        if: ${{ matrix.llvm == 'llvm-13' }}
+        run: |
+          cd anvill
+          rm -rf build
+          mkdir -p build && cd build
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
+            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
+            -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
+            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
+            ..
+          cmake --build .
+          cmake --build . --target install
+          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+>>>>>>> master:.github/workflows/vcpkg_ci_linux.yml
 
       - name: Publish Release Assets
         if: |
