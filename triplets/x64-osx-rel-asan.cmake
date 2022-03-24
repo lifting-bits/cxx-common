@@ -9,7 +9,7 @@ set(VCPKG_USE_SANITIZER "Address")
 
 # If the following flags cause errors during build, you might need to manually
 # ignore the PORT and check VCPKG_USE_SANITIZER
-if(NOT PORT MATCHES "^((llvm)|(llvm-[0-9]+)|(upb))$")
+if(NOT PORT MATCHES "^((upb))$")
   set(VCPKG_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
   set(VCPKG_C_FLAGS "-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
 endif()
