@@ -20,7 +20,7 @@ vcpkg_from_github(
 
 # Xed has its own compiler detection, and will readily guess wrong.
 # Help it out by finding the correct compiler
-vcpkg_cmake_get_vars(cmake_vars_file)
+z_vcpkg_get_cmake_vars(cmake_vars_file)
 include("${cmake_vars_file}")
 message(STATUS "Detected CXX compiler: ${VCPKG_DETECTED_CMAKE_CXX_COMPILER}")
 message(STATUS "Detected C compiler: ${VCPKG_DETECTED_CMAKE_C_COMPILER}")
