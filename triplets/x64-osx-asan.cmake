@@ -9,8 +9,8 @@ set(VCPKG_USE_SANITIZER "Address")
 # If the following flags cause errors during build, you might need to manually
 # ignore the PORT and check VCPKG_USE_SANITIZER
 if(NOT PORT MATCHES "^((upb))$")
-  set(VCPKG_CXX_FLAGS "-O1 -g -fno-eliminate-unused-debug-symbols -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
-  set(VCPKG_C_FLAGS "-O1 -g -fno-eliminate-unused-debug-symbols -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -ffunction-sections -fdata-sections")
+  set(VCPKG_CXX_FLAGS "-O1 -g -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+  set(VCPKG_C_FLAGS "-O1 -g -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls")
   set(VCPKG_LINKER_FLAGS "-fsanitize=address")
 endif()
 
