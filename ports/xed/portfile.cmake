@@ -4,7 +4,7 @@ vcpkg_from_github(
     REF 5976632eeaaaad7890c2109d0cfaf4012eaca3b8 # 12.0.1
     SHA512 9463e669cc273f55829e82d6032763221c2ba73f3c43191be847f694f6fd3609b866cc14101e8b1f88e7e44f04b4f5f7bf61bb9431b72b7e17ded1db34b7757d
     HEAD_REF master
-    PATCHES 
+    PATCHES
       dont_call_evex_scan_when_error.patch
 )
 
@@ -17,6 +17,13 @@ vcpkg_from_github(
     SHA512 ed3a705204a5f9526473280fdb64820aeec23b2da850dc3c78b83e6ccc7cd72961990fab0a0188c249d967b59f3d2cb00f6dcd3f9cceb7c30aa13e378e26ccd5
     HEAD_REF master
 )
+
+# Xed has its own compiler detection, and will readily guess wrong.
+# Help it out by finding the correct compiler
+z_vcpkg_get_cmake_vars(cmake_vars_file)
+include("${cmake_vars_file}")
+message(STATUS "Detected CXX compiler: ${VCPKG_DETECTED_CMAKE_CXX_COMPILER}")
+message(STATUS "Detected C compiler: ${VCPKG_DETECTED_CMAKE_C_COMPILER}")
 
 # Copy mbuild sources.
 message(STATUS "Copying mbuild to parallel source directory...")
@@ -53,7 +60,7 @@ if (NOT VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL release)
   file(REMOVE_RECURSE ${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET})
   file(MAKE_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET})
   vcpkg_execute_required_process(
-    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR} --build-dir "${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_C_FLAGS} ${VCPKG_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS_RELEASE}" "--extra-cxxflags=${VCPKG_CXX_FLAGS} ${VCPKG_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}" "--extra-linkflags=${VCPKG_LINKER_FLAGS} ${VCPKG_LINKER_FLAGS_RELEASE}" --verbose=9
+    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install "--cc=${VCPKG_DETECTED_CMAKE_C_COMPILER}" "--cxx=${VCPKG_DETECTED_CMAKE_CXX_COMPILER}" --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR} --build-dir "${CURRENT_BUILDTREES_DIR}/${RELEASE_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_DETECTED_CMAKE_C_FLAGS} ${VCPKG_DETECTED_CMAKE_C_FLAGS_RELEASE} ${EXTRA_C_FLAGS_RELEASE}" "--extra-cxxflags=${VCPKG_DETECTED_CMAKE_CXX_FLAGS} ${VCPKG_DETECTED_CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS_RELEASE}" "--extra-linkflags=${VCPKG_DETECTED_CMAKE_LINKER_FLAGS} ${VCPKG_DETECTED_CMAKE_LINKER_FLAGS_RELEASE}" --verbose=9
     WORKING_DIRECTORY ${SOURCE_PATH}
     LOGNAME python-${TARGET_TRIPLET}-build-install-rel
   )
@@ -75,7 +82,7 @@ if (NOT VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL debug)
   file(REMOVE_RECURSE ${CURRENT_BUILDTREES_DIR}/${DEBUG_TRIPLET})
   file(MAKE_DIRECTORY ${CURRENT_BUILDTREES_DIR}/${DEBUG_TRIPLET})
   vcpkg_execute_required_process(
-    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install --debug --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR}/debug --build-dir "${CURRENT_BUILDTREES_DIR}/${DEBUG_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_C_FLAGS} ${VCPKG_C_FLAGS_DEBUG} ${EXTRA_C_FLAGS_DEBUG}" "--extra-cxxflags=${VCPKG_CXX_FLAGS} ${VCPKG_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}" "--extra-linkflags=${VCPKG_LINKER_FLAGS} ${VCPKG_LINKER_FLAGS_DEBUG}" --verbose=9
+    COMMAND ${PYTHON3} ${SOURCE_PATH}/mfile.py install "--cc=${VCPKG_DETECTED_CMAKE_C_COMPILER}" "--cxx=${VCPKG_DETECTED_CMAKE_CXX_COMPILER}" --debug --${LINK_TYPE} --install-dir ${CURRENT_PACKAGES_DIR}/debug --build-dir "${CURRENT_BUILDTREES_DIR}/${DEBUG_TRIPLET}" -j ${VCPKG_CONCURRENCY} "--extra-ccflags=${VCPKG_DETECTED_CMAKE_C_FLAGS} ${VCPKG_DETECTED_CMAKE_C_FLAGS_DEBUG} ${EXTRA_C_FLAGS_DEBUG}" "--extra-cxxflags=${VCPKG_DETECTED_CMAKE_CXX_FLAGS} ${VCPKG_DETECTED_CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS_DEBUG}" "--extra-linkflags=${VCPKG_DETECTED_CMAKE_LINKER_FLAGS} ${VCPKG_DETECTED_CMAKE_LINKER_FLAGS_DEBUG}" --verbose=9
     WORKING_DIRECTORY ${SOURCE_PATH}
     LOGNAME python-${TARGET_TRIPLET}-build-install-dbg
   )
