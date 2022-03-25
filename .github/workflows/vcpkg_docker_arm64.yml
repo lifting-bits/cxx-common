@@ -1,4 +1,4 @@
-name: Docker Build Images (AMD64)
+name: Docker Build Images (ARM64)
 
 on:
   schedule:
