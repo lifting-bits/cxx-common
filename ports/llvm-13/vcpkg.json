@@ -21,8 +21,6 @@
     "compiler-rt",
     "default-options",
     "cxx-common-targets",
-    "libcxx",
-    "libcxxabi",
     "mlir",
     "tools",
     "utils"
