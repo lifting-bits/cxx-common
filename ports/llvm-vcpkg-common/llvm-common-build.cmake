@@ -189,6 +189,9 @@ if("lld" IN_LIST FEATURES)
 endif()
 if("lldb" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "lldb")
+    list(APPEND FEATURE_OPTIONS
+    -DLLDB_ENABLE_CURSES=OFF
+    )
 endif()
 if("mlir" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
@@ -209,9 +212,13 @@ if("openmp" IN_LIST FEATURES)
         )
     endif()
 endif()
+
+if (LLVM_VERSION VERSION_LESS "14.0.0")
 if("parallel-libs" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "parallel-libs")
 endif()
+endif()
+
 if("polly" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "polly")
 endif()
