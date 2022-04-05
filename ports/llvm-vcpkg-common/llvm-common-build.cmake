@@ -264,6 +264,10 @@ set(known_llvm_targets
     XCore
 )
 
+if (LLVM_VERSION VERSION_GREATER_EQUAL "14.0.0")
+    list(APPEND known_llvm_targets VE)
+endif()
+
 set(LLVM_TARGETS_TO_BUILD "")
 foreach(llvm_target IN LISTS known_llvm_targets)
     string(TOLOWER "target-${llvm_target}" feature_name)
