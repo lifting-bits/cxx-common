@@ -188,12 +188,14 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           scripts/build-preset.sh debug
           scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
       - name: 'Remill build'
+        # if: ${{ matrix.llvm == 'llvm-13' }}
         shell: 'bash'
         run: |
           cd remill
@@ -206,6 +208,7 @@ jobs:
           popd
 
       - name: 'Anvill build'
+        if: ${{ matrix.llvm == 'llvm-13' }}
         shell: 'bash'
         run: |
           cd anvill
