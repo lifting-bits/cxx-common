@@ -12,6 +12,7 @@ vcpkg_from_github(
         0001-fix-install-tools-path.patch
         0004-fix-dr-1734.patch
         0005-fix-tools-path.patch
+        0007-fix-compiler-rt-install-path.patch
         0010-fix-libffi.patch
         0011-fix-install-bolt.patch
         0020-fix-FindZ3.cmake.patch
@@ -135,6 +136,10 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF
         )
     endif()
+    # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
+    # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
+    # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
+    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
@@ -287,7 +292,7 @@ vcpkg_cmake_configure(
         -DPACKAGE_VERSION=${LLVM_VERSION}
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
         -DLLVM_PARALLEL_LINK_JOBS=2
-        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm/bin
+        -DLLVM_TOOLS_INSTALL_DIR=tools/llvm
 )
 
 vcpkg_cmake_install(ADD_BIN_TO_PATH)
@@ -305,7 +310,7 @@ function(llvm_cmake_package_config_fixup package_name)
         set(args)
         # Maintains case even if package_name name is case-sensitive
         list(APPEND args PACKAGE_NAME "${lower_package}")
-        list(APPEND args TOOLS_PATH "tools/llvm/bin")
+        list(APPEND args TOOLS_PATH "tools/llvm")
         # TODO: There is a LLVM_LIBDIR_SUFFIX attached to 'lib' that might make this not work for everyone
         list(APPEND args CONFIG_PATH "lib/cmake/${lower_package}")
         if(arg_DO_NOT_DELETE_PARENT_CONFIG_PATH)
@@ -335,11 +340,6 @@ llvm_cmake_package_config_fixup("LLVM")
 
 # Needed because we are doing versioned ports
 file(INSTALL "${SOURCE_PATH}/llvm/LICENSE.TXT" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
-
-# Move all of the tools
-# Move the clang headers directory so that the built compiler can use the includes
-file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/tools/llvm/lib")
-file(RENAME "${CURRENT_PACKAGES_DIR}/lib/clang" "${CURRENT_PACKAGES_DIR}/tools/llvm/lib/clang")
 
 set(empty_dirs)
 
@@ -379,7 +379,7 @@ if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
     )
 endif()
 
-vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm/bin)
+vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)
 
 # LLVM still generates a few DLLs in the static build:
 # * LLVM-C.dll
