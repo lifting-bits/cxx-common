@@ -110,10 +110,6 @@ elseif("disable-abi-breaking-checks" IN_LIST FEATURES)
 endif()
 
 set(LLVM_ENABLE_PROJECTS)
-
-set(LLVM_ENABLE_RUNTIMES)
-
-
 if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
     if("disable-clang-static-analyzer" IN_LIST FEATURES)
@@ -162,11 +158,7 @@ if("libclc" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "libclc")
 endif()
 if("libcxx" IN_LIST FEATURES)
-    if (LLVM_VERSION VERSION_GREATER_EQUAL "14.0.0")
-        list(APPEND LLVM_ENABLE_RUNTIMES "libcxx")
-    else()
-        list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
-    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
     list(APPEND FEATURE_OPTIONS
         -DLIBCXX_ENABLE_STATIC=YES
         -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=YES
@@ -184,29 +176,19 @@ if("libcxx" IN_LIST FEATURES)
             -DLIBCXX_ENABLE_SHARED=YES
             )
     endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libcxx")
 endif()
 if("libcxxabi" IN_LIST FEATURES)
-    if (LLVM_VERSION VERSION_GREATER_EQUAL "14.0.0")
-        list(APPEND LLVM_ENABLE_RUNTIMES "libcxxabi")
-    else()
-        list(APPEND LLVM_ENABLE_PROJECTS "libcxxabi")
-    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libcxxabi")
 endif()
 if("libunwind" IN_LIST FEATURES)
-    if (LLVM_VERSION VERSION_GREATER_EQUAL "14.0.0")
-        list(APPEND LLVM_ENABLE_RUNTIMES "libunwind")
-    else()
-        list(APPEND LLVM_ENABLE_PROJECTS "libunwind")
-    endif()
+    list(APPEND LLVM_ENABLE_PROJECTS "libunwind")
 endif()
 if("lld" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "lld")
 endif()
 if("lldb" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "lldb")
-    list(APPEND FEATURE_OPTIONS
-    -DLLDB_ENABLE_CURSES=OFF
-    )
 endif()
 if("mlir" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
@@ -227,13 +209,9 @@ if("openmp" IN_LIST FEATURES)
         )
     endif()
 endif()
-
-if (LLVM_VERSION VERSION_LESS "14.0.0")
 if("parallel-libs" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "parallel-libs")
 endif()
-endif()
-
 if("polly" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "polly")
 endif()
@@ -263,10 +241,6 @@ set(known_llvm_targets
     X86
     XCore
 )
-
-if (LLVM_VERSION VERSION_GREATER_EQUAL "14.0.0")
-    list(APPEND known_llvm_targets VE)
-endif()
 
 set(LLVM_TARGETS_TO_BUILD "")
 foreach(llvm_target IN LISTS known_llvm_targets)
@@ -321,7 +295,6 @@ vcpkg_cmake_configure(
         -DLLVM_OPTIMIZED_TABLEGEN=ON
         "-DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS}"
         "-DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}"
-        "-DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES}"
         -DPACKAGE_VERSION=${LLVM_VERSION}
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
         -DLLVM_PARALLEL_LINK_JOBS=2
