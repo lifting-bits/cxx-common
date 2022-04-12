@@ -35,7 +35,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm: [
-          'llvm-12',
           'llvm-13',
           'llvm-14'
           ]
