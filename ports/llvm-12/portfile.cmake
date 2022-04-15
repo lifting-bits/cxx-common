@@ -18,8 +18,7 @@ vcpkg_from_github(
         0009-fix-tools-install-path.patch
         0010-fix-libffi.patch
         0011-fix-libxml2.patch
-        0020-remove-FindZ3.cmake.patch
-        0021-fix-FindZ3.cmake.patch
+        0020-fix-FindZ3.cmake.patch
         0022-llvm-config-bin-path.patch
         0023-clang-sys-include-dir-path.patch
 )
