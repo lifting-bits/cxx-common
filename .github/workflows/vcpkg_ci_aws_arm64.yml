@@ -68,7 +68,7 @@ jobs:
           - { name: 'ubuntu-20.04', arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
-        llvm: [ 'llvm-13' ]
+        llvm: [ 'llvm-13', 'llvm-14' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
@@ -188,12 +188,14 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           scripts/build-preset.sh debug
           scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
       - name: 'Remill build'
+        if: ${{ matrix.llvm == 'llvm-13' }}
         shell: 'bash'
         run: |
           cd remill
@@ -206,6 +208,7 @@ jobs:
           popd
 
       - name: 'Anvill build'
+        if: ${{ matrix.llvm == 'llvm-13' }}
         shell: 'bash'
         run: |
           cd anvill

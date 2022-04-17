@@ -32,10 +32,10 @@ index 118b1eac3b32..455bbf28facc 100644
 +
 +endif()
 diff --git a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
-index cdee11412eb5..9a229e903ba5 100644
+index 4d9099554192..551bd5e5e8aa 100644
 --- a/llvm/lib/Support/CMakeLists.txt
 +++ b/llvm/lib/Support/CMakeLists.txt
-@@ -46,7 +46,11 @@ endif()
+@@ -71,7 +71,11 @@ endif()
  
  # Link Z3 if the user wants to build it.
  if(LLVM_WITH_Z3)
@@ -48,7 +48,7 @@ index cdee11412eb5..9a229e903ba5 100644
  endif()
  
  # Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
-@@ -248,6 +252,19 @@ if(LLVM_ENABLE_ZLIB)
+@@ -280,6 +284,19 @@ if(LLVM_ENABLE_ZLIB)
    set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
  endif()
  
@@ -66,5 +66,5 @@ index cdee11412eb5..9a229e903ba5 100644
 +endif()
 +
  if(LLVM_ENABLE_TERMINFO)
-   get_library_name(${TERMINFO_LIB} terminfo_library)
-   set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
+   if(NOT terminfo_library)
+     get_property(terminfo_library TARGET Terminfo::terminfo PROPERTY LOCATION)
