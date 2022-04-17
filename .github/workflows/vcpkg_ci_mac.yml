@@ -156,7 +156,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        # if: ${{ matrix.llvm == 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd remill
           mkdir -p build && cd build
