@@ -10,3 +10,4 @@ flatbuffers
 roaring
 rocksdb
 capnproto
+cpp-httplib

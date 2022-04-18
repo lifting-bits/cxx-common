@@ -1,20 +1,18 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO intelxed/xed
-    REF 5976632eeaaaad7890c2109d0cfaf4012eaca3b8 # 12.0.1
-    SHA512 9463e669cc273f55829e82d6032763221c2ba73f3c43191be847f694f6fd3609b866cc14101e8b1f88e7e44f04b4f5f7bf61bb9431b72b7e17ded1db34b7757d
+    REF v2022.04.17
+    SHA512 941511144899701854449b510aed9f03244aee7b3d3ac27de75cf2612baaf2a4df9977ba04d3d6c3e4ea87b12525d081585fbf48c0ff9c5fde7a0f8bba889701
     HEAD_REF master
-    PATCHES
-      dont_call_evex_scan_when_error.patch
 )
 
-# Last checked Dec 9, 2020
-# Commit from Dec 2, 2020
+# Last checked Apr. 18, 2022
+# Commit from Apr 16, 2021
 vcpkg_from_github(
     OUT_SOURCE_PATH MBUILD_SOURCE_PATH
     REPO intelxed/mbuild
-    REF 3e8eb33aada4153c21c4261b35e5f51f6e2019e8
-    SHA512 ed3a705204a5f9526473280fdb64820aeec23b2da850dc3c78b83e6ccc7cd72961990fab0a0188c249d967b59f3d2cb00f6dcd3f9cceb7c30aa13e378e26ccd5
+    REF 09b6654be0c52bf1df44e88c88b411a67b624cbd
+    SHA512 63797a1763ec7ea5ab5897fbd457c0bf715e1a144ae34e44f18c17ab1bbaaa848da479212518eb356d64dd3f46372fb69e955a0033adafc8211f5b4120016ab5
     HEAD_REF master
 )
 
