@@ -148,6 +148,14 @@ jobs:
           apt-get install -y pixz
           tar --use-compress-program pixz -cf "${{ env.ARTIFACT_NAME }}.tar.xz" ./${{ env.ARTIFACT_NAME }}
 
+      - name: Publish Release Assets
+        if: github.event.release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT_NAME }}.tar.xz
+          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+
       - uses: actions/upload-artifact@v3
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         with:
@@ -213,15 +221,6 @@ jobs:
           cd anvill
           scripts/build-preset.sh debug
           ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
-
-      - name: Publish Release Assets
-        if: |
-          github.event.release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ${{ env.ARTIFACT_NAME }}.tar.xz
-          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
-          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Cache cleanup and reporting
         shell: 'bash'

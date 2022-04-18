@@ -118,6 +118,14 @@ jobs:
             --7zip `
             --output=${{ env.ARTIFACT_NAME }}
 
+      - name: Publish Release Assets
+        if: github.event.release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT_NAME }}
+          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+
       - uses: actions/upload-artifact@v3
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
         with:
@@ -184,15 +192,6 @@ jobs:
           cmake --build . --config Release --target install
 
           & ( Get-ChildItem install\bin | Where-Object {$_.name -match "anvill-decompile-json.exe"} ) -spec ..\bin\Decompile\tests\specs\ret0.json -bc_out ret0.bc -ir_out ret0.ir
-
-      - name: Publish Release Assets
-        if: |
-          github.event.release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ${{ env.ARTIFACT_NAME }}
-          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
-          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Cache cleanup
         run: |
