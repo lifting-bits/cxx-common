@@ -11,6 +11,7 @@ vcpkg_from_github(
   PATCHES
       fix-install-path.patch
       remove-flag-overrides.patch
+      fix-32-bit-build.patch
 )
 
 if (VCPKG_LIBRARY_LINKAGE STREQUAL "static")
@@ -22,6 +23,7 @@ vcpkg_cmake_configure(
   OPTIONS
     ${BUILD_STATIC}
     -DZ3_BUILD_TEST_EXECUTABLES=OFF
+    -DZ3_ENABLE_EXAMPLE_TARGETS=OFF
 )
 
 vcpkg_cmake_install()
