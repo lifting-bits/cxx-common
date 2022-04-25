@@ -8,10 +8,9 @@ updates:
       interval: "daily"
 
   # Maintain dependencies for GitHub Actions
-  - package-ecosystem: "gitsubmodule"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      # McSema has a pinned version of anvill
-      - dependency-name: "anvill-mcsema"
+  # NOTE(ekilmer): Disabled because dependabot needs access to GHA secrets and
+  # the submodule updates aren't super critical right now
+  # - package-ecosystem: "gitsubmodule"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
