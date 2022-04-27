@@ -1,4 +1,4 @@
-set(LLVM_VERSION "14.0.1")
+set(LLVM_VERSION "14.0.2")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 0a15aa9cfc978a7b03a1659a2affad65ede66d280f5c12bf0beaaf194cd7bdd57ff438b5f40e64c1e1b88f368de99be349e9d30b544d2bbe4a50f0ebed3307f2
+    SHA512 aafec8a923fd33dbf09ce9e809764432a80291309396ac32a04bc6b9a54a630ae0e2ff6e71ac1b842e8d64ccb62b93a2273f353f1b6ce710ac1eb0dc847302bb
     HEAD_REF master
     PATCHES
         0001-fix-install-tools-path.patch
