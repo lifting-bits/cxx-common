@@ -137,6 +137,17 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF
         )
     endif()
+    if(VCPKG_TARGET_IS_WINDOWS)
+        list(APPEND FEATURE_OPTIONS
+            # Disable dl library on Windows
+            -DDL_LIBRARY_PATH:FILEPATH=
+        )
+    elseif(VCPKG_TARGET_IS_OSX)
+        list(APPEND FEATURE_OPTIONS
+            -DDEFAULT_SYSROOT:FILEPATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+            -DLLVM_CREATE_XCODE_TOOLCHAIN=ON
+        )
+    endif()
     # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
     # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
     # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
