@@ -149,7 +149,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-13' }}
+        # if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd rellic
           mkdir -p build && cd build
