@@ -133,7 +133,7 @@ jobs:
           path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
 
       - name: 'Test rellic build'
-        if: ${{ matrix.llvm == 'llvm-13' }}
+        if: ${{ matrix.llvm == 'llvm-14' }}
         run: |
           cd rellic
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
