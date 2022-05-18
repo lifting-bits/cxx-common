@@ -1,0 +1,4 @@
+The package gap provides CMake targets:
+
+    find_package(gap CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE gap::gap gap::gap-core gap::gap-settings)
