@@ -1,0 +1,24 @@
+{
+    "name": "remill",
+    "version": "5.0.2",
+    "port-version": 1,
+    "description": "A static binary translator.",
+    "homepage": "https://github.com/lifting-bits/remill",
+    "license": "Apache-2.0",
+    "dependencies": [
+        {
+            "name": "vcpkg-cmake-config",
+            "host": true
+        },
+        "glog",
+        "gflags",
+        "xed",
+        {
+            "name": "llvm-14",
+            "default-features": false,
+            "features": [
+                "cxx-common-targets"
+            ]
+        }
+    ]
+}
