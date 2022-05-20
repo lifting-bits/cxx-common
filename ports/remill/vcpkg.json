@@ -12,12 +12,26 @@
         },
         "glog",
         "gflags",
-        "xed",
-        {
-            "name": "llvm-14",
-            "default-features": false,
-            "features": [
-                "cxx-common-targets"
+        "gtest",
+        "xed"
+    ],
+    "default-features": [
+        "cxx-common-llvm-14"
+      ],
+    "features": [
+        "system-llvm": {
+            "description": "Build with system llvm"
+        },
+        "cxx-common-llvm-14": {
+            "description": "Build with cxx-common llvm-14 port",
+            "dependencies": [
+                {
+                    "name": "llvm-14",
+                    "default-features": false,
+                    "features": [
+                        "cxx-common-targets"
+                    ]
+                }
             ]
         }
     ]
