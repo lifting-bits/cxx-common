@@ -15,6 +15,7 @@ vcpkg_install_cmake()
 vcpkg_cmake_config_fixup()
 
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" )
+file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share" )
 
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"

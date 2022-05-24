@@ -17,7 +17,7 @@
     ],
     "default-features": [
         "cxx-common-llvm-14"
-      ],
+    ],
     "features": {
         "system-llvm": {
             "description": "Build with system llvm"
