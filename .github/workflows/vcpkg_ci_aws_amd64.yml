@@ -84,20 +84,21 @@ jobs:
     needs: start-runner # required to start the main job when the runner is ready
     runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
     steps:
-      # Used to get commit message since PRs are on a merge commit
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.after }}
-          submodules: false
-      - name: Get commit message
-        run: |
-          echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
-          echo "$(git log --format=%B -n 1 ${{ github.event.after }})" >> "$GITHUB_ENV"
-          echo "EOF" >> "$GITHUB_ENV"
-
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+          fetch-depth: 2
+
+      # Used to get commit message since PRs are on a merge commit
+      - name: Get commit message
+        run: |
+          echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
+          if   [[ '${{ github.event_name }}' == 'push' ]]; then
+            echo "$(git log --format=%B -n 1 HEAD)" >> "$GITHUB_ENV"
+          elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            echo "$(git log --format=%B -n 1 HEAD^2)" >> "$GITHUB_ENV"
+          fi
+          echo "EOF" >> "$GITHUB_ENV"
 
       - name: Clear prior vcpkg directory
         run: |
