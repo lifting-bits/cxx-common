@@ -24,6 +24,9 @@ vcpkg_cmake_config_fixup(
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" )
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share" )
 
+# we do not populate lib folder yet
+file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/lib" )
+
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"
   DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}"
