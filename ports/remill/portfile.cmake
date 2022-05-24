@@ -12,10 +12,17 @@ vcpkg_configure_cmake(
 )
 
 vcpkg_install_cmake()
-vcpkg_cmake_config_fixup()
+vcpkg_cmake_config_fixup(
+  PACKAGE_NAME "remill"
+  CONFIG_PATH lib/cmake
+)
 
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" )
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share" )
+
+if ( VCPKG_LIBRARY_LINKAGE STREQUAL "static" )
+  file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/bin" "${CURRENT_PACKAGES_DIR}/debug/bin" )
+endif()
 
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"
@@ -23,6 +30,10 @@ file(
   RENAME copyright
 )
 
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage")
-  file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}" RENAME usage)
+if ( EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage" )
+  file(
+    INSTALL "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage"
+    DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}"
+    RENAME usage
+  )
 endif()
