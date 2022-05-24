@@ -11,6 +11,7 @@ vcpkg_configure_cmake(
   PREFER_NINJA
   OPTIONS
     -DGAP_ENABLE_COROUTINES=OFF
+    -DENABLE_TESTING=OFF
     -DGAP_INSTALL=ON
 )
 
