@@ -13,6 +13,7 @@
         "glog",
         "gflags",
         "gtest",
+        "zlib",
         "xed"
     ],
     "default-features": [
