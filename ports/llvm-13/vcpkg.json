@@ -1,7 +1,7 @@
 {
   "name": "llvm-13",
   "version": "13.0.1",
-  "port-version": 4,
+  "port-version": 5,
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "supports": "!uwp & !(arm & windows)",
@@ -73,6 +73,7 @@
             "target-arm",
             "target-nvptx",
             "target-sparc",
+            "target-webassembly",
             "target-x86"
           ]
         }
