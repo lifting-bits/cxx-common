@@ -18,7 +18,7 @@ vcpkg_configure_cmake(
 vcpkg_install_cmake()
 vcpkg_cmake_config_fixup(
   PACKAGE_NAME "gap"
-  CONFIG_PATH lib/cmake
+  CONFIG_PATH lib/cmake/gap
 )
 
 file( REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" )
@@ -33,7 +33,7 @@ file(
   RENAME copyright
 )
 
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage")
+if ( EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage" )
   file(
     INSTALL "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage"
     DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}"
