@@ -1,4 +1,4 @@
-set(LLVM_VERSION "14.0.3")
+set(LLVM_VERSION "14.0.4")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 511e93fd9b1c414c38fe9e2649679ac0b16cb04f7f7838569d187b04c542a185e364d6db73e96465026e3b2533649eb75ac95507d12514af32b28bdfb66f2646
+    SHA512 0
     HEAD_REF master
     PATCHES
         0001-fix-install-tools-path.patch
@@ -292,6 +292,8 @@ vcpkg_cmake_configure(
         ${CROSS_OPTIONS}
         -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_BUILD_EXAMPLES=OFF
+        -DLLVM_INCLUDE_DOCS=OFF
+        -DLLVM_BUILD_DOCS=OFF
         -DLLVM_INCLUDE_TESTS=OFF
         -DLLVM_BUILD_TESTS=OFF
         -DLLVM_INCLUDE_BENCHMARKS=OFF

@@ -1,16 +1,16 @@
 {
   "name": "grpc",
-  "version-semver": "1.41.0",
-  "port-version": 5,
+  "version-semver": "1.44.0",
+  "port-version": 1,
   "description": "An RPC library and framework",
   "homepage": "https://github.com/grpc/grpc",
+  "license": "Apache-2.0",
   "dependencies": [
     "abseil",
     {
       "name": "c-ares",
       "platform": "!uwp"
     },
-    "gflags",
     {
       "name": "grpc",
       "host": true,
@@ -26,6 +26,14 @@
     },
     "re2",
     "upb",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    },
     "zlib"
   ],
   "features": {

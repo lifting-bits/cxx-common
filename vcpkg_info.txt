@@ -1,2 +1,2 @@
 https://github.com/microsoft/vcpkg.git
-2022.04.12
+20907dc8bfd4a3baf555467727755fbba708ad84
