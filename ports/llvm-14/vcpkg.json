@@ -16,7 +16,6 @@
   ],
   "default-features": [
     "clang",
-    "compiler-rt",
     "default-options",
     "cxx-common-targets",
     "mlir",
@@ -43,7 +42,7 @@
           "name": "llvm-14",
           "default-features": false,
           "features": [
-            "compiler-rt",
+            "compiler-rt-runtime",
             "tools"
           ]
         }
@@ -53,7 +52,19 @@
       "description": "Include Clang tools."
     },
     "compiler-rt": {
-      "description": "Include compiler's runtime libraries."
+      "description": "Include compiler's runtime libraries as a project.",
+      "dependencies": [
+        {
+          "name": "llvm-14",
+          "default-features": false,
+          "features": [
+            "compiler-rt-runtime"
+          ]
+        }
+      ]
+    },
+    "compiler-rt-runtime": {
+      "description": "Include compiler's runtime libraries as only a runtime"
     },
     "default-options": {
       "description": "Build with default options.",

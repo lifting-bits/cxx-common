@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 0
+    SHA512 e14e6c3a1915a96e9ddc609f16ca3a398ca6f7fd0a691dadaa24490078a661340e845cb2d18f3679de4f47300bb822c33ae69548af6a0370d55737831a28b959
     HEAD_REF master
     PATCHES
         0001-fix-install-tools-path.patch
@@ -20,6 +20,15 @@ vcpkg_from_github(
         0023-clang-sys-include-dir-path.patch
         0024-remove-elf_relocation-checks.patch
 )
+
+string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
+list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
+list(GET VERSION_LIST 1 LLVM_VERSION_MINOR)
+list(GET VERSION_LIST 2 LLVM_VERSION_PATCH)
+# Remove anything after the first patch number (removes suffix like `-rc3`)
+if("${LLVM_VERSION_PATCH}" MATCHES "^([0-9]+).*")
+    set(LLVM_VERSION_PATCH "${CMAKE_MATCH_1}")
+endif()
 
 vcpkg_check_features(
     OUT_FEATURE_OPTIONS FEATURE_OPTIONS
@@ -151,7 +160,8 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
     # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
     # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
     # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
-    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION})
+    # This needs to not include version suffixes like '-rc3'
+    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
@@ -160,6 +170,7 @@ if("compiler-rt" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "compiler-rt")
 endif()
 if("flang" IN_LIST FEATURES)
+    # Disable Flang on Windows (see http://lists.llvm.org/pipermail/flang-dev/2020-July/000448.html).
     if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_TARGET_ARCHITECTURE STREQUAL "x86")
         message(FATAL_ERROR "Building Flang with MSVC is not supported on x86. Disable it until issues are fixed.")
     endif()
@@ -211,6 +222,9 @@ if("pstl" IN_LIST FEATURES)
 endif()
 
 set(LLVM_ENABLE_RUNTIMES)
+if("compiler-rt-runtime" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
+endif()
 if("libcxx" IN_LIST FEATURES)
     if(VCPKG_TARGET_IS_WINDOWS)
         message(FATAL_ERROR "Building libcxx with MSVC is not supported, as cl doesn't support the #include_next extension.")
