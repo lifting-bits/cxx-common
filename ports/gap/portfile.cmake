@@ -6,16 +6,16 @@ vcpkg_from_github(
   HEAD_REF main
 )
 
-vcpkg_configure_cmake(
+vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"
-  PREFER_NINJA
   OPTIONS
     -DGAP_ENABLE_COROUTINES=OFF
     -DENABLE_TESTING=OFF
     -DGAP_INSTALL=ON
+    -DUSE_SYSTEM_DEPENDENCIES=ON
 )
 
-vcpkg_install_cmake()
+vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(
   PACKAGE_NAME "gap"
   CONFIG_PATH lib/cmake/gap
