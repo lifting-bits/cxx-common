@@ -221,6 +221,7 @@ if("pstl" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "pstl")
 endif()
 
+set(LLVM_ENABLE_RUNTIMES)
 if("libcxx" IN_LIST FEATURES)
     if(VCPKG_TARGET_IS_WINDOWS)
         message(FATAL_ERROR "Building libcxx with MSVC is not supported, as cl doesn't support the #include_next extension.")
