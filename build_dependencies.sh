@@ -219,6 +219,7 @@ if [[ "${EXPORT_DIR}" != "${vcpkg_dir}" ]]; then
     "scripts/buildsystems/msbuild/vcpkg.targets"
     "scripts/buildsystems/msbuild/vcpkg.props"
     "scripts/buildsystems/msbuild/vcpkg-general.xml"
+    "scripts/buildsystems/osx/applocal.py"
     "scripts/buildsystems/vcpkg.cmake"
     "scripts/cmake/vcpkg_get_windows_sdk.cmake"
   )
