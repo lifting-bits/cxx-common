@@ -1,9 +1,9 @@
 diff --git a/cmake/upb.cmake b/cmake/upb.cmake
-index 59d6813..1ce8bce 100644
+index 88d654084f..f87898ef15 100644
 --- a/cmake/upb.cmake
 +++ b/cmake/upb.cmake
-@@ -24,8 +24,21 @@ set(_gRPC_UPB_LIBRARIES upb)
- 
+@@ -21,8 +21,21 @@ set(_gRPC_UPB_INCLUDE_DIR "${UPB_ROOT_DIR}")
+ set(_gRPC_UPB_LIBRARIES upb)
  elseif(gRPC_UPB_PROVIDER STREQUAL "package")
      find_package(upb CONFIG REQUIRED)
 -    set(_gRPC_UPB_LIBRARIES upb::upb)
@@ -15,7 +15,7 @@ index 59d6813..1ce8bce 100644
 +        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/ext/upb-generated/google/protobuf/descriptor.upb.c
 +    )
 +    set_target_properties(upb PROPERTIES OUTPUT_NAME grpc_upbdefs)
-+    target_include_directories(upb PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ext/upb-generated" "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ext/upbdefs-generated")
++    target_include_directories(upb PRIVATE ${_gRPC_UPB_GRPC_GENERATED_DIR})
 +    target_link_libraries(upb PUBLIC upb::all_libs)
 +    if(gRPC_INSTALL)
 +        install(TARGETS upb EXPORT gRPCTargets

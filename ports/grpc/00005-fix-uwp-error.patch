@@ -1,29 +1,30 @@
 diff --git a/src/core/lib/slice/slice.cc b/src/core/lib/slice/slice.cc
-index 0dacbfef3e..0743a1b003 100644
+index 5f7e9ea0c8..547b5415ef 100644
 --- a/src/core/lib/slice/slice.cc
 +++ b/src/core/lib/slice/slice.cc
-@@ -234,6 +234,7 @@ grpc_slice grpc_slice_from_moved_buffer(grpc_core::UniquePtr<char> p,
+@@ -233,7 +233,7 @@ grpc_slice grpc_slice_from_copied_string(const char* source) {
+ grpc_slice grpc_slice_from_moved_buffer(grpc_core::UniquePtr<char> p,
                                          size_t len) {
    uint8_t* ptr = reinterpret_cast<uint8_t*>(p.get());
-   grpc_slice slice;
-+  memset(&slice, 0, sizeof(grpc_slice));
+-  grpc_slice slice;
++  grpc_slice slice = {};
    if (len <= sizeof(slice.data.inlined.bytes)) {
      slice.refcount = nullptr;
      slice.data.inlined.length = len;
-@@ -253,7 +254,7 @@ grpc_slice grpc_slice_from_moved_string(grpc_core::UniquePtr<char> p) {
+@@ -253,7 +253,7 @@ grpc_slice grpc_slice_from_moved_string(grpc_core::UniquePtr<char> p) {
  }
  
  grpc_slice grpc_slice_from_cpp_string(std::string str) {
 -  grpc_slice slice;
-+  grpc_slice slice = { 0 };
++  grpc_slice slice = {};
    if (str.size() <= sizeof(slice.data.inlined.bytes)) {
      slice.refcount = nullptr;
      slice.data.inlined.length = str.size();
 diff --git a/src/core/lib/surface/server.cc b/src/core/lib/surface/server.cc
-index c94551545d..3fd9797316 100644
+index a97c1c57ce..ec9b268556 100644
 --- a/src/core/lib/surface/server.cc
 +++ b/src/core/lib/surface/server.cc
-@@ -878,7 +878,7 @@ grpc_call_error Server::QueueRequestedCall(size_t cq_idx, RequestedCall* rc) {
+@@ -910,7 +910,7 @@ grpc_call_error Server::QueueRequestedCall(size_t cq_idx, RequestedCall* rc) {
               GRPC_ERROR_CREATE_FROM_STATIC_STRING("Server Shutdown"));
      return GRPC_CALL_OK;
    }
