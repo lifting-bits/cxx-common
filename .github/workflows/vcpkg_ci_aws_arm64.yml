@@ -120,25 +120,30 @@ jobs:
           export VCPKG_FORCE_SYSTEM_BINARIES=1
 
           # Setup NuGet authentication
-          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
+          # Need to manually download nuget. Keep updated with URL listed in
+          # https://github.com/microsoft/vcpkg/blob/master/scripts/vcpkgTools.xml
+          export NUGET_EXE=/usr/local/bin/nuget
+          curl -L https://dist.nuget.org/win-x86-commandline/v5.11.0/nuget.exe > "${NUGET_EXE}"
+          chmod +x "${NUGET_EXE}"
+          mono "${NUGET_EXE}" sources add \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             -storepasswordincleartext \
             -name "Source" \
             -username "${{ github.repository_owner }}" \
             -password "${{ secrets.GITHUB_TOKEN }}" || true
 
-          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources update \
+          mono "${NUGET_EXE}" sources update \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             -storepasswordincleartext \
             -name "Source" \
             -username "${{ github.repository_owner }}" \
             -password "${{ secrets.GITHUB_TOKEN }}"
 
-          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
+          mono "${NUGET_EXE}" setapikey \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build
+          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
 
