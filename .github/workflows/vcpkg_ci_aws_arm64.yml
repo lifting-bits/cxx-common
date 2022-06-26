@@ -110,6 +110,8 @@ jobs:
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
+          export "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)"
+          export "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)"
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
