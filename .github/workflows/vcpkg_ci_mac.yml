@@ -94,7 +94,7 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build
+          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
 
@@ -182,7 +182,7 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-13' }}
+        #if: ${{ matrix.llvm == 'llvm-13' }}
         run: |
           cd anvill
           mkdir -p build && cd build

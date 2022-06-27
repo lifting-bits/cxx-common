@@ -198,8 +198,8 @@ msg "Boostrapping vcpkg"
   set -x
   if command -v ccache &> /dev/null
   then
-    export CMAKE_C_COMPILER_LAUNCHER="$(which ccache)"
-    export CMAKE_CXX_COMPILER_LAUNCHER="$(which ccache)"
+    export "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)"
+    export "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)"
   fi
 
   "${vcpkg_dir}/bootstrap-vcpkg.sh"
@@ -233,16 +233,6 @@ msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
 
-# Run the vcpkg installation of our packages
-(
-  cd "${repo_dir}"
-  (
-    set -x
-
-    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
-  )
-)
-
 # Check if we should upgrade ports
 if [[ ${UPGRADE_PORTS} == "true" ]]; then
   echo ""
@@ -253,8 +243,18 @@ if [[ ${UPGRADE_PORTS} == "true" ]]; then
       set -x
       "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run --allow-unsupported
     )
-  )
+  ) || exit 1
 fi
+
+# Run the vcpkg installation of our packages
+(
+  cd "${repo_dir}"
+  (
+    set -x
+
+    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
+  )
+) || exit 1
 
 echo ""
 msg "Investigate the following directory to discover all packages available to you:"
