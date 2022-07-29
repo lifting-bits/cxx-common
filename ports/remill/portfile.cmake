@@ -31,10 +31,7 @@ file(
   RENAME copyright
 )
 
-if ( EXISTS "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage" )
-  file(
-    INSTALL "${CMAKE_CURRENT_LIST_DIR}/${lower_package}_usage"
-    DESTINATION "${CURRENT_PACKAGES_DIR}/share/${lower_package}"
-    RENAME usage
-  )
-endif()
+file(
+  INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage"
+  DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}"
+)
