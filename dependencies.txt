@@ -8,6 +8,8 @@ abseil
 grpc[absl-sync,codegen]
 flatbuffers
 roaring
-rocksdb
+rocksdb[zstd]
 capnproto
 cpp-httplib
+re2
+zstd
