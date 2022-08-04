@@ -12,12 +12,14 @@ function die {
 
 function Help
 {
-  echo "Usage: ./build_dependencies.sh [--release] [--asan] [--upgrade-ports] [--export-dir DIR] [...]"
+  echo "Usage: ./build_dependencies.sh [--release] [--target-arch ARCH] [--asan] [--upgrade-ports] [--export-dir DIR] [...]"
   echo ""
   echo "Options:"
   echo "  --release"
   echo "     Build only release versions with triplet as detected in"
   echo "     this script"
+  echo "  --target-arch <ARCH>"
+  echo "     Override target triplet architecture for cross compilation"
   echo "  --asan"
   echo "     Build with ASAN triplet as detected in this script"
   echo "  --upgrade-ports"
@@ -57,6 +59,10 @@ while [[ $# -gt 0 ]] ; do
       RELEASE="true"
       msg "Building Release-only binaries"
     ;;
+    --target-arch)
+      shift
+      TARGET_ARCH=${1}
+    ;;
     --asan)
       ASAN="true"
       msg "Building ASAN binaries"
@@ -75,7 +81,7 @@ msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
 
 function die_if_not_installed {
-  if ! type $1 &>/dev/null; then
+  if ! type "$1" &>/dev/null; then
     die "Please install the package providing [${1}] command for your OS"
   fi
 }
@@ -118,7 +124,7 @@ export VCPKG_DISABLE_METRICS=1
 
 msg "Building dependencies from source"
 
-triplet=""
+target_triplet=""
 extra_vcpkg_args=()
 extra_cmake_usage_args=()
 
@@ -147,12 +153,16 @@ else
   die "Could not detect OS. OS detection required for release-only builds."
 fi
 
-triplet="${triplet_arch}-${triplet_os}"
+host_triplet="${triplet_arch}-${triplet_os}"
+if [[ -v TARGET_ARCH ]]; then
+  triplet_arch=${TARGET_ARCH}
+fi
+target_triplet="${triplet_arch}-${triplet_os}"
 
 # Build-Type triplet
 if [[ ${RELEASE} == "true" ]]; then
   msg "Only building release versions"
-  triplet="${triplet}-rel"
+  target_triplet="${target_triplet}-rel"
 else
   msg "Building Release and Debug versions"
 fi
@@ -160,7 +170,7 @@ fi
 # ASAN triplet
 if [[ ${ASAN} == "true" ]]; then
   msg "Building with asan"
-  triplet="${triplet}-asan"
+  target_triplet="${target_triplet}-asan"
 fi
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -171,9 +181,9 @@ if [[ -z ${EXPORT_DIR} ]]; then
   EXPORT_DIR="${vcpkg_dir}"
 fi
 
-extra_vcpkg_args+=("--triplet=${triplet}" "--host-triplet=${triplet}" "--x-install-root=${EXPORT_DIR}/installed")
+extra_vcpkg_args+=("--triplet=${target_triplet}" "--host-triplet=${host_triplet}" "--x-install-root=${EXPORT_DIR}/installed")
 
-extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${triplet}" "-DVCPKG_HOST_TRIPLET=${triplet}")
+extra_cmake_usage_args+=("-DVCPKG_TARGET_TRIPLET=${target_triplet}" "-DVCPKG_HOST_TRIPLET=${host_triplet}")
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 vcpkg_info_file="${repo_dir}/vcpkg_info.txt"
