@@ -3,10 +3,11 @@ z3
 glog
 gtest
 gflags
+protobuf
 abseil
+grpc[absl-sync,codegen]
+flatbuffers
 roaring
-rocksdb[zstd]
+rocksdb
 capnproto
 cpp-httplib
-re2
-zstd
