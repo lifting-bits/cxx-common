@@ -19,6 +19,7 @@ vcpkg_from_github(
         0021-fix-find_dependency.patch
         0023-clang-sys-include-dir-path.patch
         0024-remove-elf_relocation-checks.patch
+        0025-PASTA-patches.patch
 )
 
 string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
