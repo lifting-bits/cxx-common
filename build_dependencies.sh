@@ -153,7 +153,7 @@ else
   die "Could not detect OS. OS detection required for release-only builds."
 fi
 
-host_triplet="${triplet_arch}-${triplet_os}"
+host_triplet="${triplet_arch}-${triplet_os}-rel"
 if [[ -v TARGET_ARCH ]]; then
   triplet_arch=${TARGET_ARCH}
 fi
