@@ -154,13 +154,11 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd rellic
           mkdir -p build && cd build
           cmake -G Ninja \
-            -DCMAKE_CROSSCOMPILING=ON \
-            -DZ3_RETURNCODE=0 \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
@@ -179,12 +177,12 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         # if: ${{ matrix.llvm == 'llvm-13' }}
+        if: ${{ matrix.target_arch == 'x64' }}
         run: |
           cd remill
           mkdir -p build && cd build
           cmake -G Ninja \
-            -DCMAKE_CROSSCOMPILING=ON \
-            -DZ3_RETURNCODE=0 \
+            -DCMAKE_SYSTEM_NAME=Darwin \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
@@ -205,6 +203,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         #if: ${{ matrix.llvm == 'llvm-13' }}
+        if: ${{ matrix.target_arch == 'x64' }}
         run: |
           cd anvill
           mkdir -p build && cd build
