@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-11', xcode: '13.0' }
+          - { runner: 'macos-11' }
         llvm: [
           'llvm-13',
           'llvm-14'
@@ -42,7 +42,7 @@ jobs:
     runs-on: ${{ matrix.os.runner }}
 
     env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64
+      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_amd64
 
     steps:
       - uses: actions/checkout@v3
@@ -68,11 +68,6 @@ jobs:
           source-url: https://nuget.pkg.github.com/lifting-bits/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Select the XCode version
-        run: |
-          echo "Selecting XCode Version ${{ matrix.os.xcode }}"
-          sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
       - name: Initialize vcpkg
         shell: bash
@@ -139,9 +134,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.os.runner }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.os.runner }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
