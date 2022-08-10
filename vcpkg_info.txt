@@ -1,2 +1,2 @@
-https://github.com/ekilmer/vcpkg.git
-da8c5fa8268c3113819bb2ac1d3b39b43afe695e
+https://github.com/microsoft/vcpkg.git
+c9bbaff1577315d735418cbe2d4e8cf669fc485b
