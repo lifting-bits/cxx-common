@@ -182,7 +182,6 @@ jobs:
           cd remill
           mkdir -p build && cd build
           cmake -G Ninja \
-            -DCMAKE_SYSTEM_NAME=Darwin \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
