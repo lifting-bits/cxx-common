@@ -13,3 +13,4 @@ capnproto
 cpp-httplib
 re2
 zstd
+doctest
