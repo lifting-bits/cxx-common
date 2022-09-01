@@ -273,6 +273,10 @@ echo ""
 msg "Set the following in your CMake configure command to use these dependencies!"
 msg "  -DCMAKE_TOOLCHAIN_FILE=\"${EXPORT_DIR}/scripts/buildsystems/vcpkg.cmake\" ${extra_cmake_usage_args[*]}"
 
+if [[ "${host_triplet}" != "${target_triplet}" ]]; then
+  rm -rf "${EXPORT_DIR}/installed/${host_triplet}"
+fi
+
 if [[ "$(uname -m)" = "aarch64" ]]; then
   echo ""
   msg "On aarch64, you also need to set:"
