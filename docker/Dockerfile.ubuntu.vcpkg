@@ -37,8 +37,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cmake --build build --target install && \
     cd .. && rm -rf ccache-ccache-*
 
-ENV CC=/usr/bin/clang-${LLVM_VERSION} \
-    CXX=/usr/bin/clang++-${LLVM_VERSION}
+# Default to clang-10 because things will break if mixing objects compiled with clang-10 and clang-14
+ENV CC=/usr/bin/clang-10 \
+    CXX=/usr/bin/clang++-10
 
 
 # Much heavier installation due to mono dependency for NuGet
