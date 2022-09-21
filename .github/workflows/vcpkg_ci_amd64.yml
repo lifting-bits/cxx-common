@@ -36,6 +36,7 @@ jobs:
           - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
+          - { name: 'ubuntu', tag: '22.04' }
         llvm: [ 'llvm-15', 'llvm-15[pasta]' ]
 
     container:
