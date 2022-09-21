@@ -18,12 +18,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    \
-    if [ ${DISTRO_VERSION} != "jammy" ] ; then \
-        echo "deb http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
-        echo "deb-src http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list ; \
-    fi && \
-    \
+    echo "deb http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    echo "deb-src http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
     apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
@@ -52,7 +48,7 @@ ARG DISTRO_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     \
-    if [ ${DISTRO_VERSION} = "focal" ] ; then \
+    if [ ${DISTRO_VERSION} != "jammy" ] ; then \
         apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
         echo "deb https://download.mono-project.com/repo/ubuntu stable-${DISTRO_VERSION} main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
     fi && \
