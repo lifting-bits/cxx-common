@@ -6,7 +6,7 @@ set -euo pipefail
 # build vcpkg libraries as well as all lifting-bits tools
 
 # Ubuntu versions to build
-UBUNTU_VERSION_MATRIX=( "18.04" "20.04" )
+UBUNTU_VERSION_MATRIX=( "focal" "jammy" )
 
 for version in "${UBUNTU_VERSION_MATRIX[@]}"; do
   # Always pull from upstream
