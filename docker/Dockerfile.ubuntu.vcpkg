@@ -1,4 +1,4 @@
-ARG DISTRO_VERSION=20.04
+ARG DISTRO_VERSION=focal
 ARG LLVM_VERSION=14
 
 ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
@@ -18,8 +18,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
-    echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    echo "deb http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    echo "deb-src http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
     apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
@@ -48,13 +48,7 @@ ARG DISTRO_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
-    \
-    if [ ${DISTRO_VERSION} = "20.04" ] ; then \
-      echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
-    elif [ ${DISTRO_VERSION} = "18.04" ] ; then \
-      echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
-    fi && \
-    \
+    echo "deb https://download.mono-project.com/repo/ubuntu stable-${DISTRO_VERSION} main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
     apt-get update && \
     apt-get install --yes mono-devel && \
     apt-get clean --yes && \
