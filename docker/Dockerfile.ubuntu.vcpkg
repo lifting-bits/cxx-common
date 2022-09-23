@@ -1,4 +1,4 @@
-ARG DISTRO_VERSION=20.04
+ARG DISTRO_VERSION=focal
 ARG LLVM_VERSION=14
 
 ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
@@ -18,15 +18,15 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
-    echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    echo "deb http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    echo "deb-src http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
     apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
       "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
       "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" \
-      libtinfo-dev libzstd-dev python3.8 python3-pip python3-setuptools python-setuptools \
-      build-essential g++ gcc clang-10 lld-10 clang-${LLVM_VERSION} lld-${LLVM_VERSION} ninja-build \
-      pixz xz-utils make rpm curl unzip tar git zip python python3 pkg-config && \
+      libtinfo-dev libzstd-dev python3-pip python3-setuptools python-setuptools \
+      build-essential g++ gcc clang lld clang-${LLVM_VERSION} lld-${LLVM_VERSION} ninja-build \
+      pixz xz-utils make rpm curl unzip tar git zip python3 pkg-config && \
     apt-get clean --yes && \
     rm -rf /var/lib/apt/lists/* && \
     \
@@ -37,9 +37,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cmake --build build --target install && \
     cd .. && rm -rf ccache-ccache-*
 
-# Default to clang-10 because things will break if mixing objects compiled with clang-10 and clang-14
-ENV CC=/usr/bin/clang-10 \
-    CXX=/usr/bin/clang++-10
+# Default to system clang because things will break if mixing objects compiled with system clang and clang-14
+ENV CC=/usr/bin/clang \
+    CXX=/usr/bin/clang++
 
 
 # Much heavier installation due to mono dependency for NuGet
@@ -47,12 +47,10 @@ FROM base as caching
 ARG DISTRO_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
     \
-    if [ ${DISTRO_VERSION} = "20.04" ] ; then \
-      echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
-    elif [ ${DISTRO_VERSION} = "18.04" ] ; then \
-      echo "deb https://download.mono-project.com/repo/ubuntu stable-bionic main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
+    if [ ${DISTRO_VERSION} != "jammy" ] ; then \
+        apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
+        echo "deb https://download.mono-project.com/repo/ubuntu stable-${DISTRO_VERSION} main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
     fi && \
     \
     apt-get update && \
