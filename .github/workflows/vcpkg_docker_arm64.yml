@@ -59,7 +59,6 @@ jobs:
         container:
           - { distro: 'ubuntu', version: '20.04', codename: 'focal' }
           - { distro: 'ubuntu', version: '22.04', codename: 'jammy' }
-        llvm: [ 'llvm-13' ]
 
     name: Do the job on the runner
     needs: start-runner # required to start the main job when the runner is ready
