@@ -165,7 +165,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        # if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -182,7 +182,7 @@ jobs:
 
       - name: 'Anvill build'
         shell: 'bash'
-        #if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' }}
         run: |
           cd anvill
           mkdir -p build && cd build
