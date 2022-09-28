@@ -91,6 +91,7 @@ jobs:
 
       # Used to get commit message since PRs are on a merge commit
       - name: Get commit message
+        shell: bash
         run: |
           echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
           if   [[ '${{ github.event_name }}' == 'push' ]]; then
