@@ -61,7 +61,7 @@ jobs:
           fi
           echo "EOF" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-dotnet@v2
+      - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
           # Sets as "Source"
