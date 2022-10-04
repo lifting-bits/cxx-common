@@ -15,14 +15,14 @@ Many of the lifting-bits tools have support for using the vcpkg binaries written
 For example:
 
 ```bash
-curl -LO https://github.com/lifting-bits/cxx-common/releases/latest/download/vcpkg_ubuntu-20.04_llvm-13_amd64.tar.xz
-tar -xJf vcpkg_ubuntu-20.04_llvm-13_amd64.tar.xz
+curl -LO https://github.com/lifting-bits/cxx-common/releases/latest/download/vcpkg_ubuntu-20.04_llvm-14_amd64.tar.xz
+tar -xJf vcpkg_ubuntu-20.04_llvm-14_amd64.tar.xz
 ```
 
 Will produce a directory, and then you'll have to set the following during your CMake configure command to use these dependencies!
 
 ```text
--DCMAKE_TOOLCHAIN_FILE="<...>/vcpkg_ubuntu-20.04_llvm-13_amd64/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-linux-rel
+-DCMAKE_TOOLCHAIN_FILE="<...>/vcpkg_ubuntu-20.04_llvm-14_amd64/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-linux-rel
 ```
 
 Replace `x64-linux-rel` with `x64-osx-rel` if using the macOS pre-built download.
@@ -31,10 +31,10 @@ Replace `x64-linux-rel` with `x64-osx-rel` if using the macOS pre-built download
 
 If you aren't running a supported operating system, or you want to have dependencies with a build type other than `Release`, you can build everything from source using the `./build_dependencies.sh` script (pass `--help` to see available options).
 
-By default, the script will install the dependencies listed in [`dependencies.txt`](./dependencies.txt), which doesn't include an LLVM version, so passing an `llvm-13` string as an argument will actually be passed to [`vcpkg install`](https://github.com/microsoft/vcpkg/blob/master/docs/examples/installing-and-using-packages.md#install). Any other strings not matching the script's own options are also passed to the `vcpkg install` command. Furthermore, without specifying any other build script options, vcpkg determine determine the best triplet for your operating system, which means building _both_ `Debug` and `Release` build types (see the [vcpkg triplet docs](https://github.com/microsoft/vcpkg/blob/master/docs/users/triplets.md) for more info).
+By default, the script will install the dependencies listed in [`dependencies.txt`](./dependencies.txt), which doesn't include an LLVM version, so passing an `llvm-14` string as an argument will actually be passed to [`vcpkg install`](https://github.com/microsoft/vcpkg/blob/master/docs/examples/installing-and-using-packages.md#install). Any other strings not matching the script's own options are also passed to the `vcpkg install` command. Furthermore, without specifying any other build script options, vcpkg determine determine the best triplet for your operating system, which means building _both_ `Debug` and `Release` build types (see the [vcpkg triplet docs](https://github.com/microsoft/vcpkg/blob/master/docs/users/triplets.md) for more info).
 
 ```bash
-./build_dependencies.sh llvm-13
+./build_dependencies.sh llvm-14
 ```
 
 Note that vcpkg will use binary caching to store built dependency packages (usually at `~/.cache/vcpkg` or manually set with environment variable `VCPKG_DEFAULT_BINARY_CACHE`) so that upon reinstallation/rebuilding (re-running the script) you likely won't have to rebuild everything from scratch, unless the package itself has been updated, you are using a different vcpkg triplet, your compiler has been changed/update, or any of the vcpkg scripts have changed (updated vcpkg repo). If you'd like to turn off [binary caching](https://github.com/microsoft/vcpkg/blob/master/docs/users/binarycaching.md) (not recommended), then you can either pass `--no-binarycaching` to the build script after the main options listed in or add `-binarycaching` to the `VCPKG_FEATURE_FLAGS` environment variable.
@@ -46,25 +46,25 @@ Note that vcpkg will use binary caching to store built dependency packages (usua
 Passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can install the chosen dependencies in a separate directory. Otherwise, the built dependencies will be stored within the vcpkg repo directory itself (`vcpkg/installed` relative path if in the root of this repo). Separate export directories are required to keep track of different LLVM versions, since they cannot coexist within the same export (read: installation) directory.
 
 ```bash
-./build_dependencies.sh --export-dir vcpkg-llvm-13-install llvm-13
+./build_dependencies.sh --export-dir vcpkg-llvm-14-install llvm-14
 ```
 
-will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 13 and install into a local directory named `vcpkg-llvm-13-install`.
+will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 14 and install into a local directory named `vcpkg-llvm-14-install`.
 
 Furthermore, you are able to install additional dependencies into an existing exported directory created by this script by setting the `--export-dir <path>` to the same path:
 
 ```bash
-./build_dependencies.sh --release --export-dir "<...>/vcpkg_ubuntu-20.04_llvm-13_amd64" spdlog
+./build_dependencies.sh --release --export-dir "<...>/vcpkg_ubuntu-20.04_llvm-14_amd64" spdlog
 ```
 
 When reusing the pre-built export directory downloaded from GitHub, you must specify `--release` (see the 'Debug and Release Builds' section below) to build only release binaries. You cannot use dependencies from different triplets.
 
 ### Debug and Release Builds
 
-To build both debug and release versions with llvm-13, just run the following
+To build both debug and release versions with llvm-14, just run the following
 
 ```bash
-./build_dependencies.sh llvm-13
+./build_dependencies.sh llvm-14
 ```
 
 The script will be verbose about what it is doing and will clone the correct version of vcpkg (found in `vcpkg_info.txt`) and build everything in the `vcpkg` directory in the root of this repo.
@@ -83,7 +83,7 @@ $ ./build_dependencies.sh --export-dir example-export-dir
 If you don't want to compile a debug version of the tools, just pass `--release` to the script.
 
 ```bash
-$ ./build_dependencies.sh --release llvm-13
+$ ./build_dependencies.sh --release llvm-14
 ...
 [+] Set the following in your CMake configure command to use these dependencies!
 [+]   -DCMAKE_TOOLCHAIN_FILE="/Users/ekilmer/src/cxx-common/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-osx-rel -DVCPKG_HOST_TRIPLET=x64-osx-rel
@@ -98,7 +98,7 @@ There is experimental support for compiling dependencies with address sanitizer 
 These dependencies can be built with the script by passing `--asan` to the script, and it should work whether building only Release or both Debug and Release:
 
 ```bash
-./build_dependencies.sh [--release] --asan llvm-13
+./build_dependencies.sh [--release] --asan llvm-14
 ```
 
 Just because your dependencies were built with a sanitizer, you'll still need to manually add support for sanitizer usage within your own project. A quick and dirty way involves specifying the extra compilation flags during CMake configure:
@@ -163,4 +163,4 @@ This command will do similar things as the above command, except it will `remove
 
 This repo is under the Apache-2.0 LICENSE, unless where specified. See below.
 
-The LLVM version port directories (ports/llvm-{13,14}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.
+The LLVM version port directories (ports/llvm-{14,15}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.

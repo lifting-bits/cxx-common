@@ -34,8 +34,8 @@ jobs:
         os:
           - { runner: 'macos-11', xcode: '13.0' }
         llvm: [
-          'llvm-13',
-          'llvm-14'
+          'llvm-14',
+          'llvm-15'
           ]
         target_arch: [
           'x64',
@@ -64,7 +64,7 @@ jobs:
           fi
           echo "EOF" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-dotnet@v2
+      - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '3.1.x' # SDK Version to use.
           # Sets as "Source"
@@ -176,8 +176,7 @@ jobs:
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
       - name: 'Remill build'
         shell: 'bash'
-        # if: ${{ matrix.llvm == 'llvm-13' }}
-        if: ${{ matrix.target_arch == 'x64' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -201,8 +200,7 @@ jobs:
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
       - name: 'Anvill build'
         shell: 'bash'
-        #if: ${{ matrix.llvm == 'llvm-13' }}
-        if: ${{ matrix.target_arch == 'x64' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd anvill
           mkdir -p build && cd build

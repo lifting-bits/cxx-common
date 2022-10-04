@@ -1,12 +1,12 @@
 diff --git a/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h b/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
-index 128c9967a596..9dc2f6cf7f98 100644
+index c434b45077a3..a4ccfd28fa65 100644
 --- a/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
 +++ b/llvm/include/llvm/ExecutionEngine/RuntimeDyld.h
 @@ -57,6 +57,10 @@ class RuntimeDyldImpl;
  
  class RuntimeDyld {
  public:
-+  
++
 +  // Should there be a hard failure on a relocation or just soft failure?
 +  static bool ShouldFailOnRelocationErrors;
 +
@@ -14,10 +14,10 @@ index 128c9967a596..9dc2f6cf7f98 100644
    // Any relocations already associated with the symbol will be re-resolved.
    void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
-index 687fd839805f..2e9e1a2794ac 100644
+index 3f38d26869d4..ccf0d531f0d5 100644
 --- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
 +++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyld.cpp
-@@ -1446,4 +1446,6 @@ void jitLinkForORC(
+@@ -1479,4 +1479,6 @@ void jitLinkForORC(
                                   std::move(O), std::move(Info));
  }
  
@@ -25,7 +25,7 @@ index 687fd839805f..2e9e1a2794ac 100644
 +
  } // end namespace llvm
 diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
-index efe0b9cd61cd..4f29726b2112 100644
+index f92618afdff6..777efb3445e5 100644
 --- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
 +++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
 @@ -21,6 +21,7 @@
@@ -45,7 +45,7 @@ index efe0b9cd61cd..4f29726b2112 100644
 +  llvm::raw_string_ostream ss(message);
 +  ss << "Relocation type not implemented yet: " << ty << "!\n";
 +  if (RuntimeDyld::ShouldFailOnRelocationErrors) {
-+    report_fatal_error(message);
++    report_fatal_error(message.c_str());
 +  } else {
 +    dbgs() << message;
 +  }
@@ -63,7 +63,7 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    case ELF::R_X86_64_NONE:
      break;
-@@ -371,7 +383,7 @@ void RuntimeDyldELF::resolveX86Relocation(const SectionEntry &Section,
+@@ -397,7 +409,7 @@ void RuntimeDyldELF::resolveX86Relocation(const SectionEntry &Section,
    default:
      // There are other relocation types, but it appears these are the
      // only ones currently used by the LLVM ELF object writer
@@ -72,16 +72,16 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    }
  }
-@@ -394,7 +406,7 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
+@@ -420,7 +432,7 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
  
    switch (Type) {
    default:
 -    report_fatal_error("Relocation type not implemented yet!");
 +    report_reallocation_error(Type);
      break;
-   case ELF::R_AARCH64_ABS16: {
-     uint64_t Result = Value + Addend;
-@@ -779,7 +791,7 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
+   case ELF::R_AARCH64_NONE:
+     break;
+@@ -807,7 +819,7 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
    uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
    switch (Type) {
    default:
@@ -90,7 +90,7 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    case ELF::R_PPC_ADDR16_LO:
      writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
-@@ -799,7 +811,7 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
+@@ -827,7 +839,7 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
    uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
    switch (Type) {
    default:
@@ -99,7 +99,7 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    case ELF::R_PPC64_ADDR16:
      writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
-@@ -893,7 +905,7 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
+@@ -921,7 +933,7 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
    uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
    switch (Type) {
    default:
@@ -108,7 +108,7 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    case ELF::R_390_PC16DBL:
    case ELF::R_390_PLT16DBL: {
-@@ -948,7 +960,7 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
+@@ -976,7 +988,7 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
  
    switch (Type) {
    default:
@@ -117,15 +117,3 @@ index efe0b9cd61cd..4f29726b2112 100644
      break;
    case ELF::R_BPF_NONE:
    case ELF::R_BPF_64_64:
-diff --git a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
-index 31892b7466e6..4a2cc70f0e96 100644
---- a/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
-+++ b/llvm/lib/ExecutionEngine/RuntimeDyld/RuntimeDyldELF.h
-@@ -162,6 +162,7 @@ private:
-   bool relocationNeedsStub(const RelocationRef &R) const override;
- 
- public:
-+
-   RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
-                  JITSymbolResolver &Resolver);
-   ~RuntimeDyldELF() override;
