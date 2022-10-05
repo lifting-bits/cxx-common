@@ -218,7 +218,7 @@ jobs:
           cmake --build . --target install
       - name: 'Anvil test'
         shell: 'bash'
-        if: ${{ matrix.target_arch == 'x64' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           # Only run test on x64
           cd anvill/build
