@@ -192,7 +192,7 @@ jobs:
           cmake --build . --target test_dependencies
       - name: 'Remill test'
         shell: 'bash'
-        if: ${{ matrix.target_arch == 'x64' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           # Only run test on x64
           # Sometimes fails on a flaky test
