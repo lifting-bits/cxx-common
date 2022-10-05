@@ -1,5 +1,5 @@
 diff --git a/llvm/cmake/modules/LLVMConfig.cmake.in b/llvm/cmake/modules/LLVMConfig.cmake.in
-index fbf28d36bedf..a9a5b83852b5 100644
+index f1362fa032c2..a9a5b83852b5 100644
 --- a/llvm/cmake/modules/LLVMConfig.cmake.in
 +++ b/llvm/cmake/modules/LLVMConfig.cmake.in
 @@ -51,16 +51,18 @@ set(LLVM_ENABLE_ASSERTIONS @LLVM_ENABLE_ASSERTIONS@)
@@ -23,7 +23,7 @@ index fbf28d36bedf..a9a5b83852b5 100644
  endif()
  
  set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
-@@ -69,22 +71,23 @@ set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
+@@ -69,21 +71,23 @@ set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
  
  set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
  if(LLVM_ENABLE_ZLIB)
@@ -34,7 +34,6 @@ index fbf28d36bedf..a9a5b83852b5 100644
  
  set(LLVM_ENABLE_ZSTD @LLVM_ENABLE_ZSTD@)
  if(LLVM_ENABLE_ZSTD)
--  set(zstd_ROOT @zstd_ROOT@)
 -  find_package(zstd)
 +  find_dependency(zstd)
  endif()
