@@ -1,4 +1,4 @@
-name: Linux CI on AWS (ARM64)
+name: Linux CI
 
 env:
   # "Source" is set in the vcpkg install step
@@ -15,57 +15,25 @@ on:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_aws_arm64*'
+      - '!.github/workflows/vcpkg_ci_amd64*'
   push:
     paths-ignore:
       - 'docker/**'
       - '.github/**'
       - '**.md'
-      - '!.github/workflows/vcpkg_ci_aws_arm64*'
+      - '!.github/workflows/vcpkg_ci_amd64*'
     tags-ignore:
       - 'v*'
     branches:
       - 'master'
 
 jobs:
-  start-runner:
-    name: Start self-hosted EC2 runner
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ec2:
-          - { ami: ami-0128e20cf90406205, instance-type: r6g.8xlarge}
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: start
-          github-token: ${{ secrets.GHA_PAT }}
-          ec2-image-id: ${{ matrix.ec2.ami }}
-          ec2-instance-type: ${{ matrix.ec2.instance-type }}
-          subnet-id: subnet-0deb935f0bbfe1a5d
-          security-group-id: sg-0f6a02eb80fafb982
-          aws-resource-tags: > # optional, requires additional permissions
-            [
-              {"Key": "Name", "Value": "ec2-github-runner"},
-              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
-            ]
-  do-the-job:
+  build:
     strategy:
       fail-fast: false
       matrix:
         host:
-          - { name: 'ubuntu-20.04', arch: 'arm64', triplet: 'arm64-linux-rel', arch_docker: '_arm64' }
+          - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
         llvm: [ 'llvm-14', 'llvm-15' ]
@@ -81,8 +49,7 @@ jobs:
       VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
 
     name: Do the job on the runner
-    needs: start-runner # required to start the main job when the runner is ready
-    runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
+    runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
       - uses: actions/checkout@v3
         with:
@@ -111,8 +78,6 @@ jobs:
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
-          export "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)"
-          export "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)"
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
@@ -120,29 +85,23 @@ jobs:
         shell: 'bash'
         run: |
           export VCPKG_DISABLE_METRICS=1
-          export VCPKG_FORCE_SYSTEM_BINARIES=1
 
           # Setup NuGet authentication
-          # Need to manually download nuget. Keep updated with URL listed in
-          # https://github.com/microsoft/vcpkg/blob/master/scripts/vcpkgTools.xml
-          export NUGET_EXE=/usr/local/bin/nuget
-          curl -L https://dist.nuget.org/win-x86-commandline/v5.11.0/nuget.exe > "${NUGET_EXE}"
-          chmod +x "${NUGET_EXE}"
-          mono "${NUGET_EXE}" sources add \
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources add \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             -storepasswordincleartext \
             -name "Source" \
             -username "${{ github.repository_owner }}" \
             -password "${{ secrets.GITHUB_TOKEN }}" || true
 
-          mono "${NUGET_EXE}" sources update \
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" sources update \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             -storepasswordincleartext \
             -name "Source" \
             -username "${{ github.repository_owner }}" \
             -password "${{ secrets.GITHUB_TOKEN }}"
 
-          mono "${NUGET_EXE}" setapikey \
+          mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
@@ -204,8 +163,8 @@ jobs:
           mkdir -p "${INSTALL_DIR}"
 
       - name: 'Rellic build'
-        shell: 'bash'
         if: ${{ matrix.llvm == 'llvm-14' }}
+        shell: 'bash'
         run: |
           cd rellic
           scripts/build-preset.sh debug
@@ -219,8 +178,8 @@ jobs:
           scripts/build-preset.sh debug
           pushd ${INSTALL_DIR}/build/remill
           cmake --build . --parallel --target test_dependencies
-          # See issue https://github.com/lifting-bits/remill/issues/518 for
-          # failing aarch64 tests
+          # The ||true is ther since we are Failing some tests on AWS (issue #583)
+          # https://github.com/lifting-bits/remill/issues/583
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
           popd
 
@@ -237,25 +196,3 @@ jobs:
         run: |
           rm -rf vcpkg/{buildtrees,installed,packages}
           ccache --show-stats
-
-  stop-runner:
-    name: Stop self-hosted EC2 runner
-    needs:
-      - start-runner # required to get output from the start-runner job
-      - do-the-job # required to wait when the main job is done
-    runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: stop
-          github-token: ${{ secrets.GHA_PAT }}
-          label: ${{ needs.start-runner.outputs.label }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
