@@ -96,6 +96,7 @@ list(APPEND FEATURE_OPTIONS
 # Force enable or disable external libraries
 set(llvm_external_libraries
     zlib
+    zstd
     libxml2
 )
 foreach(external_library IN LISTS llvm_external_libraries)

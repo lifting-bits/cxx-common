@@ -1,6 +1,7 @@
 {
   "name": "llvm-15",
   "version": "15.0.1",
+  "port-version": 1,
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
@@ -72,7 +73,8 @@
             "enable-eh",
             "enable-threads",
             "enable-z3",
-            "enable-zlib"
+            "enable-zlib",
+            "enable-zstd"
           ]
         }
       ]
@@ -189,6 +191,12 @@
       "description": "Build with ZLib.",
       "dependencies": [
         "zlib"
+      ]
+    },
+    "enable-zstd": {
+      "description": "Build with ZSTD.",
+      "dependencies": [
+        "zstd"
       ]
     },
     "enable-z3": {
