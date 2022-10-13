@@ -5,7 +5,7 @@ gtest
 gflags
 protobuf
 abseil
-grpc[absl-sync,codegen]
+grpc[codegen]
 flatbuffers
 roaring
 rocksdb[zstd]

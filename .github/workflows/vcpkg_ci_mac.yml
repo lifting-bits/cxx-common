@@ -3,7 +3,6 @@ name: MacOS Continuous Integration
 env:
   # "Source" is set in the setup-dotnet action
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
-  TRIPLET: 'x64-osx-rel'
   VCPKG_DEFAULT_HOST_TRIPLET: 'x64-osx-rel'
 
 on:
@@ -38,11 +37,15 @@ jobs:
           'llvm-14',
           'llvm-15'
           ]
+        target_arch: [
+          'x64',
+          'arm64'
+          ]
 
     runs-on: ${{ matrix.os.runner }}
 
     env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_amd64
+      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_${{ matrix.target_arch }}
 
     steps:
       - uses: actions/checkout@v3
@@ -94,9 +97,10 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
+          ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
+          echo "TARGET_TRIPLET=${{ matrix.target_arch }}-osx-rel" >> $GITHUB_ENV
 
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
@@ -139,9 +143,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-${{ matrix.target_arch }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.os.runner }}-${{ matrix.os.xcode }}-${{ matrix.llvm }}-$${{ matrix.target_arch }}
 
       - name: ccache Initial stats
         shell: bash
@@ -150,39 +154,53 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd rellic
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
           cmake --build . --target install
-          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TRIPLET}/tools/llvm/clang"
-
+      - name: 'Rellic test'
+        shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        run: |
+          # Test only should run when we're not cross compiling
+          cd rellic/build
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd remill
           mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             ..
           cmake --build .
           cmake --build . --target install
           cmake --build . --target test_dependencies
+      - name: 'Remill test'
+        shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        run: |
+          # Only run test on x64
           # Sometimes fails on a flaky test
+          cd remill/build
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
-
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
         run: |
           cd anvill
           mkdir -p build && cd build
@@ -190,14 +208,21 @@ jobs:
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
             -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
             -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
             ..
           cmake --build .
           cmake --build . --target install
+      - name: 'Anvil test'
+        shell: 'bash'
+        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        run: |
+          # Only run test on x64
+          cd anvill/build
           ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
-
       - name: Cache cleanup and reporting
         shell: 'bash'
         run: |
