@@ -72,8 +72,8 @@ jobs:
         shell: bash
         run: |
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } < ./vcpkg_info.txt || exit 1
-          echo ::set-output name=repo_url::${vcpkg_repo_url}
-          echo ::set-output name=commit::${vcpkg_commit}
+          echo "repo_url=${vcpkg_repo_url}" >> ${GITHUB_OUTPUT}
+          echo "commit=${vcpkg_commit}" >> ${GITHUB_OUTPUT}
 
         # Setup Visual Studio Dev Environment (x64, default version/toolset)
       - uses: ilammy/msvc-dev-cmd@v1.12.0
