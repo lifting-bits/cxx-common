@@ -140,7 +140,7 @@ jobs:
           echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
           echo "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
           echo "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
-          echo ::set-output name=timestamp::$(date +"%Y-%m-%d-%H:%M:%S" --utc)
+          echo "timestamp=$(date +"%Y-%m-%d-%H:%M:%S" --utc)" >> ${GITHUB_OUTPUT}
 
       - name: ccache cache files
         uses: actions/cache@v3
