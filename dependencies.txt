@@ -14,3 +14,4 @@ cpp-httplib
 re2
 zstd
 doctest
+sqlite3
