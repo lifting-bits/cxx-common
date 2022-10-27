@@ -34,7 +34,7 @@ function Help
   echo "     other ports, vcpkg-specific options, etc."
 }
 
-if [[ -n "${VCPKG_ROOT+x}" ]]; then
+if [[ -n "${VCPKG_ROOT+unset}" ]]; then
   unset VCPKG_ROOT
 fi
 
@@ -92,7 +92,7 @@ do
 done
 
 # check if CC is not set or a null string
-if [[ ! -v "CC" || -z "${CC}" ]]; then
+if [[ -z "${CC+unset}" || -z "${CC}" ]]; then
   if type clang &>/dev/null; then
     export CC="${CC:-$(which clang)}"
     msg "Using default clang as CC=${CC}"
@@ -104,7 +104,7 @@ else
 fi
 
 # check if CXX is not set or a null string
-if [[ ! -v "CXX" || -z "${CXX}" ]]; then
+if [[ -z "${CXX+unset}" || -z "${CXX}" ]]; then
   if type clang++ &>/dev/null; then
     export CXX="${CXX:-$(which clang++)}"
     msg "Using default clang++ as CXX=${CXX}"
@@ -154,7 +154,7 @@ else
 fi
 
 host_triplet="${triplet_arch}-${triplet_os}-rel"
-if [[ -v TARGET_ARCH ]]; then
+if [[ -n ${TARGET_ARCH+unset} ]]; then
   triplet_arch=${TARGET_ARCH}
 fi
 target_triplet="${triplet_arch}-${triplet_os}"
