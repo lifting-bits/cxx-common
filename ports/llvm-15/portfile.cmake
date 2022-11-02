@@ -1,4 +1,4 @@
-set(LLVM_VERSION "15.0.3")
+set(LLVM_VERSION "15.0.4")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,8 +6,8 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 0d52d96222db159bf77261d2525c59f1605b29ab899a986114c706b77508f62742b07228f6877ab2fca43e2e71697317f0779f6a4a679db74242889ee6110441
-    HEAD_REF main
+    SHA512 800d2adee2c21dbb74974d005bac4c4d7987bc6d5d0cf94430fc43eef137802024c60addb7e20816bb531ca95bc511dc37b612ad321cdf2d6f4f9f53985cee8f
+    HEAD_REF release/15.x
     PATCHES
         0001-Fix-install-paths.patch    # This patch fixes paths in ClangConfig.cmake, LLVMConfig.cmake, LLDConfig.cmake etc.
         0002-Fix-DR-1734.patch
