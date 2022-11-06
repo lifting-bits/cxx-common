@@ -1,27 +1,27 @@
-From 3817b8dcea37c64c61f3608d6cbe1758adf2979e Mon Sep 17 00:00:00 2001
+From f3921263821b5e396b5fc33a2f844b1daf4a0dfc Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Thu, 4 Aug 2022 16:12:06 -0400
 Subject: [PATCH] PASTA patches
 
 ---
- clang/include/clang/Lex/PPCallbacks.h  | 118 ++++++++++++
- clang/include/clang/Lex/Preprocessor.h |  47 +++--
+ clang/include/clang/Lex/PPCallbacks.h  | 121 +++++++++++
+ clang/include/clang/Lex/Preprocessor.h |  47 ++--
  clang/include/clang/Lex/TokenLexer.h   |   5 +-
- clang/lib/Lex/PPDirectives.cpp         | 129 ++++++++-----
+ clang/lib/Lex/PPDirectives.cpp         | 147 +++++++++----
  clang/lib/Lex/PPExpressions.cpp        |  28 +++
  clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
- clang/lib/Lex/PPMacroExpansion.cpp     | 240 ++++++++++++++++++++++++-
- clang/lib/Lex/Pragma.cpp               |  52 ++++++
- clang/lib/Lex/Preprocessor.cpp         |  43 ++++-
- clang/lib/Lex/TokenLexer.cpp           |   2 +
+ clang/lib/Lex/PPMacroExpansion.cpp     | 286 ++++++++++++++++++++++++-
+ clang/lib/Lex/Pragma.cpp               |  59 +++++
+ clang/lib/Lex/Preprocessor.cpp         |  43 +++-
+ clang/lib/Lex/TokenLexer.cpp           |  20 +-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 631 insertions(+), 78 deletions(-)
+ 11 files changed, 722 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
-index 76a74f20c..89de5bd2d 100644
+index 76a74f20c..6ae9a03fb 100644
 --- a/clang/include/clang/Lex/PPCallbacks.h
 +++ b/clang/include/clang/Lex/PPCallbacks.h
-@@ -40,6 +40,117 @@ public:
+@@ -40,6 +40,120 @@ public:
      EnterFile, ExitFile, SystemHeaderPragma, RenameFile
    };
  
@@ -83,6 +83,9 @@ index 76a74f20c..89de5bd2d 100644
 +    // `Data` is the `MacroInfo *`. For built-in macros, this may be `nullptr`.
 +    BeginMacroExpansion,
 +    SwitchToExpansion,
++    BeginPreArgumentExpansion,
++    EndPreArgumentExpansion,
++    PrepareToCancelExpansion,  // E.g. `_Pragma` in macro argument pre-exansion.
 +    CancelExpansion,  // E.g. `_Pragma` in a macro parameter.
 +    EndMacroExpansion,
 +
@@ -139,7 +142,7 @@ index 76a74f20c..89de5bd2d 100644
    /// Callback invoked whenever a source file is entered or exited.
    ///
    /// \param Loc Indicates the new location.
-@@ -430,6 +541,13 @@ public:
+@@ -430,6 +544,13 @@ public:
  
    ~PPChainedCallbacks() override;
  
@@ -291,10 +294,23 @@ index 4d229ae61..35fae6c58 100644
    /// defined to, with arguments expanded for function-like macros.  If this is
    /// a token stream, these are the tokens we are returning.  This points into
 diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
-index f3aefdd22..87514f87c 100644
+index f3aefdd22..f278f0ab3 100644
 --- a/clang/lib/Lex/PPDirectives.cpp
 +++ b/clang/lib/Lex/PPDirectives.cpp
-@@ -441,7 +441,7 @@ Optional<unsigned> Preprocessor::getSkippedRangeForExcludedConditionalBlock(
+@@ -90,6 +90,12 @@ SourceRange Preprocessor::DiscardUntilEndOfDirective() {
+     LexUnexpandedToken(Tmp);
+   }
+   Res.setEnd(Tmp.getLocation());
++
++//  // PASTA PATCH:
++//  if (Callbacks) {
++//    Callbacks->Event(Tmp, PPCallbacks::EndDirective, 0);
++//  }
++
+   return Res;
+ }
+ 
+@@ -441,7 +447,7 @@ Optional<unsigned> Preprocessor::getSkippedRangeForExcludedConditionalBlock(
  /// If ElseOk is true, then \#else directives are ok, if not, then we have
  /// already seen one so a \#else directive is a duplicate.  When this returns,
  /// the caller can lex the first valid token.
@@ -303,7 +319,7 @@ index f3aefdd22..87514f87c 100644
                                                  SourceLocation IfTokenLoc,
                                                  bool FoundNonSkipPortion,
                                                  bool FoundElse,
-@@ -455,6 +455,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+@@ -455,6 +461,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
      CurPPLexer->pushConditionalLevel(IfTokenLoc, /*isSkipping*/ false,
                                       FoundNonSkipPortion, FoundElse);
  
@@ -316,7 +332,33 @@ index f3aefdd22..87514f87c 100644
    // Enter raw mode to disable identifier lookup (and thus macro expansion),
    // disabling warnings, etc.
    CurPPLexer->LexingRawMode = true;
-@@ -974,16 +980,16 @@ private:
+@@ -550,6 +562,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+       if (Sub.empty() ||   // "if"
+           Sub == "def" ||   // "ifdef"
+           Sub == "ndef") {  // "ifndef"
++
++        // PASTA PATCH:
++        if (Callbacks) {
++          Callbacks->Event(Tok, PPCallbacks::BeginSkippedArea, 0);
++        }
++
+         // We know the entire #if/#ifdef/#ifndef block will be skipped, don't
+         // bother parsing the condition.
+         DiscardUntilEndOfDirective();
+@@ -558,6 +576,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+                                        /*foundelse*/false);
+       }
+     } else if (Directive[0] == 'e') {
++
++      // PASTA PATCH:
++      if (Callbacks) {
++        Callbacks->Event(Tok, PPCallbacks::BeginSkippedArea, 0);
++      }
++
+       StringRef Sub = Directive.substr(1);
+       if (Sub == "ndif") {  // "endif"
+         PPConditionalInfo CondInfo;
+@@ -974,16 +998,16 @@ private:
  /// #define (to warn about macros that don't match the PCH)
  /// #pragma (to check for pragma hdrstop).
  /// All other directives are completely discarded.
@@ -338,7 +380,7 @@ index f3aefdd22..87514f87c 100644
      }
      if (SkippingUntilPragmaHdrStop && II->getPPKeywordID() == tok::pp_pragma) {
        Lex(Result);
-@@ -1022,10 +1028,36 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1022,10 +1046,36 @@ void Preprocessor::HandleDirective(Token &Result) {
    // Save the '#' token in case we need to return it later.
    Token SavedHash = Result;
  
@@ -375,7 +417,7 @@ index f3aefdd22..87514f87c 100644
    // C99 6.10.3p11: Is this preprocessor directive in macro invocation?  e.g.:
    //   #define A(x) #x
    //   A(abc
-@@ -1059,7 +1091,7 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1059,7 +1109,7 @@ void Preprocessor::HandleDirective(Token &Result) {
    ResetMacroExpansionHelper helper(this);
  
    if (SkippingUntilPCHThroughHeader || SkippingUntilPragmaHdrStop)
@@ -384,7 +426,7 @@ index f3aefdd22..87514f87c 100644
  
    switch (Result.getKind()) {
    case tok::eod:
-@@ -1073,7 +1105,7 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1073,7 +1123,7 @@ void Preprocessor::HandleDirective(Token &Result) {
    case tok::numeric_constant:  // # 7  GNU line marker directive.
      if (getLangOpts().AsmPreprocessor)
        break;  // # 4 is not a preprocessor directive in .S files.
@@ -393,7 +435,7 @@ index f3aefdd22..87514f87c 100644
    default:
      IdentifierInfo *II = Result.getIdentifierInfo();
      if (!II) break; // Not an identifier.
-@@ -1103,24 +1135,25 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1103,24 +1153,25 @@ void Preprocessor::HandleDirective(Token &Result) {
      // C99 6.10.2 - Source File Inclusion.
      case tok::pp_include:
        // Handle #include.
@@ -425,7 +467,7 @@ index f3aefdd22..87514f87c 100644
  
      // C99 6.10.6 - Pragma Directive.
      case tok::pp_pragma:
-@@ -1128,17 +1161,17 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1128,17 +1179,17 @@ void Preprocessor::HandleDirective(Token &Result) {
  
      // GNU Extensions.
      case tok::pp_import:
@@ -448,7 +490,7 @@ index f3aefdd22..87514f87c 100644
      case tok::pp_assert:
        //isExtension = true;  // FIXME: implement #assert
        break;
-@@ -1148,12 +1181,12 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1148,12 +1199,12 @@ void Preprocessor::HandleDirective(Token &Result) {
  
      case tok::pp___public_macro:
        if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
@@ -463,7 +505,7 @@ index f3aefdd22..87514f87c 100644
        break;
      }
      break;
-@@ -1164,6 +1197,11 @@ void Preprocessor::HandleDirective(Token &Result) {
+@@ -1164,6 +1215,11 @@ void Preprocessor::HandleDirective(Token &Result) {
    // various pseudo-ops.  Just return the # token and push back the following
    // token to be lexed next time.
    if (getLangOpts().AsmPreprocessor) {
@@ -475,7 +517,7 @@ index f3aefdd22..87514f87c 100644
      auto Toks = std::make_unique<Token[]>(2);
      // Return the # and the token after it.
      Toks[0] = SavedHash;
-@@ -1251,7 +1289,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
+@@ -1251,7 +1307,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
  ///   # line digit-sequence
  ///   # line digit-sequence "s-char-sequence"
  /// \endverbatim
@@ -484,7 +526,7 @@ index f3aefdd22..87514f87c 100644
    // Read the line # and string argument.  Per C99 6.10.4p5, these tokens are
    // expanded.
    Token DigitTok;
-@@ -1413,7 +1451,8 @@ static bool ReadLineMarkerFlags(bool &IsFileEntry, bool &IsFileExit,
+@@ -1413,7 +1469,8 @@ static bool ReadLineMarkerFlags(bool &IsFileEntry, bool &IsFileExit,
  ///     # 42 "file" ('1' | '2')?
  ///     # 42 "file" ('1' | '2')? '3' '4'?
  ///
@@ -494,7 +536,7 @@ index f3aefdd22..87514f87c 100644
    // Validate the number and convert it to an unsigned.  GNU does not have a
    // line # limit other than it fit in 32-bits.
    unsigned LineNo;
-@@ -1485,8 +1524,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
+@@ -1485,8 +1542,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
  
  /// HandleUserDiagnosticDirective - Handle a #warning or #error directive.
  ///
@@ -505,7 +547,7 @@ index f3aefdd22..87514f87c 100644
    // Read the rest of the line raw.  We do this because we don't want macros
    // to be expanded and we don't require that the tokens be valid preprocessing
    // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
-@@ -1507,7 +1546,8 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
+@@ -1507,7 +1564,8 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
  
  /// HandleIdentSCCSDirective - Handle a #ident/#sccs directive.
  ///
@@ -515,7 +557,7 @@ index f3aefdd22..87514f87c 100644
    // Yes, this directive is an extension.
    Diag(Tok, diag::ext_pp_ident_directive);
  
-@@ -1542,7 +1582,8 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
+@@ -1542,7 +1600,8 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
  }
  
  /// Handle a #public directive.
@@ -525,7 +567,7 @@ index f3aefdd22..87514f87c 100644
    Token MacroNameTok;
    ReadMacroName(MacroNameTok, MU_Undef);
  
-@@ -1569,7 +1610,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
+@@ -1569,7 +1628,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
  }
  
  /// Handle a #private directive.
@@ -534,7 +576,7 @@ index f3aefdd22..87514f87c 100644
    Token MacroNameTok;
    ReadMacroName(MacroNameTok, MU_Undef);
  
-@@ -1783,10 +1824,11 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
+@@ -1783,10 +1842,11 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
  /// routine with functionality shared between \#include, \#include_next and
  /// \#import.  LookupFrom is set when this is a \#include_next directive, it
  /// specifies the file to start searching from.
@@ -547,7 +589,7 @@ index f3aefdd22..87514f87c 100644
    Token FilenameTok;
    if (LexHeaderName(FilenameTok))
      return;
-@@ -2393,7 +2435,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
+@@ -2393,7 +2453,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
  
  /// HandleIncludeNextDirective - Implements \#include_next.
  ///
@@ -556,7 +598,7 @@ index f3aefdd22..87514f87c 100644
                                                Token &IncludeNextTok) {
    Diag(IncludeNextTok, diag::ext_pp_include_next_directive);
  
-@@ -2426,7 +2468,7 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
+@@ -2426,7 +2486,7 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
      ++Lookup;
    }
  
@@ -565,7 +607,7 @@ index f3aefdd22..87514f87c 100644
                                  LookupFromFile);
  }
  
-@@ -2446,21 +2488,21 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
+@@ -2446,21 +2506,21 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
  
  /// HandleImportDirective - Implements \#import.
  ///
@@ -591,7 +633,7 @@ index f3aefdd22..87514f87c 100644
                                                  Token &IncludeMacrosTok) {
    // This directive should only occur in the predefines buffer.  If not, emit an
    // error and reject it.
-@@ -2474,7 +2516,7 @@ void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
+@@ -2474,7 +2534,7 @@ void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
  
    // Treat this as a normal #include for checking purposes.  If this is
    // successful, it will push a new lexer onto the include stack.
@@ -600,7 +642,7 @@ index f3aefdd22..87514f87c 100644
  
    Token TmpTok;
    do {
-@@ -2860,7 +2902,8 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
+@@ -2860,7 +2920,8 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
  /// HandleDefineDirective - Implements \#define.  This consumes the entire macro
  /// line then lets the caller lex the next real token.
  void Preprocessor::HandleDefineDirective(
@@ -610,7 +652,7 @@ index f3aefdd22..87514f87c 100644
    ++NumDefined;
  
    Token MacroNameTok;
-@@ -3014,7 +3057,7 @@ void Preprocessor::HandleDefineDirective(
+@@ -3014,7 +3075,7 @@ void Preprocessor::HandleDefineDirective(
  
  /// HandleUndefDirective - Implements \#undef.
  ///
@@ -619,7 +661,7 @@ index f3aefdd22..87514f87c 100644
    ++NumUndefined;
  
    Token MacroNameTok;
-@@ -3078,7 +3121,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
+@@ -3078,7 +3139,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
    if (MacroNameTok.is(tok::eod)) {
      // Skip code until we get to #endif.  This helps with recovery by not
      // emitting an error when the #endif is reached.
@@ -628,7 +670,7 @@ index f3aefdd22..87514f87c 100644
                                   DirectiveTok.getLocation(),
                                   /*Foundnonskip*/ false, /*FoundElse*/ false);
      return;
-@@ -3133,7 +3176,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
+@@ -3133,7 +3194,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
                                       /*foundelse*/false);
    } else {
      // No, skip the contents of this block.
@@ -637,7 +679,7 @@ index f3aefdd22..87514f87c 100644
                                   DirectiveTok.getLocation(),
                                   /*Foundnonskip*/ false,
                                   /*FoundElse*/ false);
-@@ -3186,7 +3229,7 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
+@@ -3186,7 +3247,7 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
                                     /*foundnonskip*/true, /*foundelse*/false);
    } else {
      // No, skip the contents of this block.
@@ -646,7 +688,7 @@ index f3aefdd22..87514f87c 100644
                                   /*Foundnonskip*/ false,
                                   /*FoundElse*/ false);
    }
-@@ -3254,7 +3297,7 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
+@@ -3254,7 +3315,7 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
    }
  
    // Finally, skip the rest of the contents of this block.
@@ -655,7 +697,7 @@ index f3aefdd22..87514f87c 100644
                                 /*Foundnonskip*/ true,
                                 /*FoundElse*/ true, Result.getLocation());
  }
-@@ -3318,6 +3361,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
+@@ -3318,6 +3379,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
  
    // Finally, skip the rest of the contents of this block.
    SkipExcludedConditionalBlock(
@@ -772,10 +814,69 @@ index f8b0a2c5f..f2d7b3d5a 100644
        MacroExpandingLexersStack.back().first == CurTokenLexer.get())
      removeCachedMacroExpandedTokensOfLastLexer();
 diff --git a/clang/lib/Lex/PPMacroExpansion.cpp b/clang/lib/Lex/PPMacroExpansion.cpp
-index f6c95a8b6..9597676c3 100644
+index f6c95a8b6..957a1d401 100644
 --- a/clang/lib/Lex/PPMacroExpansion.cpp
 +++ b/clang/lib/Lex/PPMacroExpansion.cpp
-@@ -472,6 +472,13 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -59,6 +59,58 @@
+ 
+ using namespace clang;
+ 
++namespace {
++
++// PASTA PATCH: Tell us about the end of macro expansions. We have to add
++// this as a post-lex action, so that we can observe what is actually lexed
++// into `Identifier`.
++struct DeferExpansionEnd {
++  std::function<void(const Token &)> &PostLexAction;
++  PPCallbacks * const Callbacks;
++  Token Identifier;
++  MacroInfo * const MI;
++
++  DeferExpansionEnd(std::function<void(const Token &)> &PostLexAction_,
++                    PPCallbacks *Callbacks_, Token Identifier_, MacroInfo *MI_)
++      : PostLexAction(PostLexAction_),
++        Callbacks(Callbacks_),
++        Identifier(std::move(Identifier_)),
++        MI(MI_) {}
++
++  ~DeferExpansionEnd(void) {
++    if (Callbacks) {
++      PostLexAction = [CB = Callbacks, Ident = std::move(Identifier), Info = MI,
++                       PrevPostLexAction = std::move(PostLexAction)]
++                      (const Token &Tok) {
++        CB->Event(Ident, PPCallbacks::EndMacroExpansion,
++                  reinterpret_cast<uintptr_t>(Info));
++        PrevPostLexAction(Tok);
++      };
++    }
++  }
++};
++
++struct DeferExpansionCancellation {
++  std::function<void(void)> Action;
++  bool DoCancel{true};
++
++  template <typename CB>
++  DeferExpansionCancellation(CB Action_)
++      : Action(std::move(Action_)) {}
++
++  ~DeferExpansionCancellation(void) {
++    if (DoCancel) {
++      Action();
++    }
++  }
++
++  void DisableCancellation(void) {
++    DoCancel = false;
++  }
++};
++
++}  // namespace
++
+ MacroDirective *
+ Preprocessor::getLocalMacroDirectiveHistory(const IdentifierInfo *II) const {
+   if (!II->hadMacroDefinition())
+@@ -472,6 +524,19 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
  
    MacroInfo *MI = M.getMacroInfo();
  
@@ -785,19 +886,26 @@ index f6c95a8b6..9597676c3 100644
 +    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroExpansion,
 +                     reinterpret_cast<uintptr_t>(MI));
 +  }
++  DeferExpansionCancellation CancelExpansion([&, this] (void) {
++    if (Callbacks) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::CancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
++  });
 +
    // If this is a macro expansion in the "#if !defined(x)" line for the file,
    // then the macro could expand to different things in other contexts, we need
    // to disable the optimization in this case.
-@@ -482,6 +489,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -482,6 +547,8 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
      if (Callbacks)
        Callbacks->MacroExpands(Identifier, M, Identifier.getLocation(),
                                /*Args=*/nullptr);
 +
++    CancelExpansion.DisableCancellation();  // PASTA PATCH
      ExpandBuiltinMacro(Identifier);
      return true;
    }
-@@ -503,7 +511,22 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -503,7 +570,22 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
      InMacroArgs = true;
      ArgMacro = &Identifier;
  
@@ -821,7 +929,7 @@ index f6c95a8b6..9597676c3 100644
  
      // Finished parsing args.
      InMacroArgs = false;
-@@ -562,7 +585,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -562,7 +644,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
  
    // If this macro expands to no tokens, don't bother to push it onto the
    // expansion stack, only to take it right back off.
@@ -830,7 +938,7 @@ index f6c95a8b6..9597676c3 100644
      // No need for arg info.
      if (Args) Args->destroy(*this);
  
-@@ -572,7 +595,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -572,7 +654,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
      PropagateLineStartLeadingSpaceInfo(Identifier);
      ++NumFastMacroExpanded;
      return false;
@@ -839,11 +947,12 @@ index f6c95a8b6..9597676c3 100644
               isTrivialSingleTokenExpansion(MI, Identifier.getIdentifierInfo(),
                                             *this)) {
      // Otherwise, if this macro expands into a single trivially-expanded
-@@ -620,6 +643,12 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+@@ -620,6 +702,13 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
      return true;
    }
  
 +  // PASTA PATCH: Switch state to now start expanding.
++  CancelExpansion.DisableCancellation();
 +  if (Callbacks) {
 +    Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
 +                     reinterpret_cast<uintptr_t>(MI));
@@ -852,7 +961,7 @@ index f6c95a8b6..9597676c3 100644
    // Start expanding the macro.
    EnterMacro(Identifier, ExpansionEnd, MI, Args);
    return false;
-@@ -759,14 +788,11 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
+@@ -759,14 +848,11 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
  /// error.
  MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
                                                     MacroInfo *MI,
@@ -868,20 +977,22 @@ index f6c95a8b6..9597676c3 100644
    // Read arguments as unexpanded tokens.  This avoids issues, e.g., where
    // an argument value in a macro could expand to ',' or '(' or ')'.
    LexUnexpandedToken(Tok);
-@@ -778,6 +804,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+@@ -778,6 +864,9 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
    SmallVector<Token, 64> ArgTokens;
    bool ContainsCodeCompletionTok = false;
    bool FoundElidedComma = false;
 +  bool InVariadicSection = false;  // PASTA PATCH
++  bool InArgument = false;  // PASTA PATCH
++  Token ArgStartTok;  // PASTA PATCH
  
    SourceLocation TooManyArgsLoc;
  
-@@ -792,6 +819,20 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+@@ -792,6 +881,21 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
      size_t ArgTokenStart = ArgTokens.size();
      SourceLocation ArgStartLoc = Tok.getLocation();
  
 +    // PASTA PATCH: Visibility into macro expansion.
-+    Token ArgStartTok = Tok;
++    ArgStartTok = Tok;
 +    if (Callbacks) {
 +      if (isVariadic && !NumFixedArgsLeft) {
 +        Callbacks->Event(ArgStartTok, PPCallbacks::BeginVariadicCallArgumentList,
@@ -891,13 +1002,14 @@ index f6c95a8b6..9597676c3 100644
 +      if (NumFixedArgsLeft) {
 +        Callbacks->Event(ArgStartTok, PPCallbacks::BeginMacroCallArgument,
 +                         reinterpret_cast<uintptr_t>(&MacroName));
++        InArgument = true;
 +      }
 +    }
 +
      // C99 6.10.3p11: Keep track of the number of l_parens we have seen.  Note
      // that we already consumed the first one.
      unsigned NumParens = 0;
-@@ -816,9 +857,10 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+@@ -816,9 +920,10 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
          EnterTokenStream(std::move(Toks), 1, true, /*IsReinject*/ false);
          break;
        } else if (Tok.is(tok::r_paren)) {
@@ -909,15 +1021,18 @@ index f6c95a8b6..9597676c3 100644
            if (!ArgTokens.empty() &&
                ArgTokens.back().commaAfterElided()) {
              FoundElidedComma = true;
-@@ -846,6 +888,23 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+@@ -846,6 +951,27 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
              break;
            if (NumFixedArgsLeft > 1)
              break;
 +
 +          // PASTA PATCH: Visibility into variadic macro expansion.
 +          if (Callbacks) {
-+            Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
-+                             reinterpret_cast<uintptr_t>(&Tok));
++            if (InArgument) {
++              Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
++                               reinterpret_cast<uintptr_t>(&Tok));
++              InArgument = false;
++            }
 +            ArgStartTok = Tok;
 +
 +            if (!InVariadicSection) {
@@ -929,28 +1044,47 @@ index f6c95a8b6..9597676c3 100644
 +
 +            Callbacks->Event(ArgStartTok, PPCallbacks::BeginMacroCallArgument,
 +                             reinterpret_cast<uintptr_t>(&MacroName));
++            InArgument = true;
 +          }
          }
        } else if (Tok.is(tok::comment) && !KeepMacroComments) {
          // If this is a comment token in the argument list and we're just in
-@@ -874,6 +933,16 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
-       ArgTokens.push_back(Tok);
-     }
+@@ -895,6 +1021,15 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+                     ? diag::warn_cxx98_compat_empty_fnmacro_arg
+                     : diag::ext_empty_fnmacro_arg);
  
 +    // PASTA PATCH:
 +    if (Callbacks) {
-+      Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
-+                       reinterpret_cast<uintptr_t>(&Tok));
-+      if (InVariadicSection) {
-+        Callbacks->Event(ArgStartTok, PPCallbacks::EndVariadicCallArgumentList,
++      if (InArgument) {
++        InArgument = false;
++        Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
 +                         reinterpret_cast<uintptr_t>(&Tok));
 +      }
 +    }
 +
-     // If this was an empty argument list foo(), don't add this as an empty
-     // argument.
-     if (ArgTokens.empty() && Tok.getKind() == tok::r_paren)
-@@ -1161,6 +1230,17 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
+     // Add a marker EOF token to the end of the token list for this argument.
+     Token EOFTok;
+     EOFTok.startToken();
+@@ -907,6 +1042,18 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+       --NumFixedArgsLeft;
+   }
+ 
++  if (Callbacks) {
++    if (InArgument) {
++      InArgument = false;
++      Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
++                       reinterpret_cast<uintptr_t>(&Tok));
++    }
++    if (InVariadicSection) {
++      Callbacks->Event(ArgStartTok, PPCallbacks::EndVariadicCallArgumentList,
++                       reinterpret_cast<uintptr_t>(&Tok));
++    }
++  }
++
+   // Okay, we either found the r_paren.  Check to see if we parsed too few
+   // arguments.
+   unsigned MinArgsExpected = MI->getNumParams();
+@@ -1161,6 +1308,17 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
                                       IdentifierInfo *II, Preprocessor &PP,
                                       const DirectoryLookup *LookupFrom,
                                       const FileEntry *LookupFromFile) {
@@ -968,7 +1102,7 @@ index f6c95a8b6..9597676c3 100644
    // Save the location of the current token.  If a '(' is later found, use
    // that location.  If not, use the end of this location instead.
    SourceLocation LParenLoc = Tok.getLocation();
-@@ -1180,6 +1260,8 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
+@@ -1180,6 +1338,8 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
        return false;
    } while (Tok.getKind() == tok::comment);
  
@@ -977,7 +1111,7 @@ index f6c95a8b6..9597676c3 100644
    // Ensure we have a '('.
    if (Tok.isNot(tok::l_paren)) {
      // No '(', use end of last token.
-@@ -1190,6 +1272,10 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
+@@ -1190,6 +1350,10 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
      if (Tok.isNot(tok::header_name))
        return false;
    } else {
@@ -988,7 +1122,7 @@ index f6c95a8b6..9597676c3 100644
      // Save '(' location for possible missing ')' message.
      LParenLoc = Tok.getLocation();
      if (PP.LexHeaderName(Tok))
-@@ -1221,6 +1307,16 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
+@@ -1221,6 +1385,16 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
      return false;
    }
  
@@ -1005,7 +1139,7 @@ index f6c95a8b6..9597676c3 100644
    bool isAngled = PP.GetIncludeFilenameSpelling(Tok.getLocation(), Filename);
    // If GetIncludeFilenameSpelling set the start ptr to null, there was an
    // error.
-@@ -1293,9 +1389,27 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+@@ -1293,9 +1467,27 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
                                              llvm::function_ref<
                                                int(Token &Tok,
                                                    bool &HasLexedNextTok)> Op) {
@@ -1033,7 +1167,7 @@ index f6c95a8b6..9597676c3 100644
      PP.Diag(Tok.getLocation(), diag::err_pp_expected_after) << II
                                                              << tok::l_paren;
  
-@@ -1307,6 +1421,22 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+@@ -1307,6 +1499,22 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
      return;
    }
  
@@ -1056,7 +1190,7 @@ index f6c95a8b6..9597676c3 100644
    unsigned ParenDepth = 1;
    SourceLocation LParenLoc = Tok.getLocation();
    llvm::Optional<int> Result;
-@@ -1327,6 +1457,7 @@ already_lexed:
+@@ -1327,6 +1535,7 @@ already_lexed:
          // Don't provide even a dummy value if the eod or eof marker is
          // reached.  Simply provide a diagnostic.
          PP.Diag(Tok.getLocation(), diag::err_unterm_macro_invoc);
@@ -1064,7 +1198,7 @@ index f6c95a8b6..9597676c3 100644
          return;
  
        case tok::comma:
-@@ -1334,6 +1465,13 @@ already_lexed:
+@@ -1334,6 +1543,13 @@ already_lexed:
            PP.Diag(Tok.getLocation(), diag::err_too_many_args_in_macro_invoc);
            SuppressDiagnostic = true;
          }
@@ -1078,7 +1212,7 @@ index f6c95a8b6..9597676c3 100644
          continue;
  
        case tok::l_paren:
-@@ -1363,6 +1501,7 @@ already_lexed:
+@@ -1363,6 +1579,7 @@ already_lexed:
            if (!SuppressDiagnostic)
              PP.Diag(Tok.getLocation(), diag::err_too_few_args_in_macro_invoc);
          }
@@ -1086,7 +1220,7 @@ index f6c95a8b6..9597676c3 100644
          Tok.setKind(tok::numeric_constant);
          return;
  
-@@ -1371,6 +1510,13 @@ already_lexed:
+@@ -1371,6 +1588,13 @@ already_lexed:
          if (Result.hasValue())
            break;
  
@@ -1100,7 +1234,7 @@ index f6c95a8b6..9597676c3 100644
          bool HasLexedNextToken = false;
          Result = Op(Tok, HasLexedNextToken);
          ResultTok = Tok;
-@@ -1393,6 +1539,8 @@ already_lexed:
+@@ -1393,6 +1617,8 @@ already_lexed:
        SuppressDiagnostic = true;
      }
    }
@@ -1109,46 +1243,7 @@ index f6c95a8b6..9597676c3 100644
  }
  
  /// Helper function to return the IdentifierInfo structure of a Token
-@@ -1458,6 +1606,38 @@ static bool isTargetEnvironment(const TargetInfo &TI,
-   return TI.getTriple().getEnvironment() == Env.getEnvironment();
- }
- 
-+// PASTA PATCH: Tell us about the end of macro expansions. We have to add
-+// this as a post-lex action, so that we can observe what is actually lexed
-+// into `Identifier`.
-+struct DeferExpansionEnd {
-+  std::function<void(const Token &)> &PostLexAction;
-+  PPCallbacks * const Callbacks;
-+  Token Identifier;
-+  MacroInfo * const MI;
-+
-+  DeferExpansionEnd(std::function<void(const Token &)> &PostLexAction_,
-+                    PPCallbacks *Callbacks_, Token Identifier_, MacroInfo *MI_)
-+      : PostLexAction(PostLexAction_),
-+        Callbacks(Callbacks_),
-+        Identifier(std::move(Identifier_)),
-+        MI(MI_) {}
-+
-+  ~DeferExpansionEnd(void) {
-+    if (Callbacks) {
-+      auto CB = Callbacks;
-+      auto Ident = std::move(Identifier);
-+      auto Info = MI;
-+      PostLexAction = [CB, Ident, Info,
-+                       PrevPostLexAction = std::move(PostLexAction)]
-+                      (const Token &Tok) {
-+        CB->Event(Ident, PPCallbacks::EndMacroExpansion,
-+                  reinterpret_cast<uintptr_t>(Info));
-+        PrevPostLexAction(Tok);
-+      };
-+    }
-+  }
-+};
-+
- /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
- /// as a builtin macro, handle it and return the next token as 'Tok'.
- void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
-@@ -1483,7 +1663,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1483,7 +1709,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
    bool IsAtStartOfLine = Tok.isAtStartOfLine();
    bool HasLeadingSpace = Tok.hasLeadingSpace();
  
@@ -1171,7 +1266,7 @@ index f6c95a8b6..9597676c3 100644
      // C99 6.10.8: "__LINE__: The presumed line number (within the current
      // source file) of the current source line (an integer constant)".  This can
      // be affected by #line.
-@@ -1506,6 +1701,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1506,6 +1747,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      Tok.setKind(tok::numeric_constant);
    } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__ ||
               II == Ident__FILE_NAME__) {
@@ -1179,7 +1274,7 @@ index f6c95a8b6..9597676c3 100644
      // C99 6.10.8: "__FILE__: The presumed name of the current source file (a
      // character string literal)". This can be affected by #line.
      PresumedLoc PLoc = SourceMgr.getPresumedLoc(Tok.getLocation());
-@@ -1545,6 +1741,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1545,6 +1787,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      }
      Tok.setKind(tok::string_literal);
    } else if (II == Ident__DATE__) {
@@ -1187,7 +1282,7 @@ index f6c95a8b6..9597676c3 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      if (!DATELoc.isValid())
        ComputeDATE_TIME(DATELoc, TIMELoc, *this);
-@@ -1555,6 +1752,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1555,6 +1798,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                                   Tok.getLength()));
      return;
    } else if (II == Ident__TIME__) {
@@ -1195,7 +1290,7 @@ index f6c95a8b6..9597676c3 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      if (!TIMELoc.isValid())
        ComputeDATE_TIME(DATELoc, TIMELoc, *this);
-@@ -1565,6 +1763,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1565,6 +1809,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                                   Tok.getLength()));
      return;
    } else if (II == Ident__INCLUDE_LEVEL__) {
@@ -1203,7 +1298,7 @@ index f6c95a8b6..9597676c3 100644
      // Compute the presumed include depth of this token.  This can be affected
      // by GNU line markers.
      unsigned Depth = 0;
-@@ -1580,6 +1779,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1580,6 +1825,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      OS << Depth;
      Tok.setKind(tok::numeric_constant);
    } else if (II == Ident__TIMESTAMP__) {
@@ -1211,7 +1306,7 @@ index f6c95a8b6..9597676c3 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
      // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-@@ -1604,6 +1804,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1604,6 +1850,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      OS << '"' << StringRef(Result).drop_back() << '"';
      Tok.setKind(tok::string_literal);
    } else if (II == Ident__COUNTER__) {
@@ -1219,7 +1314,7 @@ index f6c95a8b6..9597676c3 100644
      // __COUNTER__ expands to a simple numeric value.
      OS << CounterValue++;
      Tok.setKind(tok::numeric_constant);
-@@ -1785,6 +1986,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1785,6 +2032,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                 (II->getName() == getLangOpts().CurrentModule);
        });
    } else if (II == Ident__MODULE__) {
@@ -1227,7 +1322,7 @@ index f6c95a8b6..9597676c3 100644
      // The current module as an identifier.
      OS << getLangOpts().CurrentModule;
      IdentifierInfo *ModuleII = getIdentifierInfo(getLangOpts().CurrentModule);
-@@ -1793,6 +1995,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1793,6 +2041,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
    } else if (II == Ident__identifier) {
      SourceLocation Loc = Tok.getLocation();
  
@@ -1240,7 +1335,7 @@ index f6c95a8b6..9597676c3 100644
      // We're expecting '__identifier' '(' identifier ')'. Try to recover
      // if the parens are missing.
      LexNonComment(Tok);
-@@ -1806,6 +2014,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1806,6 +2060,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
        return;
      }
  
@@ -1254,7 +1349,7 @@ index f6c95a8b6..9597676c3 100644
      SourceLocation LParenLoc = Tok.getLocation();
      LexNonComment(Tok);
  
-@@ -1834,6 +2049,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1834,6 +2095,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
          << Tok.getKind() << tok::r_paren;
        Diag(LParenLoc, diag::note_matching) << tok::l_paren;
      }
@@ -1271,29 +1366,27 @@ index f6c95a8b6..9597676c3 100644
    } else if (II == Ident__is_target_arch) {
      EvaluateFeatureLikeBuiltinMacro(
 diff --git a/clang/lib/Lex/Pragma.cpp b/clang/lib/Lex/Pragma.cpp
-index eb7e7cbc4..83cf8d37b 100644
+index eb7e7cbc4..5122b2b49 100644
 --- a/clang/lib/Lex/Pragma.cpp
 +++ b/clang/lib/Lex/Pragma.cpp
-@@ -209,10 +209,29 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+@@ -209,10 +209,27 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
    // In Case #2, we check the syntax now, but then put the tokens back into the
    // token stream for later consumption.
  
 +  // PASTA PATCH
-+  // If we're expanding a macro argument, then skip the eager checking done
-+  // for case 2, and let it happen later.
++  // If we're expanding a macro argument, let the checking and subsequent lexing
++  // happen, but tell the listener that we're going to be cancelling this.
 +  Token SavedIdentifier = Tok;
 +  MacroDefinition MD = getMacroDefinition(Tok.getIdentifierInfo());
 +  MacroInfo *MI = MD.getMacroInfo();
-+  if (InMacroArgPreExpansion) {
-+    if (Callbacks) {
-+      Callbacks->Event(SavedIdentifier, PPCallbacks::CancelExpansion,
++  if (Callbacks) {
++    if (InMacroArgPreExpansion) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::PrepareToCancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    } else {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
 +                       reinterpret_cast<uintptr_t>(MI));
 +    }
-+    return;
-+  }
-+  if (Callbacks) {
-+    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
-+                     reinterpret_cast<uintptr_t>(MI));
 +  }
 +
    TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
@@ -1304,13 +1397,13 @@ index eb7e7cbc4..83cf8d37b 100644
  
    // Read the '('.
    Toks.lex();
-@@ -221,6 +240,13 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+@@ -221,6 +238,13 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
      return;
    }
  
 +  // PASTA PATCH
 +  Token LParenTok = Tok;
-+  if (Callbacks) {
++  if (Callbacks && !InMacroArgPreExpansion) {
 +    Callbacks->Event(LParenTok, PPCallbacks::BeginMacroCallArgument,
 +                     reinterpret_cast<uintptr_t>(&SavedIdentifier));
 +  }
@@ -1318,7 +1411,7 @@ index eb7e7cbc4..83cf8d37b 100644
    // Read the '"..."'.
    Toks.lex();
    if (!tok::isStringLiteral(Tok.getKind())) {
-@@ -256,6 +282,32 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+@@ -256,8 +280,43 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
      return;
    }
  
@@ -1326,7 +1419,7 @@ index eb7e7cbc4..83cf8d37b 100644
 +  // if this had been an actual `#pragma` directive.
 +  Token HashTok;
 +  Token PragmaDirectiveTok;
-+  if (Callbacks) {
++  if (Callbacks && !InMacroArgPreExpansion) {
 +    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgument,
 +                     reinterpret_cast<uintptr_t>(&Tok));
 +    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgumentList, 0);
@@ -1335,7 +1428,8 @@ index eb7e7cbc4..83cf8d37b 100644
 +
 +    HashTok.startToken();
 +    HashTok.setKind(tok::hash);
-+    HashTok.setLocation(PragmaLoc);
++    CreateString("#", HashTok, PragmaLoc,
++                 PragmaLoc.getLocWithOffset(1));
 +    HashTok.setLength(1u);
 +    Callbacks->Event(HashTok, PPCallbacks::BeginDirective, 0);
 +
@@ -1350,7 +1444,17 @@ index eb7e7cbc4..83cf8d37b 100644
 +
    // If we're expanding a macro argument, put the tokens back.
    if (InMacroArgPreExpansion) {
++    if (Callbacks) {
++//      Token EOD;
++//      EOD.startToken();
++//      EOD.setKind(tok::eod);
++//      Callbacks->Event(EOD, PPCallbacks::EndNonDirective, 0);
++      Callbacks->Event(SavedIdentifier, PPCallbacks::CancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
      Toks.revert();
+     return;
+   }
 diff --git a/clang/lib/Lex/Preprocessor.cpp b/clang/lib/Lex/Preprocessor.cpp
 index 3c338a2b8..4b3d153de 100644
 --- a/clang/lib/Lex/Preprocessor.cpp
@@ -1440,7 +1544,7 @@ index 3c338a2b8..4b3d153de 100644
  
    if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
 diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
-index e71a65f03..b08397d84 100644
+index e71a65f03..b89e8ac42 100644
 --- a/clang/lib/Lex/TokenLexer.cpp
 +++ b/clang/lib/Lex/TokenLexer.cpp
 @@ -41,6 +41,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
@@ -1452,6 +1556,39 @@ index e71a65f03..b08397d84 100644
    Macro = MI;
    ActualArgs = Actuals;
    CurTokenIdx = 0;
+@@ -80,8 +82,18 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+ 
+   // If this is a function-like macro, expand the arguments and change
+   // Tokens to point to the expanded tokens.
+-  if (Macro->isFunctionLike() && Macro->getNumParams())
++  if (Macro->isFunctionLike() && Macro->getNumParams()) {  // PASTA PATCH
++    auto Callbacks = PP.getPPCallbacks();
++    if (Callbacks) {
++      Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
++    }
+     ExpandFunctionArguments();
++    if (Callbacks) {
++      Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
++    }
++  }  // PASTA PATCH
+ 
+   // Mark the macro as currently disabled, so that it is not recursively
+   // expanded.  The macro must be disabled only after argument pre-expansion of
+@@ -625,6 +637,12 @@ bool TokenLexer::Lex(Token &Tok) {
+     // that it is no longer being expanded.
+     if (Macro) Macro->EnableMacro();
+ 
++//    // PASTA PATCH
++//    if (Macro && PP.Callbacks) {
++//      PP.Callbacks->Event(MacroNameTok, PPCallbacks::EndMacroExpansion,
++//                          reinterpret_cast<uintptr_t>(Macro));
++//    }
++
+     Tok.startToken();
+     Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
+     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
 diff --git a/clang/lib/Parse/ParseTemplate.cpp b/clang/lib/Parse/ParseTemplate.cpp
 index f875e3bf4..a6dfcd05a 100644
 --- a/clang/lib/Parse/ParseTemplate.cpp
@@ -1471,5 +1608,5 @@ index f875e3bf4..a6dfcd05a 100644
    if (CachingTokens) {
      // If the previous cached token is being merged, delete it.
 -- 
-2.37.1
+2.37.3
 

@@ -1,6 +1,7 @@
 {
   "name": "llvm-15",
   "version": "15.0.4",
+  "port-version": 6,
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
