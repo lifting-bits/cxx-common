@@ -38,10 +38,13 @@ jobs:
 
     runs-on: ${{ matrix.os.runner }}
 
-    env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.os.runner }}_${{ matrix.llvm }}_xcode-${{ matrix.os.xcode }}_${{ matrix.target_arch == 'x64' && 'amd64' || matrix.target_arch }}
-
     steps:
+      - name: Set Artifact Name
+        run: |
+          # Need to fix because paths with brackets cause issues
+          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}' | tr '[' '-' | tr -d ']')"
+          echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -148,7 +151,7 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           cd rellic
           mkdir -p build && cd build
@@ -163,14 +166,14 @@ jobs:
           cmake --build . --target install
       - name: 'Rellic test'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           # Test only should run when we're not cross compiling
           cd rellic/build
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
       - name: 'Remill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           cd remill
           mkdir -p build && cd build
@@ -186,7 +189,7 @@ jobs:
           cmake --build . --target test_dependencies
       - name: 'Remill test'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           # Only run test on x64
           # Sometimes fails on a flaky test
@@ -194,7 +197,7 @@ jobs:
           env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
       - name: 'Anvill build'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           cd anvill
           mkdir -p build && cd build
@@ -212,7 +215,7 @@ jobs:
           cmake --build . --target install
       - name: 'Anvil test'
         shell: 'bash'
-        if: ${{ matrix.llvm == 'llvm-14' && matrix.target_arch == 'x64' }}
+        if: ${{ contains('${{ matrix.llvm }}', 'llvm-14') && matrix.target_arch == 'x64' }}
         run: |
           # Only run test on x64
           cd anvill/build
