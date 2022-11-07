@@ -6,11 +6,9 @@ Curated dependencies that are compatible with the [lifting-bits](https://github.
 
 Every [release](https://github.com/lifting-bits/cxx-common/releases), we publish compressed archives of the pre-built dependencies built by [vcpkg](https://github.com/microsoft/vcpkg) with the CMake `Release` build type.
 
-We only officially support and test the libraries built for the OSs that appear in CI, which includes Ubuntu 18.04, 20.04, and Mac OS 11.
+We only officially support and test the libraries built for the OSs that appear in CI. If an OS or architecture is not listed in a release, please open an issue so that we can track potential support.
 
-To use the dependencies, just download the compressed file and decompress it. The resulting directory _does not require_ installation of anything other than a recent version of CMake to use with a project.
-
-Many of the lifting-bits tools have support for using the vcpkg binaries written into their `CMakeLists.txt` files and will tell you how to pass the path.
+To use the dependencies, just download the compressed file and decompress it. The resulting directory _does not require_ installation of anything other than a C++ compiler and recent version of CMake to use with a project.
 
 For example:
 
@@ -32,6 +30,8 @@ Replace `x64-linux-rel` with `x64-osx-rel` if using the macOS pre-built download
 If you aren't running a supported operating system, or you want to have dependencies with a build type other than `Release`, you can build everything from source using the `./build_dependencies.sh` script (pass `--help` to see available options).
 
 By default, the script will install the dependencies listed in [`dependencies.txt`](./dependencies.txt), which doesn't include an LLVM version, so passing an `llvm-14` string as an argument will actually be passed to [`vcpkg install`](https://github.com/microsoft/vcpkg/blob/master/docs/examples/installing-and-using-packages.md#install). Any other strings not matching the script's own options are also passed to the `vcpkg install` command. Furthermore, without specifying any other build script options, vcpkg determine determine the best triplet for your operating system, which means building _both_ `Debug` and `Release` build types (see the [vcpkg triplet docs](https://github.com/microsoft/vcpkg/blob/master/docs/users/triplets.md) for more info).
+
+You can customize the features that a particular package is built with by specifying the feature name between brackets, i.e. `llvm-14[target-all]` (build all target backends), to ensure non-default features are also installed along with all default features. The list of features can be found in the target port's `vcpkg.json` file. Please read the [vcpkg docs](https://github.com/microsoft/vcpkg/blob/master/docs/users/selecting-library-features.md#installing-additional-features) for more information about specifying additional features.
 
 ```bash
 ./build_dependencies.sh llvm-14
