@@ -33,14 +33,8 @@ jobs:
       matrix:
         os:
           - { runner: 'macos-11', xcode: '13.0' }
-        llvm: [
-          'llvm-14',
-          'llvm-15'
-          ]
-        target_arch: [
-          'x64',
-          'arm64'
-          ]
+        llvm: [ 'llvm-14', 'llvm-14[pasta]', 'llvm-15', 'llvm-15[pasta]' ]
+        target_arch: [ 'x64', 'arm64' ]
 
     runs-on: ${{ matrix.os.runner }}
 
