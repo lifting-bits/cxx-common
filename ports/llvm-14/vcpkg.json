@@ -284,6 +284,9 @@
     "parallel-libs": {
       "description": "Include parallel-libs project."
     },
+    "pasta": {
+      "description": "Include patches for PASTA tool."
+    },
     "polly": {
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",
       "dependencies": [
