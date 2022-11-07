@@ -1,10 +1,10 @@
-From 17e57e5e8f7737374e901e30a80f82b6bb5fb346 Mon Sep 17 00:00:00 2001
+From bb3344981a9f46f0e079d8d87030190770451487 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Sun, 6 Nov 2022 17:07:33 -0500
 Subject: [PATCH] PASTA patches for macro tracking
 
 ---
- clang/include/clang/Lex/PPCallbacks.h  | 114 ++++++++++
+ clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
  clang/include/clang/Lex/Preprocessor.h |  46 ++--
  clang/include/clang/Lex/TokenLexer.h   |   5 +-
  clang/lib/Lex/PPDirectives.cpp         | 147 +++++++++----
@@ -15,10 +15,10 @@ Subject: [PATCH] PASTA patches for macro tracking
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
  clang/lib/Lex/TokenLexer.cpp           |  20 +-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 715 insertions(+), 77 deletions(-)
+ 11 files changed, 721 insertions(+), 77 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
-index 045df8711a41..b7749b9713c9 100644
+index 045df8711a41..cba195cff5c6 100644
 --- a/clang/include/clang/Lex/PPCallbacks.h
 +++ b/clang/include/clang/Lex/PPCallbacks.h
 @@ -40,6 +40,120 @@ public:
@@ -27,7 +27,7 @@ index 045df8711a41..b7749b9713c9 100644
  
 +  // PASTA PATCH: Add in an event that lets us get better visibility into the
 +  //              behavior of the preprocessor, as things are happening.
-+#define LLVM_CLANG_HAS_PASTA_EVENTS 20220727L
++#define LLVM_CLANG_HAS_PASTA_EVENTS 20221107L
 +  enum EventKind {
 +    // Tell us just after one of the lexers has lexed a token.
 +    //
@@ -142,6 +142,19 @@ index 045df8711a41..b7749b9713c9 100644
    /// Callback invoked whenever a source file is entered or exited.
    ///
    /// \param Loc Indicates the new location.
+@@ -435,6 +549,12 @@ public:
+ 
+   ~PPChainedCallbacks() override;
+ 
++  // PASTA PATCH
++  void Event(const Token &Tok, EventKind Kind, uintptr_t Data) override {
++    First->Event(Tok, Kind, Data);
++    Second->Event(Tok, Kind, Data);
++  }
++
+   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                    SrcMgr::CharacteristicKind FileType,
+                    FileID PrevFID) override {
 diff --git a/clang/include/clang/Lex/Preprocessor.h b/clang/include/clang/Lex/Preprocessor.h
 index bf39153e3d3c..5952ffa7ecd0 100644
 --- a/clang/include/clang/Lex/Preprocessor.h
