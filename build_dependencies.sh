@@ -15,6 +15,8 @@ function Help
   echo "Usage: ./build_dependencies.sh [--release] [--target-arch ARCH] [--asan] [--upgrade-ports] [--export-dir DIR] [...]"
   echo ""
   echo "Options:"
+  echo "  --verbose"
+  echo "     Print more verbose information from vcpkg during installation"
   echo "  --release"
   echo "     Build only release versions with triplet as detected in"
   echo "     this script"
@@ -50,6 +52,9 @@ while [[ $# -gt 0 ]] ; do
     -h|--help)
       Help
       exit 0
+    ;;
+    --verbose)
+      VCPKG_ARGS+=("--debug")
     ;;
     --upgrade-ports)
       UPGRADE_PORTS="true"
