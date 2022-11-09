@@ -36,7 +36,7 @@ jobs:
           - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
-        llvm: [ 'llvm-14', 'llvm-15' ]
+        llvm: [ 'llvm-14', 'llvm-14[pasta]', 'llvm-15', 'llvm-15[pasta]' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
@@ -45,12 +45,17 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     env:
-      ARTIFACT_NAME: vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}
       VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
 
     name: Do the job on the runner
     runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
+      - name: Set Artifact Name
+        run: |
+          # Need to fix because paths with brackets cause issues
+          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}' | tr '[' '-' | tr -d ']')"
+          echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -163,7 +168,7 @@ jobs:
           mkdir -p "${INSTALL_DIR}"
 
       - name: 'Rellic build'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
         run: |
           cd rellic
@@ -171,7 +176,7 @@ jobs:
           scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
 
       - name: 'Remill build'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
         run: |
           cd remill
@@ -184,7 +189,7 @@ jobs:
           popd
 
       - name: 'Anvill build'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
         run: |
           cd anvill

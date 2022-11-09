@@ -1,6 +1,7 @@
 {
   "name": "llvm-15",
   "version": "15.0.4",
+  "port-version": 1,
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
@@ -293,6 +294,9 @@
           ]
         }
       ]
+    },
+    "pasta": {
+      "description": "Include patches for PASTA tool."
     },
     "polly": {
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",

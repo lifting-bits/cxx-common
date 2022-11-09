@@ -1,7 +1,7 @@
 {
   "name": "llvm-14",
   "version": "14.0.6",
-  "port-version": 1,
+  "port-version": 2,
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "supports": "!uwp & !(arm & windows)",
@@ -283,6 +283,9 @@
     },
     "parallel-libs": {
       "description": "Include parallel-libs project."
+    },
+    "pasta": {
+      "description": "Include patches for PASTA tool."
     },
     "polly": {
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",

@@ -20,9 +20,16 @@ vcpkg_from_github(
         0021-fix-find_dependency.patch
         0023-clang-sys-include-dir-path.patch
         0024-remove-elf_relocation-checks.patch
-        # 0025-PASTA-patches.patch
         0026-fix-prefix-path-calc.patch
 )
+
+if("pasta" IN_LIST FEATURES)
+    z_vcpkg_apply_patches(
+        SOURCE_PATH "${SOURCE_PATH}"
+        PATCHES
+            0025-PASTA-patches.patch
+    )
+endif()
 
 string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
 list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
