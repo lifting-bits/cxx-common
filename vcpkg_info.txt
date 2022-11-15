@@ -1,2 +1,2 @@
 https://github.com/microsoft/vcpkg.git
-2022.10.19
+2022.11.14
