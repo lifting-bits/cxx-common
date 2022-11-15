@@ -18,8 +18,8 @@
   "default-features": [
     "clang",
     "compiler-rt",
-    "default-options",
     "cxx-common-targets",
+    "default-options",
     "mlir",
     "tools",
     "utils"
@@ -56,6 +56,23 @@
     "compiler-rt": {
       "description": "Include compiler's runtime libraries."
     },
+    "cxx-common-targets": {
+      "description": "Build with cxx-common target set",
+      "dependencies": [
+        {
+          "name": "llvm-14",
+          "default-features": false,
+          "features": [
+            "target-aarch64",
+            "target-arm",
+            "target-nvptx",
+            "target-sparc",
+            "target-webassembly",
+            "target-x86"
+          ]
+        }
+      ]
+    },
     "default-options": {
       "description": "Build with default options.",
       "dependencies": [
@@ -70,23 +87,6 @@
             "enable-threads",
             "enable-z3",
             "enable-zlib"
-          ]
-        }
-      ]
-    },
-    "cxx-common-targets": {
-      "description": "Build with cxx-common target set",
-      "dependencies": [
-        {
-          "name": "llvm-14",
-          "default-features": false,
-          "features": [
-            "target-aarch64",
-            "target-arm",
-            "target-nvptx",
-            "target-sparc",
-            "target-webassembly",
-            "target-x86"
           ]
         }
       ]
@@ -179,23 +179,23 @@
     "enable-threads": {
       "description": "Use threads if available."
     },
-    "enable-zlib": {
-      "description": "Build with ZLib.",
-      "dependencies": [
-        "zlib"
-      ]
-    },
     "enable-z3": {
       "description": "Compile with Z3 SMT solver support for Clang static analyzer.",
       "dependencies": [
-        "z3",
         {
           "name": "llvm-14",
           "default-features": false,
           "features": [
             "clang"
           ]
-        }
+        },
+        "z3"
+      ]
+    },
+    "enable-zlib": {
+      "description": "Build with ZLib.",
+      "dependencies": [
+        "zlib"
       ]
     },
     "flang": {
@@ -290,7 +290,6 @@
     "polly": {
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",
       "dependencies": [
-        "target-ve",
         {
           "name": "llvm-14",
           "default-features": false,
@@ -298,7 +297,8 @@
             "tools",
             "utils"
           ]
-        }
+        },
+        "target-ve"
       ]
     },
     "pstl": {
