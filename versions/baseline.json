@@ -1,3 +1,16 @@
 {
-  "default": {}
+  "default": {
+    "llvm-14": {
+      "baseline": "14.0.6",
+      "port-version": 2
+    },
+    "llvm-15": {
+      "baseline": "15.0.4",
+      "port-version": 2
+    },
+    "xed": {
+      "baseline": "2022-04-17",
+      "port-version": 0
+    }
+  }
 }
