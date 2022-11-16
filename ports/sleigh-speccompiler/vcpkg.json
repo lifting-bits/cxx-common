@@ -1,0 +1,11 @@
+{
+  "name": "sleigh-speccompiler",
+  "version": "10.2.1",
+  "description": "Unofficial Ghidra Sleigh specification compiler",
+  "homepage": "https://github.com/lifting-bits/sleigh",
+  "supports": "native",
+  "dependencies": [
+    "vcpkg-cmake",
+    "vcpkg-cmake-config"
+  ]
+}
