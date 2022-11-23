@@ -1,4 +1,4 @@
-From acd4d5b98e11f32059c63e3fa3bdd1690f9a36c3 Mon Sep 17 00:00:00 2001
+From 13fbfed4b79540f276ca8cb63ac8c135add229b8 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -13,9 +13,9 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/PPMacroExpansion.cpp     | 285 ++++++++++++++++++++++++-
  clang/lib/Lex/Pragma.cpp               |  59 +++++
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
- clang/lib/Lex/TokenLexer.cpp           |  36 +++-
+ clang/lib/Lex/TokenLexer.cpp           |  30 ++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 737 insertions(+), 77 deletions(-)
+ 11 files changed, 731 insertions(+), 77 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -1554,7 +1554,7 @@ index 5310db3c8..31f31736a 100644
  
    if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
 diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
-index efda6d004..a4a33b091 100644
+index efda6d004..94c866510 100644
 --- a/clang/lib/Lex/TokenLexer.cpp
 +++ b/clang/lib/Lex/TokenLexer.cpp
 @@ -41,6 +41,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
@@ -1566,7 +1566,7 @@ index efda6d004..a4a33b091 100644
    Macro = MI;
    ActualArgs = Actuals;
    CurTokenIdx = 0;
-@@ -80,8 +82,34 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+@@ -80,8 +82,28 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
  
    // If this is a function-like macro, expand the arguments and change
    // Tokens to point to the expanded tokens.
@@ -1575,34 +1575,28 @@ index efda6d004..a4a33b091 100644
 +    auto Callbacks = PP.getPPCallbacks();
 +    if (ActualArgs && Callbacks) {
 +      unsigned NumArgs = ActualArgs->getNumMacroArguments();
-+      bool PreExpanded = false;
-+      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
-+        const Token *ArgTok = ActualArgs->getUnexpArgument(ArgNo);
-+        if (!ActualArgs->ArgNeedsPreexpansion(ArgTok, PP)) {
-+          continue;
-+        }
++      
++      // In theory we only need to pre-expand what needs pre-expansion. In
++      // practice, Clang goes and sometimes requests pre-expansion for the
++      // sake of figuring out __VA_OPT__ stuff, via the
++      // `MacroArgs::invokedWithVariadicArgument` function.
++      Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
 +
-+        // Only pre-expand the argument if it could possibly need it. This
-+        // avoids some work in common cases. We also want to ensure that we do
-+        // pre-expansion in the order in which the arguments appear.
-+        if (!PreExpanded) {
-+          PreExpanded = true;
-+          Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
-+                           reinterpret_cast<uintptr_t>(Macro));
-+        }
++      // Pre expand each argument, which internally caches the results.
++      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
 +        (void) ActualArgs->getPreExpArgument(ArgNo, PP);
 +      }
-+      if (PreExpanded) {
-+        Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
-+                         reinterpret_cast<uintptr_t>(Macro));
-+      }
++
++      Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
 +    }
      ExpandFunctionArguments();
 +  }  // PASTA PATCH
  
    // Mark the macro as currently disabled, so that it is not recursively
    // expanded.  The macro must be disabled only after argument pre-expansion of
-@@ -625,6 +653,12 @@ bool TokenLexer::Lex(Token &Tok) {
+@@ -625,6 +647,12 @@ bool TokenLexer::Lex(Token &Tok) {
      // that it is no longer being expanded.
      if (Macro) Macro->EnableMacro();
  
