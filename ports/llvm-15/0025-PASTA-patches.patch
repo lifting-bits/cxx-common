@@ -1,4 +1,4 @@
-From 82bce4a1d74eb1d42ef9d2db9e226a886d158f83 Mon Sep 17 00:00:00 2001
+From 6b7b31df2a614557d3c86fed4779535f3f782f19 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -6,7 +6,7 @@ Subject: [PATCH] Patches for PASTA
 ---
  clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
  clang/include/clang/Lex/Preprocessor.h |  46 ++--
- clang/include/clang/Lex/TokenLexer.h   |   5 +-
+ clang/include/clang/Lex/TokenLexer.h   |   7 +-
  clang/lib/Lex/PPDirectives.cpp         | 147 +++++++++----
  clang/lib/Lex/PPExpressions.cpp        |  28 +++
  clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
@@ -15,7 +15,7 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
  clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 739 insertions(+), 78 deletions(-)
+ 11 files changed, 740 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -269,7 +269,7 @@ index 7c5df0506..643f7216f 100644
    // Conditional Inclusion.
    void HandleIfdefDirective(Token &Result, const Token &HashToken,
 diff --git a/clang/include/clang/Lex/TokenLexer.h b/clang/include/clang/Lex/TokenLexer.h
-index 4d229ae61..35fae6c58 100644
+index 4d229ae61..923107b84 100644
 --- a/clang/include/clang/Lex/TokenLexer.h
 +++ b/clang/include/clang/Lex/TokenLexer.h
 @@ -13,7 +13,7 @@
@@ -291,6 +291,15 @@ index 4d229ae61..35fae6c58 100644
    /// This is the pointer to an array of tokens that the macro is
    /// defined to, with arguments expanded for function-like macros.  If this is
    /// a token stream, these are the tokens we are returning.  This points into
+@@ -98,7 +101,7 @@ class TokenLexer {
+ 
+   /// When true, the produced tokens have Token::IsReinjected flag set.
+   /// See the flag documentation for details.
+-  bool IsReinject : 1;
++  bool IsReinject;  // PASTA PATCH
+ 
+ public:
+   /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
 index 9a8fd4391..b20144c12 100644
 --- a/clang/lib/Lex/PPDirectives.cpp
