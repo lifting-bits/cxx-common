@@ -1,4 +1,4 @@
-From acd4d5b98e11f32059c63e3fa3bdd1690f9a36c3 Mon Sep 17 00:00:00 2001
+From 6b7b31df2a614557d3c86fed4779535f3f782f19 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -6,16 +6,16 @@ Subject: [PATCH] Patches for PASTA
 ---
  clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
  clang/include/clang/Lex/Preprocessor.h |  46 ++--
- clang/include/clang/Lex/TokenLexer.h   |   5 +-
+ clang/include/clang/Lex/TokenLexer.h   |   7 +-
  clang/lib/Lex/PPDirectives.cpp         | 147 +++++++++----
  clang/lib/Lex/PPExpressions.cpp        |  28 +++
  clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
  clang/lib/Lex/PPMacroExpansion.cpp     | 285 ++++++++++++++++++++++++-
  clang/lib/Lex/Pragma.cpp               |  59 +++++
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
- clang/lib/Lex/TokenLexer.cpp           |  36 +++-
+ clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 737 insertions(+), 77 deletions(-)
+ 11 files changed, 740 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -269,7 +269,7 @@ index 7c5df0506..643f7216f 100644
    // Conditional Inclusion.
    void HandleIfdefDirective(Token &Result, const Token &HashToken,
 diff --git a/clang/include/clang/Lex/TokenLexer.h b/clang/include/clang/Lex/TokenLexer.h
-index 4d229ae61..35fae6c58 100644
+index 4d229ae61..923107b84 100644
 --- a/clang/include/clang/Lex/TokenLexer.h
 +++ b/clang/include/clang/Lex/TokenLexer.h
 @@ -13,7 +13,7 @@
@@ -291,6 +291,15 @@ index 4d229ae61..35fae6c58 100644
    /// This is the pointer to an array of tokens that the macro is
    /// defined to, with arguments expanded for function-like macros.  If this is
    /// a token stream, these are the tokens we are returning.  This points into
+@@ -98,7 +101,7 @@ class TokenLexer {
+ 
+   /// When true, the produced tokens have Token::IsReinjected flag set.
+   /// See the flag documentation for details.
+-  bool IsReinject : 1;
++  bool IsReinject;  // PASTA PATCH
+ 
+ public:
+   /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
 index 9a8fd4391..b20144c12 100644
 --- a/clang/lib/Lex/PPDirectives.cpp
@@ -1554,7 +1563,7 @@ index 5310db3c8..31f31736a 100644
  
    if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
 diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
-index efda6d004..a4a33b091 100644
+index efda6d004..4e8c9b78d 100644
 --- a/clang/lib/Lex/TokenLexer.cpp
 +++ b/clang/lib/Lex/TokenLexer.cpp
 @@ -41,6 +41,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
@@ -1566,7 +1575,7 @@ index efda6d004..a4a33b091 100644
    Macro = MI;
    ActualArgs = Actuals;
    CurTokenIdx = 0;
-@@ -80,8 +82,34 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+@@ -80,8 +82,33 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
  
    // If this is a function-like macro, expand the arguments and change
    // Tokens to point to the expanded tokens.
@@ -1575,34 +1584,51 @@ index efda6d004..a4a33b091 100644
 +    auto Callbacks = PP.getPPCallbacks();
 +    if (ActualArgs && Callbacks) {
 +      unsigned NumArgs = ActualArgs->getNumMacroArguments();
-+      bool PreExpanded = false;
-+      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
-+        const Token *ArgTok = ActualArgs->getUnexpArgument(ArgNo);
-+        if (!ActualArgs->ArgNeedsPreexpansion(ArgTok, PP)) {
-+          continue;
-+        }
++      if (NumArgs && Macro->isVariadic() && ActualArgs->isVarargsElidedUse()) {
++        NumArgs -= 1u;  // Last argument is `VariadicArgIndex`.
++      }
++      
++      // In theory we only need to pre-expand what needs pre-expansion. In
++      // practice, Clang goes and sometimes requests pre-expansion for the
++      // sake of figuring out __VA_OPT__ stuff, via the
++      // `MacroArgs::invokedWithVariadicArgument` function.
++      Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
 +
-+        // Only pre-expand the argument if it could possibly need it. This
-+        // avoids some work in common cases. We also want to ensure that we do
-+        // pre-expansion in the order in which the arguments appear.
-+        if (!PreExpanded) {
-+          PreExpanded = true;
-+          Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
-+                           reinterpret_cast<uintptr_t>(Macro));
-+        }
++      // Pre expand each argument, which internally caches the results.
++      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
++        Callbacks->Event(MacroNameTok, PPCallbacks::BeginMacroCallArgument, 0);
 +        (void) ActualArgs->getPreExpArgument(ArgNo, PP);
++        Callbacks->Event(MacroNameTok, PPCallbacks::EndMacroCallArgument, 0);
 +      }
-+      if (PreExpanded) {
-+        Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
-+                         reinterpret_cast<uintptr_t>(Macro));
-+      }
++
++      Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
 +    }
      ExpandFunctionArguments();
 +  }  // PASTA PATCH
  
    // Mark the macro as currently disabled, so that it is not recursively
    // expanded.  The macro must be disabled only after argument pre-expansion of
-@@ -625,6 +653,12 @@ bool TokenLexer::Lex(Token &Tok) {
+@@ -251,6 +278,8 @@ void TokenLexer::ExpandFunctionArguments() {
+ 
+   VAOptExpansionContext VCtx(PP);
+ 
++  auto Callbacks = PP.getPPCallbacks();  // PASTA PATCH
++
+   for (unsigned I = 0, E = NumTokens; I != E; ++I) {
+     const Token &CurTok = Tokens[I];
+     // We don't want a space for the next token after a paste
+@@ -451,7 +480,7 @@ void TokenLexer::ExpandFunctionArguments() {
+       // Only preexpand the argument if it could possibly need it.  This
+       // avoids some work in common cases.
+       const Token *ArgTok = ActualArgs->getUnexpArgument(ArgNo);
+-      if (ActualArgs->ArgNeedsPreexpansion(ArgTok, PP))
++      if (Callbacks || ActualArgs->ArgNeedsPreexpansion(ArgTok, PP))  // PASTA PATCH
+         ResultArgToks = &ActualArgs->getPreExpArgument(ArgNo, PP)[0];
+       else
+         ResultArgToks = ArgTok;  // Use non-preexpanded tokens.
+@@ -625,6 +654,12 @@ bool TokenLexer::Lex(Token &Tok) {
      // that it is no longer being expanded.
      if (Macro) Macro->EnableMacro();
  
