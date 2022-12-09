@@ -1,21 +1,21 @@
-From ea53234d5061cfc725c9b21798ed39ce09ac3e8e Mon Sep 17 00:00:00 2001
+From c18338dd444d7252e22735d3ee6c50c2320a7f17 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
 
 ---
- clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++
- clang/include/clang/Lex/Preprocessor.h |  46 ++--
+ clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
+ clang/include/clang/Lex/Preprocessor.h |  46 ++---
  clang/include/clang/Lex/TokenLexer.h   |   7 +-
- clang/lib/Lex/PPDirectives.cpp         | 147 +++++++----
+ clang/lib/Lex/PPDirectives.cpp         | 147 ++++++++++----
  clang/lib/Lex/PPExpressions.cpp        |  28 +++
- clang/lib/Lex/PPLexerChange.cpp        |  38 +++
- clang/lib/Lex/PPMacroExpansion.cpp     | 323 ++++++++++++++++++++++++-
- clang/lib/Lex/Pragma.cpp               |  59 +++++
+ clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
+ clang/lib/Lex/PPMacroExpansion.cpp     | 267 ++++++++++++++++++++++++-
+ clang/lib/Lex/Pragma.cpp               |  59 ++++++
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
- clang/lib/Lex/TokenLexer.cpp           |  39 ++-
+ clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 772 insertions(+), 85 deletions(-)
+ 11 files changed, 722 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -825,7 +825,7 @@ index 36d3aa59b..19697799e 100644
        MacroExpandingLexersStack.back().first == CurTokenLexer.get())
      removeCachedMacroExpandedTokensOfLastLexer();
 diff --git a/clang/lib/Lex/PPMacroExpansion.cpp b/clang/lib/Lex/PPMacroExpansion.cpp
-index c56f41c44..14a91d86b 100644
+index c56f41c44..5f61b2476 100644
 --- a/clang/lib/Lex/PPMacroExpansion.cpp
 +++ b/clang/lib/Lex/PPMacroExpansion.cpp
 @@ -60,6 +60,58 @@
@@ -1147,11 +1147,10 @@ index c56f41c44..14a91d86b 100644
    bool isAngled = PP.GetIncludeFilenameSpelling(Tok.getLocation(), Filename);
    // If GetIncludeFilenameSpelling set the start ptr to null, there was an
    // error.
-@@ -1270,6 +1446,14 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+@@ -1270,6 +1446,13 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
                                              llvm::function_ref<
                                                int(Token &Tok,
                                                    bool &HasLexedNextTok)> Op) {
-+
 +  // PASTA PATCH: Visibility into macro expansion.
 +  PPCallbacks *Callbacks = PP.getPPCallbacks();
 +  Token SavedIdentifier = Tok;
@@ -1162,98 +1161,55 @@ index c56f41c44..14a91d86b 100644
    // Parse the initial '('.
    PP.LexUnexpandedToken(Tok);
    if (Tok.isNot(tok::l_paren)) {
-@@ -1288,14 +1472,84 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+@@ -1288,6 +1471,15 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
    SourceLocation LParenLoc = Tok.getLocation();
    llvm::Optional<int> Result;
  
-+  // PASTA PATCH: Re-create the loop that collects the function-like macro use,
-+  //              do the lexing and argument splitting ourselves, then go and
-+  //              run the original loop over our pre-lexed loop.
-+  Token ArgSepTok = Tok;
-+  SmallVector<clang::Token, 6> LexedToks;
-+  bool DoneLexingCall = false;
-+  bool LastWasSep = true;
++  // PASTA PATCH
++  clang::Token ArgSepTok = Tok;
 +  if (Callbacks) {
 +    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
 +                     reinterpret_cast<uintptr_t>(MI));
-+  }
-+  while (!DoneLexingCall) {
-+
-+    // Split before the first argument, or the Nth argument.
-+    if (LastWasSep) {
-+      if (Callbacks) {
-+        Callbacks->Event(ArgSepTok, PPCallbacks::BeginMacroCallArgument,
-+                         reinterpret_cast<uintptr_t>(&SavedIdentifier));
-+      }
-+      LastWasSep = false;
-+    }
-+
-+    // Parse next token.
-+    auto &SubTok = LexedToks.emplace_back();
-+    if (ExpandArgs) {
-+      PP.Lex(SubTok);
-+    } else {
-+      PP.LexUnexpandedToken(SubTok);
-+    }
-+
-+    switch (SubTok.getKind()) {
-+      case tok::eof:
-+      case tok::eod:
-+        // Don't provide even a dummy value if the eod or eof marker is
-+        // reached.  Simply provide a diagnostic.
-+        PP.Diag(SubTok.getLocation(), diag::err_unterm_macro_invoc);
-+        return;
-+
-+      case tok::comma:
-+        if (1 == ParenDepth) {
-+          ArgSepTok = SubTok;
-+          if (Callbacks) {
-+            Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
-+                             reinterpret_cast<uintptr_t>(&ArgSepTok));
-+            LastWasSep = true;
-+          }
-+        }
-+        continue;
-+
-+      case tok::l_paren:
-+        ++ParenDepth;
-+        continue;
-+
-+      case tok::r_paren:
-+        if (!--ParenDepth) {
-+          DoneLexingCall = true;
-+          ArgSepTok = Tok;
-+        }
-+        continue;
-+
-+      default:
-+        continue;
-+    }
++    Callbacks->Event(ArgSepTok, PPCallbacks::BeginMacroCallArgument,
++                     reinterpret_cast<uintptr_t>(&SavedIdentifier));
 +  }
 +
-+  if (Callbacks) {
-+    Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
-+                     reinterpret_cast<uintptr_t>(&ArgSepTok));
-+    Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgumentList, 0);
-+    Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
-+                     reinterpret_cast<uintptr_t>(MI));
-+  }
-+
-+  ParenDepth = 1;
    Token ResultTok;
    bool SuppressDiagnostic = false;
--  while (true) {
--    // Parse next token.
--    if (ExpandArgs)
--      PP.Lex(Tok);
--    else
--      PP.LexUnexpandedToken(Tok);
-+  for (const auto &LexedTok : LexedToks) {  // PASTA PATCH
-+    Tok = LexedTok;  // PASTA PATCH
+   while (true) {
+@@ -1307,6 +1499,15 @@ already_lexed:
+         return;
  
- already_lexed:
-     switch (Tok.getKind()) {
-@@ -1493,7 +1747,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+       case tok::comma:
++        // PASTA PATCH
++        if (ParenDepth == 1 && Callbacks) {
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&Tok));
++          ArgSepTok = Tok;
++          Callbacks->Event(ArgSepTok, PPCallbacks::BeginMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&SavedIdentifier));
++        }
++
+         if (!SuppressDiagnostic) {
+           PP.Diag(Tok.getLocation(), diag::err_too_many_args_in_macro_invoc);
+           SuppressDiagnostic = true;
+@@ -1327,6 +1528,15 @@ already_lexed:
+         if (--ParenDepth > 0)
+           continue;
+ 
++        // PASTA PATCH
++        if (Callbacks) {
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&Tok));
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgumentList, 0);
++          Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                           reinterpret_cast<uintptr_t>(MI));
++        }
++
+         // The last ')' has been reached; return the value if one found or
+         // a diagnostic and a dummy value.
+         if (Result) {
+@@ -1493,7 +1703,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
    bool IsAtStartOfLine = Tok.isAtStartOfLine();
    bool HasLeadingSpace = Tok.hasLeadingSpace();
  
@@ -1276,7 +1232,7 @@ index c56f41c44..14a91d86b 100644
      // C99 6.10.8: "__LINE__: The presumed line number (within the current
      // source file) of the current source line (an integer constant)".  This can
      // be affected by #line.
-@@ -1516,6 +1785,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1516,6 +1741,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      Tok.setKind(tok::numeric_constant);
    } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__ ||
               II == Ident__FILE_NAME__) {
@@ -1284,7 +1240,7 @@ index c56f41c44..14a91d86b 100644
      // C99 6.10.8: "__FILE__: The presumed name of the current source file (a
      // character string literal)". This can be affected by #line.
      PresumedLoc PLoc = SourceMgr.getPresumedLoc(Tok.getLocation());
-@@ -1555,6 +1825,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1555,6 +1781,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      }
      Tok.setKind(tok::string_literal);
    } else if (II == Ident__DATE__) {
@@ -1292,7 +1248,7 @@ index c56f41c44..14a91d86b 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      if (!DATELoc.isValid())
        ComputeDATE_TIME(DATELoc, TIMELoc, *this);
-@@ -1565,6 +1836,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1565,6 +1792,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                                   Tok.getLength()));
      return;
    } else if (II == Ident__TIME__) {
@@ -1300,7 +1256,7 @@ index c56f41c44..14a91d86b 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      if (!TIMELoc.isValid())
        ComputeDATE_TIME(DATELoc, TIMELoc, *this);
-@@ -1575,6 +1847,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1575,6 +1803,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                                   Tok.getLength()));
      return;
    } else if (II == Ident__INCLUDE_LEVEL__) {
@@ -1308,7 +1264,7 @@ index c56f41c44..14a91d86b 100644
      // Compute the presumed include depth of this token.  This can be affected
      // by GNU line markers.
      unsigned Depth = 0;
-@@ -1590,6 +1863,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1590,6 +1819,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      OS << Depth;
      Tok.setKind(tok::numeric_constant);
    } else if (II == Ident__TIMESTAMP__) {
@@ -1316,7 +1272,7 @@ index c56f41c44..14a91d86b 100644
      Diag(Tok.getLocation(), diag::warn_pp_date_time);
      // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
      // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-@@ -1614,6 +1888,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1614,6 +1844,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
      OS << '"' << StringRef(Result).drop_back() << '"';
      Tok.setKind(tok::string_literal);
    } else if (II == Ident__FLT_EVAL_METHOD__) {
@@ -1324,7 +1280,7 @@ index c56f41c44..14a91d86b 100644
      // __FLT_EVAL_METHOD__ is set to the default value.
      if (getTUFPEvalMethod() ==
          LangOptions::FPEvalMethodKind::FEM_Indeterminable) {
-@@ -1646,6 +1921,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1646,6 +1877,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
        }
      }
    } else if (II == Ident__COUNTER__) {
@@ -1332,7 +1288,7 @@ index c56f41c44..14a91d86b 100644
      // __COUNTER__ expands to a simple numeric value.
      OS << CounterValue++;
      Tok.setKind(tok::numeric_constant);
-@@ -1834,6 +2110,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1834,6 +2066,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                 (II->getName() == getLangOpts().CurrentModule);
        });
    } else if (II == Ident__MODULE__) {
@@ -1340,7 +1296,7 @@ index c56f41c44..14a91d86b 100644
      // The current module as an identifier.
      OS << getLangOpts().CurrentModule;
      IdentifierInfo *ModuleII = getIdentifierInfo(getLangOpts().CurrentModule);
-@@ -1842,6 +2119,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1842,6 +2075,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
    } else if (II == Ident__identifier) {
      SourceLocation Loc = Tok.getLocation();
  
@@ -1353,7 +1309,7 @@ index c56f41c44..14a91d86b 100644
      // We're expecting '__identifier' '(' identifier ')'. Try to recover
      // if the parens are missing.
      LexNonComment(Tok);
-@@ -1855,6 +2138,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1855,6 +2094,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
        return;
      }
  
@@ -1367,7 +1323,7 @@ index c56f41c44..14a91d86b 100644
      SourceLocation LParenLoc = Tok.getLocation();
      LexNonComment(Tok);
  
-@@ -1883,6 +2173,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+@@ -1883,6 +2129,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
          << Tok.getKind() << tok::r_paren;
        Diag(LParenLoc, diag::note_matching) << tok::l_paren;
      }
