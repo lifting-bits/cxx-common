@@ -1,0 +1,26 @@
+diff --git a/compiler-rt/cmake/Modules/AddCompilerRT.cmake b/compiler-rt/cmake/Modules/AddCompilerRT.cmake
+index 00bb892be595..8239ab888e52 100644
+--- a/compiler-rt/cmake/Modules/AddCompilerRT.cmake
++++ b/compiler-rt/cmake/Modules/AddCompilerRT.cmake
+@@ -651,6 +651,21 @@ macro(add_custom_libcxx name prefix)
+     PYTHON_EXECUTABLE
+     Python3_EXECUTABLE
+     Python2_EXECUTABLE
++    CMAKE_TOOLCHAIN
++    VCPKG_TARGET_TRIPLET
++    VCPKG_HOST_TRIPLET
++    VCPKG_SET_CHARSET_FLAG
++    VCPKG_PLATFORM_TOOLSET
++    VCPKG_APPLOCAL_DEPS
++    _VCPKG_ROOT_DIR
++    _VCPKG_INSTALLED_DIR
++    VCPKG_MANIFEST_INSTALL
++    VCPKG_TARGET_ARCHITECTURE
++    CMAKE_EXPORT_NO_PACKAGE_REGISTRY
++    CMAKE_FIND_PACKAGE_NO_SYSTEM_PACKAGE_REGISTRY
++    CMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY
++    CMAKE_VERBOSE_MAKEFILE
++    CMAKE_OSX_ARCHITECTURES
+     CMAKE_SYSTEM_NAME)
+   foreach(variable ${PASSTHROUGH_VARIABLES})
+     get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
