@@ -19,7 +19,6 @@ vcpkg_from_github(
         0020-fix-FindZ3.cmake.patch
         0021-fix-find_dependency.patch
         0023-clang-sys-include-dir-path.patch
-        0024-remove-elf_relocation-checks.patch
         0026-fix-prefix-path-calc.patch
 )
 
