@@ -14,4 +14,4 @@ re2
 zstd
 lz4
 doctest
-sqlite3
+sqlite3[fts5]
