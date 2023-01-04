@@ -1,0 +1,180 @@
+diff --git a/clang/include/clang/Basic/LangOptions.def b/clang/include/clang/Basic/LangOptions.def
+index ad366821f..86c99507d 100644
+--- a/clang/include/clang/Basic/LangOptions.def
++++ b/clang/include/clang/Basic/LangOptions.def
+@@ -309,6 +309,8 @@ LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
+ BENIGN_LANGOPT(CLNoSignedZero , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
+ COMPATIBLE_LANGOPT(CLUnsafeMath , 1, 0, "Unsafe Floating Point Math")
+ COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
++
++LANGOPT(UnknownAttrAnnotate, 1, 0, "Unknown attributes are treated as annotation or annotation type attributes during semantic analysis")
+ /// FP_CONTRACT mode (on/off/fast).
+ BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
+ COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
+diff --git a/clang/include/clang/Driver/Options.td b/clang/include/clang/Driver/Options.td
+index 3cab37b21..71a6a6600 100644
+--- a/clang/include/clang/Driver/Options.td
++++ b/clang/include/clang/Driver/Options.td
+@@ -4277,6 +4277,11 @@ def working_directory : JoinedOrSeparate<["-"], "working-directory">, Flags<[CC1
+ def working_directory_EQ : Joined<["-"], "working-directory=">, Flags<[CC1Option]>,
+   Alias<working_directory>;
+ 
++def funknown_attrs_as_annotate : Flag<["-"], "funknown-attrs-as-annotate">,
++  Flags<[CC1Option]>,
++  HelpText<"Treat unknown attributes as annotation or annotation type attributes in semantic analysis">,
++  MarshallingInfoFlag<LangOpts<"UnknownAttrAnnotate">>;
++
+ // Double dash options, which are usually an alias for one of the previous
+ // options.
+ 
+diff --git a/clang/lib/Driver/ToolChains/Clang.cpp b/clang/lib/Driver/ToolChains/Clang.cpp
+index 3704ed858..ae3935cc5 100644
+--- a/clang/lib/Driver/ToolChains/Clang.cpp
++++ b/clang/lib/Driver/ToolChains/Clang.cpp
+@@ -4595,6 +4595,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
+     }
+   }
+ 
++  if (const Arg *A = Args.getLastArg(options::OPT_funknown_attrs_as_annotate)) {
++    CmdArgs.push_back("-funknown-attrs-as-annotate");
++    A->claim();
++  }
++
+   if (IsOpenMPDevice) {
+     // We have to pass the triple of the host if compiling for an OpenMP device.
+     std::string NormalizedTriple =
+diff --git a/clang/lib/Parse/ParseDeclCXX.cpp b/clang/lib/Parse/ParseDeclCXX.cpp
+index bf73ddfd1..b2832d4fc 100644
+--- a/clang/lib/Parse/ParseDeclCXX.cpp
++++ b/clang/lib/Parse/ParseDeclCXX.cpp
+@@ -4276,18 +4276,22 @@ bool Parser::ParseCXX11AttributeArgs(
+       Syntax = ParsedAttr::AS_Microsoft;
+   }
+ 
++
+   // If the attribute isn't known, we will not attempt to parse any
+-  // arguments.
+-  if (Syntax != ParsedAttr::AS_Microsoft &&
+-      !hasAttribute(LO.CPlusPlus ? AttributeCommonInfo::Syntax::AS_CXX11
+-                                 : AttributeCommonInfo::Syntax::AS_C2x,
+-                    ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
+-    if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
++  // arguments. Unless we are treating unknown attributes as annotation
++  // attributes.
++  if (!getLangOpts().UnknownAttrAnnotate) {
++    if (Syntax != ParsedAttr::AS_Microsoft &&
++        !hasAttribute(LO.CPlusPlus ? AttributeCommonInfo::Syntax::AS_CXX11
++                                  : AttributeCommonInfo::Syntax::AS_C2x,
++                      ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
++      if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
++      }
++      // Eat the left paren, then skip to the ending right paren.
++      ConsumeParen();
++      SkipUntil(tok::r_paren);
++      return false;
+     }
+-    // Eat the left paren, then skip to the ending right paren.
+-    ConsumeParen();
+-    SkipUntil(tok::r_paren);
+-    return false;
+   }
+ 
+   if (ScopeName && (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"))) {
+diff --git a/clang/lib/Sema/SemaDeclAttr.cpp b/clang/lib/Sema/SemaDeclAttr.cpp
+index 838fd4835..e8efeba90 100644
+--- a/clang/lib/Sema/SemaDeclAttr.cpp
++++ b/clang/lib/Sema/SemaDeclAttr.cpp
+@@ -4168,6 +4168,21 @@ static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+   S.AddAnnotationAttr(D, AL, Str, Args);
+ }
+ 
++static void
++handleUnknownAttrAsAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
++  // Get name of unknown attribute:
++  StringRef Str = AL.getAttrName()->getName();
++
++  llvm::SmallVector<Expr *, 4> Args;
++  Args.reserve(AL.getNumArgs());
++    for (unsigned Idx = 0; Idx < AL.getNumArgs(); Idx++) {
++    assert(!AL.isArgIdent(Idx));
++    Args.push_back(AL.getArgAsExpr(Idx));
++  }
++
++  S.AddAnnotationAttr(D, AL, Str, Args);
++}
++
+ static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+   S.AddAlignValueAttr(D, AL, AL.getArgAsExpr(0));
+ }
+@@ -8355,11 +8370,15 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+   // though they were unknown attributes.
+   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
+       !AL.existsInTarget(S.Context.getTargetInfo())) {
+-    S.Diag(AL.getLoc(),
+-           AL.isDeclspecAttribute()
++        if (S.getLangOpts().UnknownAttrAnnotate) {
++          handleUnknownAttrAsAnnotateAttr(S, D, AL);
++        } else {
++          S.Diag(AL.getLoc(),
++            AL.isDeclspecAttribute()
+                ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
+                : (unsigned)diag::warn_unknown_attribute_ignored)
+-        << AL << AL.getRange();
++            << AL << AL.getRange();
++        }
+     return;
+   }
+ 
+diff --git a/clang/lib/Sema/SemaType.cpp b/clang/lib/Sema/SemaType.cpp
+index edcac4d2e..9ed87b45d 100644
+--- a/clang/lib/Sema/SemaType.cpp
++++ b/clang/lib/Sema/SemaType.cpp
+@@ -8186,6 +8186,24 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
+     CurType = T;
+ }
+ 
++static void HandleUnkownTypeAttrAsAnnotateTypeAttr(TypeProcessingState &State,
++                                   QualType &CurType, const ParsedAttr &PA) {
++  Sema &S = State.getSema();
++  StringRef Str = PA.getAttrName()->getName();
++
++  llvm::SmallVector<Expr *, 4> Args;
++  Args.reserve(PA.getNumArgs());
++  for (unsigned Idx = 0; Idx < PA.getNumArgs(); Idx++) {
++    assert(!PA.isArgIdent(Idx));
++    Args.push_back(PA.getArgAsExpr(Idx));
++  }
++  if (!S.ConstantFoldAttrArgs(PA, Args))
++    return;
++  auto *AnnotateTypeAttr =
++      AnnotateTypeAttr::Create(S.Context, Str, Args.data(), Args.size(), PA);
++  CurType = State.getAttributedType(AnnotateTypeAttr, CurType, CurType);
++}
++
+ static void HandleAnnotateTypeAttr(TypeProcessingState &State,
+                                    QualType &CurType, const ParsedAttr &PA) {
+   Sema &S = State.getSema();
+@@ -8289,12 +8307,17 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
+ 
+     case ParsedAttr::UnknownAttribute:
+       if (attr.isStandardAttributeSyntax()) {
+-        state.getSema().Diag(attr.getLoc(),
+-                             diag::warn_unknown_attribute_ignored)
+-            << attr << attr.getRange();
+-        // Mark the attribute as invalid so we don't emit the same diagnostic
+-        // multiple times.
+-        attr.setInvalid();
++        if (state.getSema().getLangOpts().UnknownAttrAnnotate) {
++          HandleUnkownTypeAttrAsAnnotateTypeAttr(state, type, attr);
++          attr.setUsedAsTypeAttr();
++        } else {
++          state.getSema().Diag(attr.getLoc(),
++                                diag::warn_unknown_attribute_ignored)
++                                << attr << attr.getRange();
++          // Mark the attribute as invalid so we don't emit the same diagnostic
++          // multiple times.
++          attr.setInvalid();
++        }
+       }
+       break;
+ 
