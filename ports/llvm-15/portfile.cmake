@@ -27,6 +27,7 @@ if("pasta" IN_LIST FEATURES)
         SOURCE_PATH "${SOURCE_PATH}"
         PATCHES
             0025-PASTA-patches.patch
+            0027-unknown-attrs-as-annotations.patch
     )
 endif()
 
