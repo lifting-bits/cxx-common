@@ -1,4 +1,4 @@
-From c18338dd444d7252e22735d3ee6c50c2320a7f17 Mon Sep 17 00:00:00 2001
+From e662db370ffe95bc663d1e1fa350ab3c35bd61b3 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -7,6 +7,7 @@ Subject: [PATCH] Patches for PASTA
  clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
  clang/include/clang/Lex/Preprocessor.h |  46 ++---
  clang/include/clang/Lex/TokenLexer.h   |   7 +-
+ clang/lib/Lex/Lexer.cpp                |   8 +
  clang/lib/Lex/PPDirectives.cpp         | 147 ++++++++++----
  clang/lib/Lex/PPExpressions.cpp        |  28 +++
  clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
@@ -15,7 +16,7 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
  clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 11 files changed, 722 insertions(+), 79 deletions(-)
+ 12 files changed, 730 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -300,6 +301,25 @@ index 4d229ae61..923107b84 100644
  
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
+diff --git a/clang/lib/Lex/Lexer.cpp b/clang/lib/Lex/Lexer.cpp
+index a4cff403e..33f17b148 100644
+--- a/clang/lib/Lex/Lexer.cpp
++++ b/clang/lib/Lex/Lexer.cpp
+@@ -2921,6 +2921,14 @@ void Lexer::ReadToEndOfLine(SmallVectorImpl<char> *Result) {
+       }
+       assert(Tmp.is(tok::eod) && "Unexpected token!");
+ 
++      // PASTA PATCH: Visibility into all tokens.
++      if (PP) {
++        if (auto Callbacks = PP->getPPCallbacks()) {
++          Callbacks->Event(Tmp, PPCallbacks::TokenFromTokenLexer, 0u);
++          Callbacks->Event(Tmp, PPCallbacks::EndDirective, 0);
++        }
++      }
++
+       // Finally, we're done;
+       return;
+     }
 diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
 index 9a8fd4391..b20144c12 100644
 --- a/clang/lib/Lex/PPDirectives.cpp
@@ -1618,5 +1638,5 @@ index e32ea6003..942c71526 100644
    if (CachingTokens) {
      // If the previous cached token is being merged, delete it.
 -- 
-2.38.1
+2.39.0
 
