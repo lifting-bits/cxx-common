@@ -1,3 +1,4 @@
+# NOTE: A large part of this file is the same as sleigh-speccompiler port
 set(ghidra_version "10.2.2")
 
 vcpkg_from_github(
@@ -30,7 +31,6 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
 FEATURES
     "specs"     sleigh_BUILD_SLEIGHSPECS  # compiled sla files
     "support"   sleigh_BUILD_SUPPORT      # support libraries
-    "compiler"  sleigh_BUILD_SPECCOMPILER # sla spec compiler tool
 )
 
 vcpkg_find_acquire_program(GIT)
@@ -40,31 +40,15 @@ vcpkg_cmake_configure(
     OPTIONS
         ${FEATURE_OPTIONS}
         "-DGIT_EXECUTABLE=${GIT}"
+        "-DSLEIGH_EXECUTABLE=${SLEIGH_SPECCOMPILER}"
         "-DFETCHCONTENT_SOURCE_DIR_GHIDRASOURCE=${GHIDRA_SOURCE_PATH}"
-        -Dsleigh_BUILD_TOOLS=ON
-        -Dsleigh_BUILD_DECOMPILER=OFF
-        -Dsleigh_BUILD_GHIDRA=OFF
+        -Dsleigh_BUILD_TOOLS=OFF
 )
 
 vcpkg_cmake_install()
 
-if("compiler" IN_LIST FEATURES)
-    vcpkg_copy_tools(
-        TOOL_NAMES sleigh
-        DESTINATION "${CURRENT_PACKAGES_DIR}/tools/sleigh"
-        AUTO_CLEAN
-    )
-endif()
-
 vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/sleigh)
 vcpkg_copy_pdbs()
-
-if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/sleigh/sleighTargets-debug.cmake"
-        "\${_IMPORT_PREFIX}/tools/sleigh/sleigh_dbg"
-        "\${_IMPORT_PREFIX}/tools/sleigh/sleigh"
-    )
-endif()
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")

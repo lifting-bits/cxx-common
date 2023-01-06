@@ -14,16 +14,11 @@
     }
   ],
   "features": {
-    "compiler": {
-      "description": "Build sleigh spec compiler"
-    },
     "specs": {
       "description": "Compile and install the upstream sleigh specs",
       "dependencies": [
         {
-          "name": "sleigh",
-          "features": [ "compiler" ],
-          "default-features": false,
+          "name": "sleigh-speccompiler",
           "host": true
         }
       ]
