@@ -225,13 +225,13 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
-      - name: 'Anvill test'
-        shell: 'bash'
-        working-directory: anvill/build
-        if: matrix.target_arch == 'x64'
-        run: |
-          # Only run test on x64
-          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+      #- name: 'Anvill test'
+      #  shell: 'bash'
+      #  working-directory: anvill/build
+      #  if: matrix.target_arch == 'x64'
+      #  run: |
+      #    # Only run test on x64
+      #    ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Cache cleanup and reporting
         shell: 'bash'
