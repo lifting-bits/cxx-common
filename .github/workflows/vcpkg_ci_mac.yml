@@ -154,7 +154,6 @@ jobs:
         working-directory: rellic
         if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
-          cd rellic
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
