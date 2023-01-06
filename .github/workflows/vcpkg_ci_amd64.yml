@@ -224,7 +224,8 @@ jobs:
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
             -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
-            -DANVILL_ENABLE_INSTALL_TARGET=ON \
+            -DANVILL_ENABLE_TESTS=true \
+            -DANVILL_ENABLE_INSTALL=true \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
             "-Dremill_DIR=$(pwd)/../remill/install/lib/cmake/remill" \
             "-Dsleigh_DIR=$(pwd)/../remill/install/lib/cmake/sleigh" \
