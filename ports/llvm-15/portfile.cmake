@@ -295,6 +295,7 @@ set(LLVM_LINK_JOBS 2)
 # Cross compilation for M1
 if (VCPKG_TARGET_IS_OSX)
     set(LLVM_DEFAULT_TARGET_TRIPLE "${VCPKG_OSX_ARCHITECTURES}-apple-darwin")
+    list(APPEND OPTIONS "-DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_DEFAULT_TARGET_TRIPLE}")
     message(STATUS "Default target triple ${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
 
@@ -312,6 +313,7 @@ vcpkg_cmake_configure(
     SOURCE_PATH ${SOURCE_PATH}/llvm
     OPTIONS
         ${FEATURE_OPTIONS}
+        ${OPTIONS}
         -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_BUILD_EXAMPLES=OFF
         -DLLVM_INCLUDE_DOCS=OFF
@@ -320,7 +322,6 @@ vcpkg_cmake_configure(
         -DLLVM_BUILD_TESTS=OFF
         -DLLVM_INCLUDE_BENCHMARKS=OFF
         -DLLVM_BUILD_BENCHMARKS=OFF
-        "-DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_DEFAULT_TARGET_TRIPLE}"
         "-DLLVM_TARGET_ARCH=${LLVM_TARGET_ARCH}"
         # Force TableGen to be built with optimization. This will significantly improve build time.
         -DLLVM_OPTIMIZED_TABLEGEN=ON
