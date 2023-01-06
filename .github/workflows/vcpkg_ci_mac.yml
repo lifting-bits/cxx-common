@@ -151,75 +151,79 @@ jobs:
 
       - name: 'Rellic build'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: rellic
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           cd rellic
-          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            -S . -B build
+          cmake --build build
+          cmake --install build
       - name: 'Rellic test'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: rellic/build
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # Test only should run when we're not cross compiling
-          cd rellic/build
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
+
       - name: 'Remill build'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: remill
+        if: matrix.target_arch == 'x64'
         run: |
-          cd remill
-          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-          cmake --build . --target test_dependencies
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            -S . -B build
+          cmake --build build
+          cmake --install build
+          cmake --build build --target test_dependencies
       - name: 'Remill test'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: remill/build
+        if: matrix.target_arch == 'x64'
         run: |
           # Only run test on x64
-          # Sometimes fails on a flaky test
-          cd remill/build
-          env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
+          env CTEST_OUTPUT_ON_FAILURE=1 ctest .
+
       - name: 'Anvill build'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: anvill
+        if: matrix.target_arch == 'x64'
         run: |
-          cd anvill
-          mkdir -p build && cd build
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DCMAKE_INSTALL_PREFIX="$(pwd)/install" \
-            -DVCPKG_ROOT="${VCPKG_ROOT}" \
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-            -Dremill_DIR="$(pwd)/../../remill/build/install/lib/cmake/remill" \
-            ..
-          cmake --build .
-          cmake --build . --target install
-      - name: 'Anvil test'
+            "-Dremill_DIR=$(pwd)/../../remill/build/install/lib/cmake/remill" \
+            "-Dsleigh_DIR=$(pwd)/../../remill/build/install/lib/cmake/sleigh" \
+            -S . -B build
+          cmake --build build
+          cmake --install build
+      - name: 'Anvill test'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-14') && matrix.target_arch == 'x64'
+        working-directory: anvill/build
+        if: matrix.target_arch == 'x64'
         run: |
           # Only run test on x64
-          cd anvill/build
           ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+
       - name: Cache cleanup and reporting
         shell: 'bash'
         run: |

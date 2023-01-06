@@ -160,41 +160,73 @@ jobs:
         run: |
           ccache --show-stats
 
-      - name: 'Make install directory'
-        shell: bash
-        run: |
-          export INSTALL_DIR="${GITHUB_WORKSPACE}/workspace"
-          echo "INSTALL_DIR=${INSTALL_DIR}" >> ${GITHUB_ENV}
-          mkdir -p "${INSTALL_DIR}"
-
       - name: 'Rellic build'
-        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
+        working-directory: rellic
+        if: contains(matrix.llvm, 'llvm-15')
         run: |
-          cd rellic
-          scripts/build-preset.sh debug
-          scripts/roundtrip.py ${INSTALL_DIR}/install/bin/rellic-decomp* $(pwd)/tests/tools/decomp "${VCPKG_ROOT}/installed/${{ matrix.host.triplet }}/tools/llvm/clang"
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            -S . -B build
+          cmake --build build
+          cmake --build build --target install
+      - name: 'Rellic test'
+        shell: 'bash'
+        working-directory: rellic/build
+        if: contains(matrix.llvm, 'llvm-15')
+        run: |
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
 
       - name: 'Remill build'
-        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
+        working-directory: remill
+        # if: contains(matrix.llvm, 'llvm-14')
         run: |
-          cd remill
-          scripts/build-preset.sh debug
-          pushd ${INSTALL_DIR}/build/remill
-          cmake --build . --parallel --target test_dependencies
-          # The ||true is ther since we are Failing some tests on AWS (issue #583)
-          # https://github.com/lifting-bits/remill/issues/583
-          env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --parallel --target test || true
-          popd
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            -S . -B build
+          cmake --build build
+          cmake --install build
+          cmake --build build --target test_dependencies
+      - name: 'Remill test'
+        shell: 'bash'
+        working-directory: remill/build
+        # if: contains(matrix.llvm, 'llvm-14')
+        run: |
+          env CTEST_OUTPUT_ON_FAILURE=1 ctest .
 
       - name: 'Anvill build'
-        if: contains(matrix.llvm, 'llvm-14')
         shell: 'bash'
+        working-directory: anvill
+        # if: contains(matrix.llvm, 'llvm-14')
         run: |
-          cd anvill
-          scripts/build-preset.sh debug
-          ${INSTALL_DIR}/install/bin/anvill-decompile-json* -spec $(pwd)/bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
+          cmake -G Ninja \
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DANVILL_ENABLE_INSTALL_TARGET=ON \
+            -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
+            "-Dremill_DIR=$(pwd)/../../remill/build/install/lib/cmake/remill" \
+            "-Dsleigh_DIR=$(pwd)/../../remill/build/install/lib/cmake/sleigh" \
+            -S . -B build
+          cmake --build build
+          cmake --install build
+      - name: 'Anvill test'
+        shell: 'bash'
+        working-directory: anvill/build
+        # if: matrix.target_arch == 'x64'
+        run: |
+          ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Cache cleanup and reporting
         shell: 'bash'
