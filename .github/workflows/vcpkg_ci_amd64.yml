@@ -188,6 +188,8 @@ jobs:
         run: |
           python3 -m pip install poetry
           python3 -m pip install --user ./scripts/diff_tester_export_insns
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
 
       - name: 'Remill build'
         shell: 'bash'
