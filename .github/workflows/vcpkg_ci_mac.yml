@@ -220,8 +220,8 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.target_arch == 'x64' && 'x86_64' || matrix.target_arch }} \
             -DANVILL_ENABLE_INSTALL_TARGET=ON \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
-            "-Dremill_DIR=$(pwd)/../../remill/build/install/lib/cmake/remill" \
-            "-Dsleigh_DIR=$(pwd)/../../remill/build/install/lib/cmake/sleigh" \
+            "-Dremill_DIR=$(pwd)/../remill/build/install/lib/cmake/remill" \
+            "-Dsleigh_DIR=$(pwd)/../remill/build/install/lib/cmake/sleigh" \
             -S . -B build
           cmake --build build
           cmake --install build
