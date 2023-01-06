@@ -181,6 +181,13 @@ jobs:
         run: |
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
 
+      - name: 'Remill dependencies'
+        shell: 'bash'
+        working-directory: remill
+        run: |
+          python3 -m pip install poetry
+          python3 -m pip install --user ./scripts/diff_tester_export_insns
+
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
