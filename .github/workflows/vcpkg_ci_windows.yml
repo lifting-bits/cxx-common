@@ -35,7 +35,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm: [
-          'llvm-14',
           'llvm-15'
           ]
 
@@ -133,7 +132,7 @@ jobs:
           path: ${{ env.VCPKG_ROOT }}/${{ env.ARTIFACT_NAME }}.7z
 
       - name: 'Test rellic build'
-        if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-15' }}
         run: |
           cd rellic
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -151,7 +150,7 @@ jobs:
           # python ../scripts/roundtrip.py ( Get-ChildItem tools | Where-Object {$_.name -match "rellic-decomp.exe"} ) ..\tests\tools\decomp "${env:VCPKG_ROOT}\installed\${env:TRIPLET}\tools\${{ matrix.llvm }}\clang.exe"
 
       - name: 'Test remill build'
-        # if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-15' }}
         run: |
           cd remill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build
@@ -174,7 +173,7 @@ jobs:
           # env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
       - name: 'Anvill build'
-        # if: ${{ matrix.llvm == 'llvm-14' }}
+        if: ${{ matrix.llvm == 'llvm-15' }}
         run: |
           cd anvill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build

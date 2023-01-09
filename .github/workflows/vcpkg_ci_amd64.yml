@@ -36,7 +36,7 @@ jobs:
           - { name: 'ubuntu-20.04', arch: 'amd64', triplet: 'x64-linux-rel', arch_docker: '' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
-        llvm: [ 'llvm-14', 'llvm-14[pasta]', 'llvm-15', 'llvm-15[pasta]' ]
+        llvm: [ 'llvm-15', 'llvm-15[pasta]' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}${{ matrix.host.arch_docker }}
@@ -194,7 +194,7 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        # if: contains(matrix.llvm, 'llvm-14')
+        if: contains(matrix.llvm, 'llvm-15')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -209,14 +209,14 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        # if: contains(matrix.llvm, 'llvm-14')
+        if: contains(matrix.llvm, 'llvm-15')
         run: |
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
 
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        # if: contains(matrix.llvm, 'llvm-14')
+        if: contains(matrix.llvm, 'llvm-15')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
