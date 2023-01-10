@@ -99,6 +99,13 @@ jobs:
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
           echo "TARGET_TRIPLET=${{ matrix.target_arch }}-osx-rel" >> $GITHUB_ENV
 
+      - name: Upload CMake logs on error
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT_NAME }}_logs
+          path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         shell: 'bash'
