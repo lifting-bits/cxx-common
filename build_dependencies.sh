@@ -261,13 +261,18 @@ if [[ ${UPGRADE_PORTS} == "true" ]]; then
   ) || exit 1
 fi
 
+dep_file='@dependencies.txt'
+if [ ! -f "${repo_dir}/dependencies.txt" ] ; then
+  dep_file=''
+fi
+
 # Run the vcpkg installation of our packages
 (
   cd "${repo_dir}"
   (
     set -x
 
-    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' '@dependencies.txt' "${VCPKG_ARGS[@]}"
+    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' "${dep_file}" "${VCPKG_ARGS[@]}"
   )
 ) || exit 1
 
