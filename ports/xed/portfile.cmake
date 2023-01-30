@@ -1,18 +1,16 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO intelxed/xed
-    REF v2022.04.17
-    SHA512 941511144899701854449b510aed9f03244aee7b3d3ac27de75cf2612baaf2a4df9977ba04d3d6c3e4ea87b12525d081585fbf48c0ff9c5fde7a0f8bba889701
-    HEAD_REF master
+    REF v2023.04.16
+    SHA512 fbba729427debe4c670af502a2e58f2e388d44216aa001333dcc3a5703346b7da475bf9027fb1c17f5404dc9ef687e40168387749f87cacbdd80460ba6e13cd9
+    HEAD_REF main
 )
 
-# Last checked Apr. 18, 2022
-# Commit from Apr 16, 2021
 vcpkg_from_github(
     OUT_SOURCE_PATH MBUILD_SOURCE_PATH
     REPO intelxed/mbuild
-    REF 09b6654be0c52bf1df44e88c88b411a67b624cbd
-    SHA512 63797a1763ec7ea5ab5897fbd457c0bf715e1a144ae34e44f18c17ab1bbaaa848da479212518eb356d64dd3f46372fb69e955a0033adafc8211f5b4120016ab5
+    REF v2022.07.28
+    SHA512 3f7b4337a101f9c31735184aa81f521c18ddb571f8d8504cfab09733b8cd01ff0c3a286bfec0e09d0527d9e1ad518ff7444bf2eb29e068587da72320bd6ffe3a
     HEAD_REF main
     PATCHES
         # For arm cross compilation
