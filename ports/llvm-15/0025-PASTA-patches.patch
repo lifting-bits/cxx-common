@@ -1,4 +1,4 @@
-From e662db370ffe95bc663d1e1fa350ab3c35bd61b3 Mon Sep 17 00:00:00 2001
+From a2055c89f23ad44059dd11a91387e69fdb1cd5e0 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -16,7 +16,8 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
  clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- 12 files changed, 730 insertions(+), 79 deletions(-)
+ clang/lib/Sema/SemaDecl.cpp            |   5 +
+ 13 files changed, 735 insertions(+), 79 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -1637,6 +1638,22 @@ index e32ea6003..942c71526 100644
    // Update the token cache to match what we just did if necessary.
    if (CachingTokens) {
      // If the previous cached token is being merged, delete it.
+diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
+index 75ffa8b0a..f4d175de2 100644
+--- a/clang/lib/Sema/SemaDecl.cpp
++++ b/clang/lib/Sema/SemaDecl.cpp
+@@ -6261,6 +6261,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
+       Previous.setRedeclarationKind(ForExternalRedeclaration);
+     }
+ 
++    // PASTA PATCH: Disable auto-creation of builtins from things like `atoi`;
++    //              it ends up leading to a lot of source location information
++    //              being dropped.
++    CreateBuiltins = CreateBuiltins ? false : false;
++
+     LookupName(Previous, S, CreateBuiltins);
+   } else { // Something like "int foo::x;"
+     LookupQualifiedName(Previous, DC);
 -- 
 2.39.0
 
