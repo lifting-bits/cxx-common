@@ -1,4 +1,4 @@
-From 50641c790360fde4e6dd518e76b5fdb3a08c8299 Mon Sep 17 00:00:00 2001
+From f941cc37d2e914c402da86edcc55e563e90313e2 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -516,7 +516,7 @@ index 9d92c848c..50d445f49 100644
  
    llvm_unreachable("unknown expr/type trait");
 diff --git a/clang/lib/AST/ItaniumMangle.cpp b/clang/lib/AST/ItaniumMangle.cpp
-index 91f41778e..027e03c12 100644
+index 91f41778e..08a6fdd15 100644
 --- a/clang/lib/AST/ItaniumMangle.cpp
 +++ b/clang/lib/AST/ItaniumMangle.cpp
 @@ -4653,6 +4653,14 @@ recurse:
@@ -528,7 +528,7 @@ index 91f41778e..027e03c12 100644
 +    case UETT_PtrAuthTypeDiscriminator:
 +    case UETT_XNUTypeSummary:
 +    case UETT_TMOTypeGetMetadata:
-+    case UETT_XNUTypeSummary:
++    case UETT_XNUTypeSignature:
 +      break;
 +
      case UETT_SizeOf:
