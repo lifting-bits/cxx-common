@@ -1,4 +1,4 @@
-From 32a7ebe30624263ddfdb670a29adc52731529ad6 Mon Sep 17 00:00:00 2001
+From ac338968c03fd2ab1c2fa7ed4819fecd9360e7da Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -7,7 +7,7 @@ Subject: [PATCH] Patches for PASTA
  clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
  clang/include/clang/Lex/Preprocessor.h |  46 ++---
  clang/include/clang/Lex/TokenLexer.h   |   7 +-
- clang/lib/AST/ASTContext.cpp           | 104 +++++++---
+ clang/lib/AST/ASTContext.cpp           | 120 ++++++++---
  clang/lib/AST/Type.cpp                 |   9 +-
  clang/lib/Lex/Lexer.cpp                |   8 +
  clang/lib/Lex/PPDirectives.cpp         | 147 ++++++++++----
@@ -18,8 +18,8 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/Preprocessor.cpp         |  43 +++-
  clang/lib/Lex/TokenLexer.cpp           |  39 +++-
  clang/lib/Parse/ParseTemplate.cpp      |   7 +
- clang/lib/Sema/SemaDecl.cpp            |   5 +
- 15 files changed, 817 insertions(+), 110 deletions(-)
+ clang/lib/Sema/SemaDecl.cpp            |  12 ++
+ 15 files changed, 840 insertions(+), 110 deletions(-)
 
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
@@ -305,7 +305,7 @@ index 4d229ae61..923107b84 100644
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
-index cfd7bf604..143281376 100644
+index cfd7bf604..6a384a35c 100644
 --- a/clang/lib/AST/ASTContext.cpp
 +++ b/clang/lib/AST/ASTContext.cpp
 @@ -3519,48 +3519,94 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
@@ -343,23 +343,8 @@ index cfd7bf604..143281376 100644
    void *InsertPos = nullptr;
 -  if (ConstantArrayType *ATP =
 -      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos))
--    return QualType(ATP, 0);
--
--  // If the element type isn't canonical or has qualifiers, or the array bound
--  // is instantiation-dependent, this won't be a canonical type either, so fill
--  // in the canonical type field.
--  QualType Canon;
--  if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
--    SplitQualType canonSplit = getCanonicalType(EltTy).split();
--    Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
--                                 ASM, IndexTypeQuals);
--    Canon = getQualifiedType(Canon, canonSplit.Quals);
--
--    // Get the new insert position for the node we care about.
--    ConstantArrayType *NewIP =
 +  ConstantArrayType *ATP =
-       ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
--    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
++      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
 +
 +  // PASTA PATCH: Profile the original one. In practice, we should probably
 +  //              never have a cache hit.
@@ -370,22 +355,23 @@ index cfd7bf604..143281376 100644
 +    ConstantArrayType::Profile(OrigID, *this, EltTy, ArySize, OrigSizeExpr, ASM,
 +                               IndexTypeQuals);
 +    OrigATP = ConstantArrayTypes.FindNodeOrInsertPos(OrigID, OrigInsertPos);
-   }
- 
--  void *Mem = Allocate(
--      ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
--      TypeAlignment);
--  auto *New = new (Mem)
--    ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
--  ConstantArrayTypes.InsertNode(New, InsertPos);
--  Types.push_back(New);
--  return QualType(New, 0);
++  }
++
 +  if (ATP && OrigATP)
 +    return getAdjustedType(QualType(OrigATP, 0), QualType(ATP, 0));
 +
 +  if (!OrigSizeExpr && ATP)
-+    return QualType(ATP, 0);
-+
+     return QualType(ATP, 0);
+ 
+-  // If the element type isn't canonical or has qualifiers, or the array bound
+-  // is instantiation-dependent, this won't be a canonical type either, so fill
+-  // in the canonical type field.
+-  QualType Canon;
+-  if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
+-    SplitQualType canonSplit = getCanonicalType(EltTy).split();
+-    Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
+-                                 ASM, IndexTypeQuals);
+-    Canon = getQualifiedType(Canon, canonSplit.Quals);
 +  if (!ATP) {
 +    // If the element type isn't canonical or has qualifiers, or the array bound
 +    // is instantiation-dependent, this won't be a canonical type either, so fill
@@ -396,7 +382,11 @@ index cfd7bf604..143281376 100644
 +      Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
 +                                   ASM, IndexTypeQuals);
 +      Canon = getQualifiedType(Canon, canonSplit.Quals);
-+
+ 
+-    // Get the new insert position for the node we care about.
+-    ConstantArrayType *NewIP =
+-      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
+-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
 +      // Get the new insert position for the node we care about.
 +      ConstantArrayType *NewIP =
 +        ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -412,8 +402,16 @@ index cfd7bf604..143281376 100644
 +      ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
 +    ConstantArrayTypes.InsertNode(ATP, InsertPos);
 +    Types.push_back(ATP);
-+  }
-+
+   }
+ 
+-  void *Mem = Allocate(
+-      ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
+-      TypeAlignment);
+-  auto *New = new (Mem)
+-    ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
+-  ConstantArrayTypes.InsertNode(New, InsertPos);
+-  Types.push_back(New);
+-  return QualType(New, 0);
 +  if (OrigSizeExpr && !OrigATP) {
 +    void *OrigMem = Allocate(
 +        ConstantArrayType::totalSizeToAlloc<const Expr *>(OrigSizeExpr ? 1 : 0),
@@ -432,6 +430,42 @@ index cfd7bf604..143281376 100644
  }
  
  /// getVariableArrayDecayedType - Turns the given type, which may be
+@@ -3661,6 +3707,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
+                                   cat->getSizeExpr(),
+                                   cat->getSizeModifier(),
+                                   cat->getIndexTypeCVRQualifiers());
++    
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
+     break;
+   }
+ 
+@@ -6793,10 +6845,20 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+   QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
+ 
+   if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy))
+-    return cast<ArrayType>(getConstantArrayType(NewEltTy, CAT->getSize(),
++
++    // PASTA PATCH: `getConstantArrayType` might return an adjusted type.
++    QualType result = getConstantArrayType(NewEltTy, CAT->getSize(),
+                                                 CAT->getSizeExpr(),
+                                                 CAT->getSizeModifier(),
+-                                           CAT->getIndexTypeCVRQualifiers()));
++                                           CAT->getIndexTypeCVRQualifiers());
++
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
++    
++    return cast<ArrayType>(result);
+   if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
+     return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
+                                                   IAT->getSizeModifier(),
 diff --git a/clang/lib/AST/Type.cpp b/clang/lib/AST/Type.cpp
 index 0f168a518..cd5497be5 100644
 --- a/clang/lib/AST/Type.cpp
@@ -1790,7 +1824,7 @@ index e32ea6003..942c71526 100644
    if (CachingTokens) {
      // If the previous cached token is being merged, delete it.
 diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
-index 75ffa8b0a..f4d175de2 100644
+index 75ffa8b0a..27cea9cdf 100644
 --- a/clang/lib/Sema/SemaDecl.cpp
 +++ b/clang/lib/Sema/SemaDecl.cpp
 @@ -6261,6 +6261,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
@@ -1805,6 +1839,20 @@ index 75ffa8b0a..f4d175de2 100644
      LookupName(Previous, S, CreateBuiltins);
    } else { // Something like "int foo::x;"
      LookupQualifiedName(Previous, DC);
+@@ -6455,6 +6460,13 @@ FixInvalidVariablyModifiedTypeLoc(TypeLoc SrcTL, TypeLoc DstTL) {
+     DstPTL.setRParenLoc(SrcPTL.getRParenLoc());
+     return;
+   }
++
++  // PASTA PATCH: Might have an AdjustedTypeLoc for DstTL due to multiplier
++  //              patches for issue #130.
++  if (AdjustedTypeLoc AdjTL = DstTL.getAs<AdjustedTypeLoc>()) {
++    DstTL = AdjTL.getOriginalLoc();
++  }
++
+   ArrayTypeLoc SrcATL = SrcTL.castAs<ArrayTypeLoc>();
+   ArrayTypeLoc DstATL = DstTL.castAs<ArrayTypeLoc>();
+   TypeLoc SrcElemTL = SrcATL.getElementLoc();
 -- 
 2.39.0
 
