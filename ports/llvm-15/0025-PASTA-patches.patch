@@ -1,4 +1,4 @@
-From bc45ac83e97e4bbe12ed431fc40b817b6d46b2e9 Mon Sep 17 00:00:00 2001
+From 50641c790360fde4e6dd518e76b5fdb3a08c8299 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -8,7 +8,7 @@ Subject: [PATCH] Patches for PASTA
  clang/include/clang/Lex/PPCallbacks.h    | 120 ++++++++++
  clang/include/clang/Lex/Preprocessor.h   |  46 ++--
  clang/include/clang/Lex/TokenLexer.h     |   7 +-
- clang/lib/AST/ASTContext.cpp             | 120 +++++++---
+ clang/lib/AST/ASTContext.cpp             | 124 ++++++++---
  clang/lib/AST/ExprConstant.cpp           |   9 +
  clang/lib/AST/ItaniumMangle.cpp          |   8 +
  clang/lib/AST/Type.cpp                   |   9 +-
@@ -26,7 +26,7 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Sema/SemaExpr.cpp              |  32 ++-
  clang/lib/Sema/SemaExprCXX.cpp           |   1 +
  clang/lib/Sema/TreeTransform.h           |  24 ++
- 22 files changed, 950 insertions(+), 114 deletions(-)
+ 22 files changed, 953 insertions(+), 115 deletions(-)
 
 diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
 index 84fc0893c..102e20a92 100644
@@ -330,7 +330,7 @@ index 4d229ae61..923107b84 100644
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
-index cfd7bf604..6a384a35c 100644
+index cfd7bf604..c70ebd052 100644
 --- a/clang/lib/AST/ASTContext.cpp
 +++ b/clang/lib/AST/ASTContext.cpp
 @@ -3519,48 +3519,94 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
@@ -459,7 +459,7 @@ index cfd7bf604..6a384a35c 100644
                                    cat->getSizeExpr(),
                                    cat->getSizeModifier(),
                                    cat->getIndexTypeCVRQualifiers());
-+    
++
 +    // PASTA PATCH: If we returned an adjusted type above, then we want to
 +    //              desugar it to the internal type.
 +    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
@@ -468,11 +468,13 @@ index cfd7bf604..6a384a35c 100644
      break;
    }
  
-@@ -6793,10 +6845,20 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+@@ -6792,11 +6844,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+   // qualifiers into the array element type and return a new array type.
    QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
  
-   if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy))
+-  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy))
 -    return cast<ArrayType>(getConstantArrayType(NewEltTy, CAT->getSize(),
++  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy)) {
 +
 +    // PASTA PATCH: `getConstantArrayType` might return an adjusted type.
 +    QualType result = getConstantArrayType(NewEltTy, CAT->getSize(),
@@ -488,6 +490,8 @@ index cfd7bf604..6a384a35c 100644
 +    }
 +    
 +    return cast<ArrayType>(result);
++  }
++  
    if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
      return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
                                                    IAT->getSizeModifier(),
