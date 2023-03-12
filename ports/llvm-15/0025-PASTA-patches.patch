@@ -1,26 +1,49 @@
-From ac338968c03fd2ab1c2fa7ed4819fecd9360e7da Mon Sep 17 00:00:00 2001
+From 7c16c0ca27e9765cf2cd2dfec1812ad39c1a6d6e Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
 
 ---
- clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
- clang/include/clang/Lex/Preprocessor.h |  46 ++---
- clang/include/clang/Lex/TokenLexer.h   |   7 +-
- clang/lib/AST/ASTContext.cpp           | 120 ++++++++---
- clang/lib/AST/Type.cpp                 |   9 +-
- clang/lib/Lex/Lexer.cpp                |   8 +
- clang/lib/Lex/PPDirectives.cpp         | 147 ++++++++++----
- clang/lib/Lex/PPExpressions.cpp        |  28 +++
- clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
- clang/lib/Lex/PPMacroExpansion.cpp     | 267 ++++++++++++++++++++++++-
- clang/lib/Lex/Pragma.cpp               |  59 ++++++
- clang/lib/Lex/Preprocessor.cpp         |  43 +++-
- clang/lib/Lex/TokenLexer.cpp           |  39 +++-
- clang/lib/Parse/ParseTemplate.cpp      |   7 +
- clang/lib/Sema/SemaDecl.cpp            |  12 ++
- 15 files changed, 840 insertions(+), 110 deletions(-)
+ clang/include/clang/Basic/TokenKinds.def |   7 +
+ clang/include/clang/Lex/PPCallbacks.h    | 120 ++++++++++
+ clang/include/clang/Lex/Preprocessor.h   |  46 ++--
+ clang/include/clang/Lex/TokenLexer.h     |   7 +-
+ clang/lib/AST/ASTContext.cpp             | 120 +++++++---
+ clang/lib/AST/ExprConstant.cpp           |   9 +
+ clang/lib/AST/ItaniumMangle.cpp          |   8 +
+ clang/lib/AST/Type.cpp                   |   9 +-
+ clang/lib/Lex/Lexer.cpp                  |   8 +
+ clang/lib/Lex/PPDirectives.cpp           | 147 +++++++++----
+ clang/lib/Lex/PPExpressions.cpp          |  28 +++
+ clang/lib/Lex/PPLexerChange.cpp          |  38 ++++
+ clang/lib/Lex/PPMacroExpansion.cpp       | 267 ++++++++++++++++++++++-
+ clang/lib/Lex/Pragma.cpp                 |  59 +++++
+ clang/lib/Lex/Preprocessor.cpp           |  43 +++-
+ clang/lib/Lex/TokenLexer.cpp             |  39 +++-
+ clang/lib/Parse/ParseTemplate.cpp        |   7 +
+ clang/lib/Sema/SemaDecl.cpp              |  12 +
+ clang/lib/Sema/SemaExpr.cpp              |  24 +-
+ clang/lib/Sema/TreeTransform.h           |  24 ++
+ 20 files changed, 911 insertions(+), 111 deletions(-)
 
+diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
+index 84fc0893c..d5f932212 100644
+--- a/clang/include/clang/Basic/TokenKinds.def
++++ b/clang/include/clang/Basic/TokenKinds.def
+@@ -554,6 +554,13 @@ ALIAS("__is_same_as", __is_same, KEYCXX)
+ KEYWORD(__private_extern__          , KEYALL)
+ KEYWORD(__module_private__          , KEYALL)
+ 
++// PASTA PATCH: Apple-specific XNU extensions.
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_signature, XNUTypeSignature, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_summary, XNUTypeSummary, KEYALL)
++KEYWORD(__builtin_xnu_types_compatible, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_tmo_type_get_metadata, TMOTypeGetMetadata, KEYALL)
++
+ // Extension that will be enabled for Microsoft, Borland and PS4, but can be
+ // disabled via '-fno-declspec'.
+ KEYWORD(__declspec                  , 0)
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
 --- a/clang/include/clang/Lex/PPCallbacks.h
@@ -466,6 +489,45 @@ index cfd7bf604..6a384a35c 100644
    if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
      return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
                                                    IAT->getSizeModifier(),
+diff --git a/clang/lib/AST/ExprConstant.cpp b/clang/lib/AST/ExprConstant.cpp
+index 9d92c848c..50d445f49 100644
+--- a/clang/lib/AST/ExprConstant.cpp
++++ b/clang/lib/AST/ExprConstant.cpp
+@@ -13287,6 +13287,15 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
+                     Info.Ctx.getOpenMPDefaultSimdAlign(E->getArgumentType()))
+             .getQuantity(),
+         E);
++
++  // PASTA PATCH: Fake these XNU-specific type traits.
++  case UETT_PtrAuthTypeDiscriminator:
++  case UETT_XNUTypeSummary:
++  case UETT_TMOTypeGetMetadata:
++    return Success(0, E);
++
++  case UETT_XNUTypeSignature:
++    return false;
+   }
+ 
+   llvm_unreachable("unknown expr/type trait");
+diff --git a/clang/lib/AST/ItaniumMangle.cpp b/clang/lib/AST/ItaniumMangle.cpp
+index 91f41778e..027e03c12 100644
+--- a/clang/lib/AST/ItaniumMangle.cpp
++++ b/clang/lib/AST/ItaniumMangle.cpp
+@@ -4653,6 +4653,14 @@ recurse:
+     };
+ 
+     switch(SAE->getKind()) {
++
++    // PASTA PATCH: Sort of support these.
++    case UETT_PtrAuthTypeDiscriminator:
++    case UETT_XNUTypeSummary:
++    case UETT_TMOTypeGetMetadata:
++    case UETT_XNUTypeSummary:
++      break;
++
+     case UETT_SizeOf:
+       Out << 's';
+       MangleAlignofSizeofArg();
 diff --git a/clang/lib/AST/Type.cpp b/clang/lib/AST/Type.cpp
 index 0f168a518..cd5497be5 100644
 --- a/clang/lib/AST/Type.cpp
@@ -1853,6 +1915,118 @@ index 75ffa8b0a..27cea9cdf 100644
    ArrayTypeLoc SrcATL = SrcTL.castAs<ArrayTypeLoc>();
    ArrayTypeLoc DstATL = DstTL.castAs<ArrayTypeLoc>();
    TypeLoc SrcElemTL = SrcATL.getElementLoc();
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 83081bbf0..1fe26c88f 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -4264,6 +4264,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
+   bool IsUnevaluatedOperand =
+       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
+        ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
++
++  // PASTA PATCH: Add in XNU-specific unary expr/type traits.
++  IsUnevaluatedOperand =
++      IsUnevaluatedOperand ||
++      ExprKind == UETT_PtrAuthTypeDiscriminator ||
++      ExprKind == UETT_XNUTypeSignature ||
++      ExprKind == UETT_XNUTypeSummary ||
++      ExprKind == UETT_TMOTypeGetMetadata;
++
+   if (IsUnevaluatedOperand) {
+     ExprResult Result = CheckUnevaluatedOperand(E);
+     if (Result.isInvalid())
+@@ -4647,6 +4656,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   E = PE.get();
+ 
++  // PASTA PATCH: We want a string literal array return type for the signature.
++  QualType RetTy = Context.getSizeType();
++
+   // Verify that the operand is valid.
+   bool isInvalid = false;
+   if (E->isTypeDependent()) {
+@@ -4661,6 +4673,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
+     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
+     isInvalid = true;
++
++  // PASTA PATCH: Let these through.
++  } else if (ExprKind == UETT_PtrAuthTypeDiscriminator ||
++             ExprKind == UETT_XNUTypeSummary ||
++             ExprKind == UETT_TMOTypeGetMetadata) {
++
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  } else if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++
+   } else {
+     isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
+   }
+@@ -4676,7 +4698,7 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());
++      ExprKind, E, RetTy, OpLoc, E->getSourceRange().getEnd());
+ }
+ 
+ /// ActOnUnaryExprOrTypeTraitExpr - Handle @c sizeof(type) and @c sizeof @c
+diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
+index a8589191f..8047b0044 100644
+--- a/clang/lib/Sema/TreeTransform.h
++++ b/clang/lib/Sema/TreeTransform.h
+@@ -5212,6 +5212,12 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have either a ConstantArrayType or a VariableArrayType now:
+   // a ConstantArrayType is allowed to have an element type which is a
+   // VariableArrayType if the type is dependent.  Fortunately, all array
+@@ -5244,6 +5250,12 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   IncompleteArrayTypeLoc NewTL = TLB.push<IncompleteArrayTypeLoc>(Result);
+   NewTL.setLBracketLoc(TL.getLBracketLoc());
+   NewTL.setRBracketLoc(TL.getRBracketLoc());
+@@ -5289,6 +5301,12 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have constant size array now, but fortunately it has the same
+   // location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
+@@ -5337,6 +5355,12 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have any sort of array type now, but fortunately they
+   // all have the same location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
 -- 
 2.39.0
 
