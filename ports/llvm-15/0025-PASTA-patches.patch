@@ -1,4 +1,4 @@
-From 7c16c0ca27e9765cf2cd2dfec1812ad39c1a6d6e Mon Sep 17 00:00:00 2001
+From bc45ac83e97e4bbe12ed431fc40b817b6d46b2e9 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -20,14 +20,16 @@ Subject: [PATCH] Patches for PASTA
  clang/lib/Lex/Pragma.cpp                 |  59 +++++
  clang/lib/Lex/Preprocessor.cpp           |  43 +++-
  clang/lib/Lex/TokenLexer.cpp             |  39 +++-
+ clang/lib/Parse/ParseExpr.cpp            |  33 ++-
  clang/lib/Parse/ParseTemplate.cpp        |   7 +
  clang/lib/Sema/SemaDecl.cpp              |  12 +
- clang/lib/Sema/SemaExpr.cpp              |  24 +-
+ clang/lib/Sema/SemaExpr.cpp              |  32 ++-
+ clang/lib/Sema/SemaExprCXX.cpp           |   1 +
  clang/lib/Sema/TreeTransform.h           |  24 ++
- 20 files changed, 911 insertions(+), 111 deletions(-)
+ 22 files changed, 950 insertions(+), 114 deletions(-)
 
 diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
-index 84fc0893c..d5f932212 100644
+index 84fc0893c..102e20a92 100644
 --- a/clang/include/clang/Basic/TokenKinds.def
 +++ b/clang/include/clang/Basic/TokenKinds.def
 @@ -554,6 +554,13 @@ ALIAS("__is_same_as", __is_same, KEYCXX)
@@ -38,8 +40,8 @@ index 84fc0893c..d5f932212 100644
 +UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
 +UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_signature, XNUTypeSignature, KEYALL)
 +UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_summary, XNUTypeSummary, KEYALL)
-+KEYWORD(__builtin_xnu_types_compatible, KEYALL)
 +UNARY_EXPR_OR_TYPE_TRAIT(__builtin_tmo_type_get_metadata, TMOTypeGetMetadata, KEYALL)
++TYPE_TRAIT_2(__builtin_xnu_types_compatible, XNUTypeCompatible, KEYALL)
 +
  // Extension that will be enabled for Microsoft, Borland and PS4, but can be
  // disabled via '-fno-declspec'.
@@ -1867,6 +1869,71 @@ index efda6d004..4e8c9b78d 100644
      Tok.startToken();
      Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
      Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
+diff --git a/clang/lib/Parse/ParseExpr.cpp b/clang/lib/Parse/ParseExpr.cpp
+index a6a946d7f..72dc2a006 100644
+--- a/clang/lib/Parse/ParseExpr.cpp
++++ b/clang/lib/Parse/ParseExpr.cpp
+@@ -1420,6 +1420,13 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
+   case tok::kw_sizeof:     // unary-expression: 'sizeof' unary-expression
+                            // unary-expression: 'sizeof' '(' type-name ')'
+   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
++
++  // PASTA PATCH: XNU-specific UETTs.
++  case tok::kw___builtin_ptrauth_type_discriminator:
++  case tok::kw___builtin_xnu_type_signature:
++  case tok::kw___builtin_xnu_type_summary:
++  case tok::kw___builtin_tmo_type_get_metadata:
++
+   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
+   case tok::kw___builtin_omp_required_simd_align:
+     if (NotPrimaryExpression)
+@@ -2284,7 +2291,13 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
+ 
+   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_sizeof, tok::kw___alignof,
+                        tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
+-                       tok::kw___builtin_omp_required_simd_align) &&
++                       tok::kw___builtin_omp_required_simd_align,
++
++                       // PASTA PATCH: XNU-specific UETTs.
++                       tok::kw___builtin_ptrauth_type_discriminator,
++                       tok::kw___builtin_xnu_type_signature,
++                       tok::kw___builtin_xnu_type_summary,
++                       tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a typeof/sizeof/alignof/vec_step expression!");
+ 
+   ExprResult Operand;
+@@ -2403,7 +2416,13 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
+ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
+                      tok::kw__Alignof, tok::kw_vec_step,
+-                     tok::kw___builtin_omp_required_simd_align) &&
++                     tok::kw___builtin_omp_required_simd_align,
++
++                     // PASTA PATCH: XNU-specific UETTs.
++                     tok::kw___builtin_ptrauth_type_discriminator,
++                     tok::kw___builtin_xnu_type_signature,
++                     tok::kw___builtin_xnu_type_summary,
++                     tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a sizeof/alignof/vec_step expression!");
+   Token OpTok = Tok;
+   ConsumeToken();
+@@ -2480,6 +2499,16 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   else if (OpTok.is(tok::kw___builtin_omp_required_simd_align))
+     ExprKind = UETT_OpenMPRequiredSimdAlign;
+ 
++  // PASTA PATCH: XNU-specific things.
++  else if (OpTok.is(tok::kw___builtin_ptrauth_type_discriminator))
++    ExprKind = UETT_PtrAuthTypeDiscriminator;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_signature))
++    ExprKind = UETT_XNUTypeSignature;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_summary))
++    ExprKind = UETT_XNUTypeSummary;
++  else if (OpTok.is(tok::kw___builtin_tmo_type_get_metadata))
++    ExprKind = UETT_TMOTypeGetMetadata;
++
+   if (isCastExpr)
+     return Actions.ActOnUnaryExprOrTypeTraitExpr(OpTok.getLocation(),
+                                                  ExprKind,
 diff --git a/clang/lib/Parse/ParseTemplate.cpp b/clang/lib/Parse/ParseTemplate.cpp
 index e32ea6003..942c71526 100644
 --- a/clang/lib/Parse/ParseTemplate.cpp
@@ -1916,7 +1983,7 @@ index 75ffa8b0a..27cea9cdf 100644
    ArrayTypeLoc DstATL = DstTL.castAs<ArrayTypeLoc>();
    TypeLoc SrcElemTL = SrcATL.getElementLoc();
 diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
-index 83081bbf0..1fe26c88f 100644
+index 83081bbf0..c9c19b9d8 100644
 --- a/clang/lib/Sema/SemaExpr.cpp
 +++ b/clang/lib/Sema/SemaExpr.cpp
 @@ -4264,6 +4264,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
@@ -1935,7 +2002,23 @@ index 83081bbf0..1fe26c88f 100644
    if (IsUnevaluatedOperand) {
      ExprResult Result = CheckUnevaluatedOperand(E);
      if (Result.isInvalid())
-@@ -4647,6 +4656,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+@@ -4632,8 +4641,14 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
+       TInfo->getType()->isVariablyModifiedType())
+     TInfo = TransformToPotentiallyEvaluated(TInfo);
+ 
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  QualType RetTy = Context.getSizeType();
++  if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++  }
++
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
++      ExprKind, TInfo, RetTy, OpLoc, R.getEnd());
+ }
+ 
+ /// Build a sizeof or alignof expression given an expression
+@@ -4647,6 +4662,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
  
    E = PE.get();
  
@@ -1945,7 +2028,7 @@ index 83081bbf0..1fe26c88f 100644
    // Verify that the operand is valid.
    bool isInvalid = false;
    if (E->isTypeDependent()) {
-@@ -4661,6 +4673,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+@@ -4661,6 +4679,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
    } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
      Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
      isInvalid = true;
@@ -1962,7 +2045,7 @@ index 83081bbf0..1fe26c88f 100644
    } else {
      isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
    }
-@@ -4676,7 +4698,7 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+@@ -4676,7 +4704,7 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
  
    // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
    return new (Context) UnaryExprOrTypeTraitExpr(
@@ -1971,6 +2054,18 @@ index 83081bbf0..1fe26c88f 100644
  }
  
  /// ActOnUnaryExprOrTypeTraitExpr - Handle @c sizeof(type) and @c sizeof @c
+diff --git a/clang/lib/Sema/SemaExprCXX.cpp b/clang/lib/Sema/SemaExprCXX.cpp
+index 6f9e02528..431dd4ac1 100644
+--- a/clang/lib/Sema/SemaExprCXX.cpp
++++ b/clang/lib/Sema/SemaExprCXX.cpp
+@@ -5532,6 +5532,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
+   }
+   case BTT_IsSame:
+     return Self.Context.hasSameType(LhsT, RhsT);
++  case BTT_XNUTypeCompatible:  // PASTA PATCH
+   case BTT_TypeCompatible: {
+     // GCC ignores cv-qualifiers on arrays for this builtin.
+     Qualifiers LhsQuals, RhsQuals;
 diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
 index a8589191f..8047b0044 100644
 --- a/clang/lib/Sema/TreeTransform.h
