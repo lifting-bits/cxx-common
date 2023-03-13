@@ -1,4 +1,4 @@
-From f941cc37d2e914c402da86edcc55e563e90313e2 Mon Sep 17 00:00:00 2001
+From c521bb0dde19bcacaaed085c7d9202d658b87da9 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
@@ -330,7 +330,7 @@ index 4d229ae61..923107b84 100644
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
-index cfd7bf604..c70ebd052 100644
+index cfd7bf604..fb20b33cd 100644
 --- a/clang/lib/AST/ASTContext.cpp
 +++ b/clang/lib/AST/ASTContext.cpp
 @@ -3519,48 +3519,94 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
@@ -442,8 +442,8 @@ index cfd7bf604..c70ebd052 100644
 +        ConstantArrayType::totalSizeToAlloc<const Expr *>(OrigSizeExpr ? 1 : 0),
 +        TypeAlignment);
 +    OrigATP = new (OrigMem)
-+      ConstantArrayType(EltTy, QualType(ATP, 0), ArySize, OrigSizeExpr,
-+                        ASM, IndexTypeQuals);
++      ConstantArrayType(EltTy, ATP->getCanonicalTypeInternal(),
++                        ArySize, OrigSizeExpr, ASM, IndexTypeQuals);
 +    ConstantArrayTypes.InsertNode(OrigATP, OrigInsertPos);
 +    Types.push_back(OrigATP);
 +  }
@@ -491,7 +491,7 @@ index cfd7bf604..c70ebd052 100644
 +    
 +    return cast<ArrayType>(result);
 +  }
-+  
++
    if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
      return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
                                                    IAT->getSizeModifier(),
