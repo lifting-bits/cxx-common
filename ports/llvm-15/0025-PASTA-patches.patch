@@ -1,24 +1,51 @@
-From a2055c89f23ad44059dd11a91387e69fdb1cd5e0 Mon Sep 17 00:00:00 2001
+From c521bb0dde19bcacaaed085c7d9202d658b87da9 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
 Date: Mon, 14 Nov 2022 14:51:27 -0500
 Subject: [PATCH] Patches for PASTA
 
 ---
- clang/include/clang/Lex/PPCallbacks.h  | 120 +++++++++++
- clang/include/clang/Lex/Preprocessor.h |  46 ++---
- clang/include/clang/Lex/TokenLexer.h   |   7 +-
- clang/lib/Lex/Lexer.cpp                |   8 +
- clang/lib/Lex/PPDirectives.cpp         | 147 ++++++++++----
- clang/lib/Lex/PPExpressions.cpp        |  28 +++
- clang/lib/Lex/PPLexerChange.cpp        |  38 ++++
- clang/lib/Lex/PPMacroExpansion.cpp     | 267 ++++++++++++++++++++++++-
- clang/lib/Lex/Pragma.cpp               |  59 ++++++
- clang/lib/Lex/Preprocessor.cpp         |  43 +++-
- clang/lib/Lex/TokenLexer.cpp           |  39 +++-
- clang/lib/Parse/ParseTemplate.cpp      |   7 +
- clang/lib/Sema/SemaDecl.cpp            |   5 +
- 13 files changed, 735 insertions(+), 79 deletions(-)
+ clang/include/clang/Basic/TokenKinds.def |   7 +
+ clang/include/clang/Lex/PPCallbacks.h    | 120 ++++++++++
+ clang/include/clang/Lex/Preprocessor.h   |  46 ++--
+ clang/include/clang/Lex/TokenLexer.h     |   7 +-
+ clang/lib/AST/ASTContext.cpp             | 124 ++++++++---
+ clang/lib/AST/ExprConstant.cpp           |   9 +
+ clang/lib/AST/ItaniumMangle.cpp          |   8 +
+ clang/lib/AST/Type.cpp                   |   9 +-
+ clang/lib/Lex/Lexer.cpp                  |   8 +
+ clang/lib/Lex/PPDirectives.cpp           | 147 +++++++++----
+ clang/lib/Lex/PPExpressions.cpp          |  28 +++
+ clang/lib/Lex/PPLexerChange.cpp          |  38 ++++
+ clang/lib/Lex/PPMacroExpansion.cpp       | 267 ++++++++++++++++++++++-
+ clang/lib/Lex/Pragma.cpp                 |  59 +++++
+ clang/lib/Lex/Preprocessor.cpp           |  43 +++-
+ clang/lib/Lex/TokenLexer.cpp             |  39 +++-
+ clang/lib/Parse/ParseExpr.cpp            |  33 ++-
+ clang/lib/Parse/ParseTemplate.cpp        |   7 +
+ clang/lib/Sema/SemaDecl.cpp              |  12 +
+ clang/lib/Sema/SemaExpr.cpp              |  32 ++-
+ clang/lib/Sema/SemaExprCXX.cpp           |   1 +
+ clang/lib/Sema/TreeTransform.h           |  24 ++
+ 22 files changed, 953 insertions(+), 115 deletions(-)
 
+diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
+index 84fc0893c..102e20a92 100644
+--- a/clang/include/clang/Basic/TokenKinds.def
++++ b/clang/include/clang/Basic/TokenKinds.def
+@@ -554,6 +554,13 @@ ALIAS("__is_same_as", __is_same, KEYCXX)
+ KEYWORD(__private_extern__          , KEYALL)
+ KEYWORD(__module_private__          , KEYALL)
+ 
++// PASTA PATCH: Apple-specific XNU extensions.
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_signature, XNUTypeSignature, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_summary, XNUTypeSummary, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_tmo_type_get_metadata, TMOTypeGetMetadata, KEYALL)
++TYPE_TRAIT_2(__builtin_xnu_types_compatible, XNUTypeCompatible, KEYALL)
++
+ // Extension that will be enabled for Microsoft, Borland and PS4, but can be
+ // disabled via '-fno-declspec'.
+ KEYWORD(__declspec                  , 0)
 diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
 index 045df8711..cba195cff 100644
 --- a/clang/include/clang/Lex/PPCallbacks.h
@@ -302,6 +329,232 @@ index 4d229ae61..923107b84 100644
  
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
+diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
+index cfd7bf604..fb20b33cd 100644
+--- a/clang/lib/AST/ASTContext.cpp
++++ b/clang/lib/AST/ASTContext.cpp
+@@ -3519,48 +3519,94 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
+           EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
+          "Constant array of VLAs is illegal!");
+ 
+-  // We only need the size as part of the type if it's instantiation-dependent.
+-  if (SizeExpr && !SizeExpr->isInstantiationDependent())
+-    SizeExpr = nullptr;
+-
+   // Convert the array size into a canonical width matching the pointer size for
+   // the target.
+   llvm::APInt ArySize(ArySizeIn);
+   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
+ 
++  // PASTA PATCH: Make it always retain `SizeExpr` so that we can see token
++  //              provenance for arrays whose types are the result of some
++  //              expression.
++  const Expr *OrigSizeExpr = SizeExpr;
++  if (SizeExpr && !SizeExpr->isInstantiationDependent() &&
++      !isa<ConstantExpr>(SizeExpr) && !isa<IntegerLiteral>(SizeExpr)) {
++    llvm::APSInt ArySizeInt(ArySizeIn, !ArySizeIn.isNegative());
++    OrigSizeExpr = ConstantExpr::Create(
++        *this, const_cast<Expr *>(SizeExpr), clang::APValue(ArySizeInt));
++  }
++
++  // We only need the size as part of the type if it's instantiation-dependent.
++  if (SizeExpr && !SizeExpr->isInstantiationDependent())
++    SizeExpr = nullptr;
++
+   llvm::FoldingSetNodeID ID;
+   ConstantArrayType::Profile(ID, *this, EltTy, ArySize, SizeExpr, ASM,
+                              IndexTypeQuals);
+ 
+   void *InsertPos = nullptr;
+-  if (ConstantArrayType *ATP =
+-      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos))
++  ConstantArrayType *ATP =
++      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
++
++  // PASTA PATCH: Profile the original one. In practice, we should probably
++  //              never have a cache hit.
++  llvm::FoldingSetNodeID OrigID;
++  void *OrigInsertPos = nullptr;
++  ConstantArrayType *OrigATP = nullptr;
++  if (OrigSizeExpr) {
++    ConstantArrayType::Profile(OrigID, *this, EltTy, ArySize, OrigSizeExpr, ASM,
++                               IndexTypeQuals);
++    OrigATP = ConstantArrayTypes.FindNodeOrInsertPos(OrigID, OrigInsertPos);
++  }
++
++  if (ATP && OrigATP)
++    return getAdjustedType(QualType(OrigATP, 0), QualType(ATP, 0));
++
++  if (!OrigSizeExpr && ATP)
+     return QualType(ATP, 0);
+ 
+-  // If the element type isn't canonical or has qualifiers, or the array bound
+-  // is instantiation-dependent, this won't be a canonical type either, so fill
+-  // in the canonical type field.
+-  QualType Canon;
+-  if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
+-    SplitQualType canonSplit = getCanonicalType(EltTy).split();
+-    Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
+-                                 ASM, IndexTypeQuals);
+-    Canon = getQualifiedType(Canon, canonSplit.Quals);
++  if (!ATP) {
++    // If the element type isn't canonical or has qualifiers, or the array bound
++    // is instantiation-dependent, this won't be a canonical type either, so fill
++    // in the canonical type field.
++    QualType Canon;
++    if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
++      SplitQualType canonSplit = getCanonicalType(EltTy).split();
++      Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
++                                   ASM, IndexTypeQuals);
++      Canon = getQualifiedType(Canon, canonSplit.Quals);
+ 
+-    // Get the new insert position for the node we care about.
+-    ConstantArrayType *NewIP =
+-      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
+-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
++      // Get the new insert position for the node we care about.
++      ConstantArrayType *NewIP =
++        ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
++      assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
++
++      // TODO(pag): Calculate a new insert position for orig expressions?
++    }
++
++    void *Mem = Allocate(
++        ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
++        TypeAlignment);
++    ATP = new (Mem)
++      ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
++    ConstantArrayTypes.InsertNode(ATP, InsertPos);
++    Types.push_back(ATP);
+   }
+ 
+-  void *Mem = Allocate(
+-      ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
+-      TypeAlignment);
+-  auto *New = new (Mem)
+-    ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
+-  ConstantArrayTypes.InsertNode(New, InsertPos);
+-  Types.push_back(New);
+-  return QualType(New, 0);
++  if (OrigSizeExpr && !OrigATP) {
++    void *OrigMem = Allocate(
++        ConstantArrayType::totalSizeToAlloc<const Expr *>(OrigSizeExpr ? 1 : 0),
++        TypeAlignment);
++    OrigATP = new (OrigMem)
++      ConstantArrayType(EltTy, ATP->getCanonicalTypeInternal(),
++                        ArySize, OrigSizeExpr, ASM, IndexTypeQuals);
++    ConstantArrayTypes.InsertNode(OrigATP, OrigInsertPos);
++    Types.push_back(OrigATP);
++  }
++
++  if (ATP && OrigATP)
++    return getAdjustedType(QualType(OrigATP, 0), QualType(ATP, 0));
++
++  return QualType(ATP, 0);
+ }
+ 
+ /// getVariableArrayDecayedType - Turns the given type, which may be
+@@ -3661,6 +3707,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
+                                   cat->getSizeExpr(),
+                                   cat->getSizeModifier(),
+                                   cat->getIndexTypeCVRQualifiers());
++
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
+     break;
+   }
+ 
+@@ -6792,11 +6844,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+   // qualifiers into the array element type and return a new array type.
+   QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
+ 
+-  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy))
+-    return cast<ArrayType>(getConstantArrayType(NewEltTy, CAT->getSize(),
++  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy)) {
++
++    // PASTA PATCH: `getConstantArrayType` might return an adjusted type.
++    QualType result = getConstantArrayType(NewEltTy, CAT->getSize(),
+                                                 CAT->getSizeExpr(),
+                                                 CAT->getSizeModifier(),
+-                                           CAT->getIndexTypeCVRQualifiers()));
++                                           CAT->getIndexTypeCVRQualifiers());
++
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
++    
++    return cast<ArrayType>(result);
++  }
++
+   if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
+     return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
+                                                   IAT->getSizeModifier(),
+diff --git a/clang/lib/AST/ExprConstant.cpp b/clang/lib/AST/ExprConstant.cpp
+index 9d92c848c..50d445f49 100644
+--- a/clang/lib/AST/ExprConstant.cpp
++++ b/clang/lib/AST/ExprConstant.cpp
+@@ -13287,6 +13287,15 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
+                     Info.Ctx.getOpenMPDefaultSimdAlign(E->getArgumentType()))
+             .getQuantity(),
+         E);
++
++  // PASTA PATCH: Fake these XNU-specific type traits.
++  case UETT_PtrAuthTypeDiscriminator:
++  case UETT_XNUTypeSummary:
++  case UETT_TMOTypeGetMetadata:
++    return Success(0, E);
++
++  case UETT_XNUTypeSignature:
++    return false;
+   }
+ 
+   llvm_unreachable("unknown expr/type trait");
+diff --git a/clang/lib/AST/ItaniumMangle.cpp b/clang/lib/AST/ItaniumMangle.cpp
+index 91f41778e..08a6fdd15 100644
+--- a/clang/lib/AST/ItaniumMangle.cpp
++++ b/clang/lib/AST/ItaniumMangle.cpp
+@@ -4653,6 +4653,14 @@ recurse:
+     };
+ 
+     switch(SAE->getKind()) {
++
++    // PASTA PATCH: Sort of support these.
++    case UETT_PtrAuthTypeDiscriminator:
++    case UETT_XNUTypeSummary:
++    case UETT_TMOTypeGetMetadata:
++    case UETT_XNUTypeSignature:
++      break;
++
+     case UETT_SizeOf:
+       Out << 's';
+       MangleAlignofSizeofArg();
+diff --git a/clang/lib/AST/Type.cpp b/clang/lib/AST/Type.cpp
+index 0f168a518..cd5497be5 100644
+--- a/clang/lib/AST/Type.cpp
++++ b/clang/lib/AST/Type.cpp
+@@ -3994,9 +3994,14 @@ bool Type::hasUnnamedOrLocalType() const {
+ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
+   switch (T->getTypeClass()) {
+ #define TYPE(Class,Base)
+-#define NON_CANONICAL_TYPE(Class,Base) case Type::Class:
++
++// PASTA PATCH: For Multiplier Issue #130, we use AdjustedTypes for arrays
++//              and so we go and handle non-canonical types via desugarding
++//              where Clang normally does not.
++#define NON_CANONICAL_TYPE(Class,Base) \
++  case Type::Class: \
++    return computeTypeLinkageInfo(cast<Class ## Type>(T)->desugar());
+ #include "clang/AST/TypeNodes.inc"
+-    llvm_unreachable("didn't expect a non-canonical type here");
+ 
+ #define TYPE(Class,Base)
+ #define DEPENDENT_TYPE(Class,Base) case Type::Class:
 diff --git a/clang/lib/Lex/Lexer.cpp b/clang/lib/Lex/Lexer.cpp
 index a4cff403e..33f17b148 100644
 --- a/clang/lib/Lex/Lexer.cpp
@@ -1620,6 +1873,71 @@ index efda6d004..4e8c9b78d 100644
      Tok.startToken();
      Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
      Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
+diff --git a/clang/lib/Parse/ParseExpr.cpp b/clang/lib/Parse/ParseExpr.cpp
+index a6a946d7f..72dc2a006 100644
+--- a/clang/lib/Parse/ParseExpr.cpp
++++ b/clang/lib/Parse/ParseExpr.cpp
+@@ -1420,6 +1420,13 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
+   case tok::kw_sizeof:     // unary-expression: 'sizeof' unary-expression
+                            // unary-expression: 'sizeof' '(' type-name ')'
+   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
++
++  // PASTA PATCH: XNU-specific UETTs.
++  case tok::kw___builtin_ptrauth_type_discriminator:
++  case tok::kw___builtin_xnu_type_signature:
++  case tok::kw___builtin_xnu_type_summary:
++  case tok::kw___builtin_tmo_type_get_metadata:
++
+   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
+   case tok::kw___builtin_omp_required_simd_align:
+     if (NotPrimaryExpression)
+@@ -2284,7 +2291,13 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
+ 
+   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_sizeof, tok::kw___alignof,
+                        tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
+-                       tok::kw___builtin_omp_required_simd_align) &&
++                       tok::kw___builtin_omp_required_simd_align,
++
++                       // PASTA PATCH: XNU-specific UETTs.
++                       tok::kw___builtin_ptrauth_type_discriminator,
++                       tok::kw___builtin_xnu_type_signature,
++                       tok::kw___builtin_xnu_type_summary,
++                       tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a typeof/sizeof/alignof/vec_step expression!");
+ 
+   ExprResult Operand;
+@@ -2403,7 +2416,13 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
+ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
+                      tok::kw__Alignof, tok::kw_vec_step,
+-                     tok::kw___builtin_omp_required_simd_align) &&
++                     tok::kw___builtin_omp_required_simd_align,
++
++                     // PASTA PATCH: XNU-specific UETTs.
++                     tok::kw___builtin_ptrauth_type_discriminator,
++                     tok::kw___builtin_xnu_type_signature,
++                     tok::kw___builtin_xnu_type_summary,
++                     tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a sizeof/alignof/vec_step expression!");
+   Token OpTok = Tok;
+   ConsumeToken();
+@@ -2480,6 +2499,16 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   else if (OpTok.is(tok::kw___builtin_omp_required_simd_align))
+     ExprKind = UETT_OpenMPRequiredSimdAlign;
+ 
++  // PASTA PATCH: XNU-specific things.
++  else if (OpTok.is(tok::kw___builtin_ptrauth_type_discriminator))
++    ExprKind = UETT_PtrAuthTypeDiscriminator;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_signature))
++    ExprKind = UETT_XNUTypeSignature;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_summary))
++    ExprKind = UETT_XNUTypeSummary;
++  else if (OpTok.is(tok::kw___builtin_tmo_type_get_metadata))
++    ExprKind = UETT_TMOTypeGetMetadata;
++
+   if (isCastExpr)
+     return Actions.ActOnUnaryExprOrTypeTraitExpr(OpTok.getLocation(),
+                                                  ExprKind,
 diff --git a/clang/lib/Parse/ParseTemplate.cpp b/clang/lib/Parse/ParseTemplate.cpp
 index e32ea6003..942c71526 100644
 --- a/clang/lib/Parse/ParseTemplate.cpp
@@ -1639,7 +1957,7 @@ index e32ea6003..942c71526 100644
    if (CachingTokens) {
      // If the previous cached token is being merged, delete it.
 diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
-index 75ffa8b0a..f4d175de2 100644
+index 75ffa8b0a..27cea9cdf 100644
 --- a/clang/lib/Sema/SemaDecl.cpp
 +++ b/clang/lib/Sema/SemaDecl.cpp
 @@ -6261,6 +6261,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
@@ -1654,6 +1972,160 @@ index 75ffa8b0a..f4d175de2 100644
      LookupName(Previous, S, CreateBuiltins);
    } else { // Something like "int foo::x;"
      LookupQualifiedName(Previous, DC);
+@@ -6455,6 +6460,13 @@ FixInvalidVariablyModifiedTypeLoc(TypeLoc SrcTL, TypeLoc DstTL) {
+     DstPTL.setRParenLoc(SrcPTL.getRParenLoc());
+     return;
+   }
++
++  // PASTA PATCH: Might have an AdjustedTypeLoc for DstTL due to multiplier
++  //              patches for issue #130.
++  if (AdjustedTypeLoc AdjTL = DstTL.getAs<AdjustedTypeLoc>()) {
++    DstTL = AdjTL.getOriginalLoc();
++  }
++
+   ArrayTypeLoc SrcATL = SrcTL.castAs<ArrayTypeLoc>();
+   ArrayTypeLoc DstATL = DstTL.castAs<ArrayTypeLoc>();
+   TypeLoc SrcElemTL = SrcATL.getElementLoc();
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 83081bbf0..c9c19b9d8 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -4264,6 +4264,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
+   bool IsUnevaluatedOperand =
+       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
+        ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
++
++  // PASTA PATCH: Add in XNU-specific unary expr/type traits.
++  IsUnevaluatedOperand =
++      IsUnevaluatedOperand ||
++      ExprKind == UETT_PtrAuthTypeDiscriminator ||
++      ExprKind == UETT_XNUTypeSignature ||
++      ExprKind == UETT_XNUTypeSummary ||
++      ExprKind == UETT_TMOTypeGetMetadata;
++
+   if (IsUnevaluatedOperand) {
+     ExprResult Result = CheckUnevaluatedOperand(E);
+     if (Result.isInvalid())
+@@ -4632,8 +4641,14 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
+       TInfo->getType()->isVariablyModifiedType())
+     TInfo = TransformToPotentiallyEvaluated(TInfo);
+ 
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  QualType RetTy = Context.getSizeType();
++  if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++  }
++
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
++      ExprKind, TInfo, RetTy, OpLoc, R.getEnd());
+ }
+ 
+ /// Build a sizeof or alignof expression given an expression
+@@ -4647,6 +4662,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   E = PE.get();
+ 
++  // PASTA PATCH: We want a string literal array return type for the signature.
++  QualType RetTy = Context.getSizeType();
++
+   // Verify that the operand is valid.
+   bool isInvalid = false;
+   if (E->isTypeDependent()) {
+@@ -4661,6 +4679,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
+     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
+     isInvalid = true;
++
++  // PASTA PATCH: Let these through.
++  } else if (ExprKind == UETT_PtrAuthTypeDiscriminator ||
++             ExprKind == UETT_XNUTypeSummary ||
++             ExprKind == UETT_TMOTypeGetMetadata) {
++
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  } else if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++
+   } else {
+     isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
+   }
+@@ -4676,7 +4704,7 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());
++      ExprKind, E, RetTy, OpLoc, E->getSourceRange().getEnd());
+ }
+ 
+ /// ActOnUnaryExprOrTypeTraitExpr - Handle @c sizeof(type) and @c sizeof @c
+diff --git a/clang/lib/Sema/SemaExprCXX.cpp b/clang/lib/Sema/SemaExprCXX.cpp
+index 6f9e02528..431dd4ac1 100644
+--- a/clang/lib/Sema/SemaExprCXX.cpp
++++ b/clang/lib/Sema/SemaExprCXX.cpp
+@@ -5532,6 +5532,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
+   }
+   case BTT_IsSame:
+     return Self.Context.hasSameType(LhsT, RhsT);
++  case BTT_XNUTypeCompatible:  // PASTA PATCH
+   case BTT_TypeCompatible: {
+     // GCC ignores cv-qualifiers on arrays for this builtin.
+     Qualifiers LhsQuals, RhsQuals;
+diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
+index a8589191f..8047b0044 100644
+--- a/clang/lib/Sema/TreeTransform.h
++++ b/clang/lib/Sema/TreeTransform.h
+@@ -5212,6 +5212,12 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have either a ConstantArrayType or a VariableArrayType now:
+   // a ConstantArrayType is allowed to have an element type which is a
+   // VariableArrayType if the type is dependent.  Fortunately, all array
+@@ -5244,6 +5250,12 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   IncompleteArrayTypeLoc NewTL = TLB.push<IncompleteArrayTypeLoc>(Result);
+   NewTL.setLBracketLoc(TL.getLBracketLoc());
+   NewTL.setRBracketLoc(TL.getRBracketLoc());
+@@ -5289,6 +5301,12 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have constant size array now, but fortunately it has the same
+   // location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
+@@ -5337,6 +5355,12 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have any sort of array type now, but fortunately they
+   // all have the same location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
 -- 
 2.39.0
 
