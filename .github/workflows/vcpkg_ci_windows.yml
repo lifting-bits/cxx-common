@@ -35,7 +35,8 @@ jobs:
       fail-fast: false
       matrix:
         llvm: [
-          'llvm-15'
+          'llvm-15',
+          'llvm-16'
           ]
 
     runs-on: ['self-hosted', 'Windows', 'X64']

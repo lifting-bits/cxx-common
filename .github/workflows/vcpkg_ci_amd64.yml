@@ -37,7 +37,7 @@ jobs:
         image:
           - { name: 'ubuntu', tag: '20.04' }
           - { name: 'ubuntu', tag: '22.04' }
-        llvm: [ 'llvm-15', 'llvm-15[pasta]' ]
+        llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
