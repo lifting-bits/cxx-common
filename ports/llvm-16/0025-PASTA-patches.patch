@@ -1,0 +1,2131 @@
+From c521bb0dde19bcacaaed085c7d9202d658b87da9 Mon Sep 17 00:00:00 2001
+From: Peter Goodman <peter.goodman@gmail.com>
+Date: Mon, 14 Nov 2022 14:51:27 -0500
+Subject: [PATCH] Patches for PASTA
+
+---
+ clang/include/clang/Basic/TokenKinds.def |   7 +
+ clang/include/clang/Lex/PPCallbacks.h    | 120 ++++++++++
+ clang/include/clang/Lex/Preprocessor.h   |  46 ++--
+ clang/include/clang/Lex/TokenLexer.h     |   7 +-
+ clang/lib/AST/ASTContext.cpp             | 124 ++++++++---
+ clang/lib/AST/ExprConstant.cpp           |   9 +
+ clang/lib/AST/ItaniumMangle.cpp          |   8 +
+ clang/lib/AST/Type.cpp                   |   9 +-
+ clang/lib/Lex/Lexer.cpp                  |   8 +
+ clang/lib/Lex/PPDirectives.cpp           | 147 +++++++++----
+ clang/lib/Lex/PPExpressions.cpp          |  28 +++
+ clang/lib/Lex/PPLexerChange.cpp          |  38 ++++
+ clang/lib/Lex/PPMacroExpansion.cpp       | 267 ++++++++++++++++++++++-
+ clang/lib/Lex/Pragma.cpp                 |  59 +++++
+ clang/lib/Lex/Preprocessor.cpp           |  43 +++-
+ clang/lib/Lex/TokenLexer.cpp             |  39 +++-
+ clang/lib/Parse/ParseExpr.cpp            |  33 ++-
+ clang/lib/Parse/ParseTemplate.cpp        |   7 +
+ clang/lib/Sema/SemaDecl.cpp              |  12 +
+ clang/lib/Sema/SemaExpr.cpp              |  32 ++-
+ clang/lib/Sema/SemaExprCXX.cpp           |   1 +
+ clang/lib/Sema/TreeTransform.h           |  24 ++
+ 22 files changed, 953 insertions(+), 115 deletions(-)
+
+diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
+index 84fc0893c..102e20a92 100644
+--- a/clang/include/clang/Basic/TokenKinds.def
++++ b/clang/include/clang/Basic/TokenKinds.def
+@@ -554,6 +554,13 @@ ALIAS("__is_same_as", __is_same, KEYCXX)
+ KEYWORD(__private_extern__          , KEYALL)
+ KEYWORD(__module_private__          , KEYALL)
+ 
++// PASTA PATCH: Apple-specific XNU extensions.
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_ptrauth_type_discriminator, PtrAuthTypeDiscriminator, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_signature, XNUTypeSignature, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_xnu_type_summary, XNUTypeSummary, KEYALL)
++UNARY_EXPR_OR_TYPE_TRAIT(__builtin_tmo_type_get_metadata, TMOTypeGetMetadata, KEYALL)
++TYPE_TRAIT_2(__builtin_xnu_types_compatible, XNUTypeCompatible, KEYALL)
++
+ // Extension that will be enabled for Microsoft, Borland and PS4, but can be
+ // disabled via '-fno-declspec'.
+ KEYWORD(__declspec                  , 0)
+diff --git a/clang/include/clang/Lex/PPCallbacks.h b/clang/include/clang/Lex/PPCallbacks.h
+index 045df8711..cba195cff 100644
+--- a/clang/include/clang/Lex/PPCallbacks.h
++++ b/clang/include/clang/Lex/PPCallbacks.h
+@@ -40,6 +40,120 @@ public:
+     EnterFile, ExitFile, SystemHeaderPragma, RenameFile
+   };
+ 
++  // PASTA PATCH: Add in an event that lets us get better visibility into the
++  //              behavior of the preprocessor, as things are happening.
++#define LLVM_CLANG_HAS_PASTA_EVENTS 20221107L
++  enum EventKind {
++    // Tell us just after one of the lexers has lexed a token.
++    //
++    // `Tok` is the token generated from one of the underlying lexers.
++    // `Data` is zero or it is a raw source location for where the lexer was
++    // invoked.
++    TokenFromLexer,
++    TokenFromTokenLexer,
++    TokenFromCachingLexer,
++    TokenFromAfterModuleImportLexer,
++
++    // Tell the listener that the parser has split a token. This happens in C++
++    // code for templates, e.g. `constant<bar<A>>>0`, where the `>>>` is first
++    // treated as one token, but then where the parser realizes that it is
++    // really `constant<bar<A>> > 0`.
++    BeginSplitToken,
++    EndSplitToken,
++
++    // Tell the listener that we've just lexed the hash token that should start
++    // off a directive.
++    //
++    // `Tok` is the `#`.
++    BeginDirective,
++
++    // Ends with an `EndDirective`.
++    //
++    // `Tok` is the `#`.
++    BeginSkippedArea,
++
++    // Tell the listener that we're in a named directive, e.g. `if` or `define`.
++    //
++    // `Tok` is the `#`.
++    // `Data` is a `Token *` of the token lexed after the `#`.
++    SetNamedDirective,
++
++    // Tell the listener that we're in an unnamed directive, e.g. GNU line
++    // numbers, such as `# 1`.
++    //
++    // `Tok` is the `#`.
++    // `Data` is a `const Token *` of the token lexed after the `#`.
++    SetUnnamedDirective,
++
++    // End a directive.
++    //
++    // `Tok` is the `tok::eod` token.
++    EndDirective,
++
++    // We thought something was a directive, but it wasn't, e.g. due to us
++    // parsing a .S file.
++    EndNonDirective,
++
++    // `Tok` is the name of the macro being expanded.
++    // `Data` is the `MacroInfo *`. For built-in macros, this may be `nullptr`.
++    BeginMacroExpansion,
++    SwitchToExpansion,
++    BeginPreArgumentExpansion,
++    EndPreArgumentExpansion,
++    PrepareToCancelExpansion,  // E.g. `_Pragma` in macro argument pre-exansion.
++    CancelExpansion,  // E.g. `_Pragma` in a macro parameter.
++    EndMacroExpansion,
++
++    // `Tok` is the name of the macro being expanded.
++    // `Data` is a `MacroInfo *`.
++    BeginMacroCallArgumentList,
++
++    // `Tok` is the token that terminated the argument list, i.e. a `)`.
++    // `Data` is a `MacroArgs *`. For built-in macros, this may be `nullptr`.
++    EndMacroCallArgumentList,
++
++    // `Tok` is the token just before the first token of the argument, e.g.
++    // `(` or `,`.
++    // `Data` is a `Token *` of the macro name.
++    BeginMacroCallArgument,
++
++    // `Tok` is the token just before the first token of the argument.
++    // `Data` is a `Token *` just after the last token of the argument, e.g. a
++    // `)` or a `,`.
++    EndMacroCallArgument,
++
++    // `Tok` is the token just before the first token of the variadic arguments,
++    // e.g. a `(` or a `,`.
++    // `Data` is a `Token *` of the macro name.
++    BeginVariadicCallArgumentList,
++
++    // `Tok` is the token just before the first token of the variadic arguments
++    // `Data` is a `Token *` just after the last token of the arguments, e.g. a
++    // `)` or a `,`.
++    EndVariadicCallArgumentList,
++
++    // `Tok` is the token which begins the substitution.
++    // `Data` is `nullptr`.
++    BeginSubstitution,
++
++    // `Tok` is the token (previously visible via another event) which we want
++    // to say begins the substitution.
++    // `Data` is `nullptr`.
++    BeginDelayedSubstitution,
++
++    // `Tok` is the last token before the substituted tokens will begin being
++    // outputted.
++    // `Data` is a `Token *` of the first token of the substitution.
++    SwitchToSubstitution,
++
++    // `Tok` is the last substituted token.
++    // `Data` is a `Token *` of the first token of the substitution.
++    EndSubstitution,
++  };
++
++  // PASTA PATCH:
++  virtual void Event(const Token &Tok, EventKind Kind, uintptr_t Data) {}
++
+   /// Callback invoked whenever a source file is entered or exited.
+   ///
+   /// \param Loc Indicates the new location.
+@@ -435,6 +549,12 @@ public:
+ 
+   ~PPChainedCallbacks() override;
+ 
++  // PASTA PATCH
++  void Event(const Token &Tok, EventKind Kind, uintptr_t Data) override {
++    First->Event(Tok, Kind, Data);
++    Second->Event(Tok, Kind, Data);
++  }
++
+   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                    SrcMgr::CharacteristicKind FileType,
+                    FileID PrevFID) override {
+diff --git a/clang/include/clang/Lex/Preprocessor.h b/clang/include/clang/Lex/Preprocessor.h
+index 7c5df0506..643f7216f 100644
+--- a/clang/include/clang/Lex/Preprocessor.h
++++ b/clang/include/clang/Lex/Preprocessor.h
+@@ -658,6 +658,9 @@ private:
+   /// encountered (e.g. a file is \#included, etc).
+   std::unique_ptr<PPCallbacks> Callbacks;
+ 
++  // PASTA PATCH: Add post-lex action.
++  std::function<void(const Token &)> PostLexAction;
++
+   struct MacroExpandsInfo {
+     Token Tok;
+     MacroDefinition MD;
+@@ -1480,8 +1483,8 @@ public:
+ 
+   /// Process directives while skipping until the through header or
+   /// #pragma hdrstop is found.
+-  void HandleSkippedDirectiveWhileUsingPCH(Token &Result,
+-                                           SourceLocation HashLoc);
++  void HandleSkippedDirectiveWhileUsingPCH(Token &Result,  // PASTA PATCH
++                                           const Token &SavedHash);  // PASTA PATCH
+ 
+   /// Enter the specified FileID as the main source file,
+   /// which implicitly adds the builtin defines etc.
+@@ -2261,15 +2264,7 @@ private:
+     CurPPLexer = nullptr;
+   }
+ 
+-  void PopIncludeMacroStack() {
+-    CurLexer = std::move(IncludeMacroStack.back().TheLexer);
+-    CurPPLexer = IncludeMacroStack.back().ThePPLexer;
+-    CurTokenLexer = std::move(IncludeMacroStack.back().TheTokenLexer);
+-    CurDirLookup  = IncludeMacroStack.back().TheDirLookup;
+-    CurLexerSubmodule = IncludeMacroStack.back().TheSubmodule;
+-    CurLexerKind = IncludeMacroStack.back().CurLexerKind;
+-    IncludeMacroStack.pop_back();
+-  }
++  void PopIncludeMacroStack();  // PASTA PATCH
+ 
+   void PropagateLineStartLeadingSpaceInfo(Token &Result);
+ 
+@@ -2333,7 +2328,7 @@ private:
+   /// \p FoundElse is false, then \#else directives are ok, if not, then we have
+   /// already seen one so a \#else directive is a duplicate.  When this returns,
+   /// the caller can lex the first valid token.
+-  void SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
++  void SkipExcludedConditionalBlock(const Token &HashToken,  // PASTA PATCH
+                                     SourceLocation IfTokenLoc,
+                                     bool FoundNonSkipPortion, bool FoundElse,
+                                     SourceLocation ElseLoc = SourceLocation());
+@@ -2401,7 +2396,7 @@ private:
+   /// After reading "MACRO(", this method is invoked to read all of the formal
+   /// arguments specified for the macro invocation.  Returns null on error.
+   MacroArgs *ReadMacroCallArgumentList(Token &MacroName, MacroInfo *MI,
+-                                       SourceLocation &MacroEnd);
++                                       Token &MacroEndTok);  // PASTA PATCH
+ 
+   /// If an identifier token is read that is to be expanded
+   /// as a builtin macro, handle it and return the next token as 'Tok'.
+@@ -2468,12 +2463,12 @@ private:
+   /// Handle*Directive - implement the various preprocessor directives.  These
+   /// should side-effect the current preprocessor object so that the next call
+   /// to Lex() will return the appropriate token next.
+-  void HandleLineDirective();
+-  void HandleDigitDirective(Token &Tok);
+-  void HandleUserDiagnosticDirective(Token &Tok, bool isWarning);
+-  void HandleIdentSCCSDirective(Token &Tok);
+-  void HandleMacroPublicDirective(Token &Tok);
+-  void HandleMacroPrivateDirective();
++  void HandleLineDirective(const Token &SavedHash);  // PASTA PATCH
++  void HandleDigitDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
++  void HandleUserDiagnosticDirective(const Token &SavedHash, Token &Tok, bool isWarning);  // PASTA PATCH
++  void HandleIdentSCCSDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
++  void HandleMacroPublicDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
++  void HandleMacroPrivateDirective(const Token &SavedHash);  // PASTA PATCH
+ 
+   /// An additional notification that can be produced by a header inclusion or
+   /// import to tell the parser what happened.
+@@ -2505,7 +2500,7 @@ private:
+       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
+ 
+   // File inclusion.
+-  void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,
++  void HandleIncludeDirective(const Token &SavedHash, Token &Tok,  // PASTA PATCH
+                               ConstSearchDirIterator LookupFrom = nullptr,
+                               const FileEntry *LookupFromFile = nullptr);
+   ImportAction
+@@ -2513,9 +2508,9 @@ private:
+                               Token &FilenameTok, SourceLocation EndLoc,
+                               ConstSearchDirIterator LookupFrom = nullptr,
+                               const FileEntry *LookupFromFile = nullptr);
+-  void HandleIncludeNextDirective(SourceLocation HashLoc, Token &Tok);
+-  void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
+-  void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
++  void HandleIncludeNextDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
++  void HandleIncludeMacrosDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
++  void HandleImportDirective(const Token &SavedHash, Token &Tok);  // PASTA PATCH
+   void HandleMicrosoftImportDirective(Token &Tok);
+ 
+ public:
+@@ -2582,8 +2577,9 @@ private:
+   void replayPreambleConditionalStack();
+ 
+   // Macro handling.
+-  void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterHeaderGuard);
+-  void HandleUndefDirective();
++  void HandleDefineDirective(const Token &SavedHash, Token &Tok,  // PASTA PATCH
++                             bool ImmediatelyAfterHeaderGuard);  // PASTA PATCH
++  void HandleUndefDirective(const Token &SavedHash);  // PASTA PATCH
+ 
+   // Conditional Inclusion.
+   void HandleIfdefDirective(Token &Result, const Token &HashToken,
+diff --git a/clang/include/clang/Lex/TokenLexer.h b/clang/include/clang/Lex/TokenLexer.h
+index 4d229ae61..923107b84 100644
+--- a/clang/include/clang/Lex/TokenLexer.h
++++ b/clang/include/clang/Lex/TokenLexer.h
+@@ -13,7 +13,7 @@
+ #ifndef LLVM_CLANG_LEX_TOKENLEXER_H
+ #define LLVM_CLANG_LEX_TOKENLEXER_H
+ 
+-#include "clang/Basic/SourceLocation.h"
++#include "clang/Lex/Token.h"  // PASTA PATCH
+ #include "llvm/ADT/ArrayRef.h"
+ 
+ namespace clang {
+@@ -40,6 +40,9 @@ class TokenLexer {
+   /// The current preprocessor object we are expanding for.
+   Preprocessor &PP;
+ 
++  // PASTA PATCH: The name token of the macro.
++  Token MacroNameTok;
++
+   /// This is the pointer to an array of tokens that the macro is
+   /// defined to, with arguments expanded for function-like macros.  If this is
+   /// a token stream, these are the tokens we are returning.  This points into
+@@ -98,7 +101,7 @@ class TokenLexer {
+ 
+   /// When true, the produced tokens have Token::IsReinjected flag set.
+   /// See the flag documentation for details.
+-  bool IsReinject : 1;
++  bool IsReinject;  // PASTA PATCH
+ 
+ public:
+   /// Create a TokenLexer for the specified macro with the specified actual
+diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
+index cfd7bf604..fb20b33cd 100644
+--- a/clang/lib/AST/ASTContext.cpp
++++ b/clang/lib/AST/ASTContext.cpp
+@@ -3519,48 +3519,94 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
+           EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
+          "Constant array of VLAs is illegal!");
+ 
+-  // We only need the size as part of the type if it's instantiation-dependent.
+-  if (SizeExpr && !SizeExpr->isInstantiationDependent())
+-    SizeExpr = nullptr;
+-
+   // Convert the array size into a canonical width matching the pointer size for
+   // the target.
+   llvm::APInt ArySize(ArySizeIn);
+   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
+ 
++  // PASTA PATCH: Make it always retain `SizeExpr` so that we can see token
++  //              provenance for arrays whose types are the result of some
++  //              expression.
++  const Expr *OrigSizeExpr = SizeExpr;
++  if (SizeExpr && !SizeExpr->isInstantiationDependent() &&
++      !isa<ConstantExpr>(SizeExpr) && !isa<IntegerLiteral>(SizeExpr)) {
++    llvm::APSInt ArySizeInt(ArySizeIn, !ArySizeIn.isNegative());
++    OrigSizeExpr = ConstantExpr::Create(
++        *this, const_cast<Expr *>(SizeExpr), clang::APValue(ArySizeInt));
++  }
++
++  // We only need the size as part of the type if it's instantiation-dependent.
++  if (SizeExpr && !SizeExpr->isInstantiationDependent())
++    SizeExpr = nullptr;
++
+   llvm::FoldingSetNodeID ID;
+   ConstantArrayType::Profile(ID, *this, EltTy, ArySize, SizeExpr, ASM,
+                              IndexTypeQuals);
+ 
+   void *InsertPos = nullptr;
+-  if (ConstantArrayType *ATP =
+-      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos))
++  ConstantArrayType *ATP =
++      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
++
++  // PASTA PATCH: Profile the original one. In practice, we should probably
++  //              never have a cache hit.
++  llvm::FoldingSetNodeID OrigID;
++  void *OrigInsertPos = nullptr;
++  ConstantArrayType *OrigATP = nullptr;
++  if (OrigSizeExpr) {
++    ConstantArrayType::Profile(OrigID, *this, EltTy, ArySize, OrigSizeExpr, ASM,
++                               IndexTypeQuals);
++    OrigATP = ConstantArrayTypes.FindNodeOrInsertPos(OrigID, OrigInsertPos);
++  }
++
++  if (ATP && OrigATP)
++    return getAdjustedType(QualType(OrigATP, 0), QualType(ATP, 0));
++
++  if (!OrigSizeExpr && ATP)
+     return QualType(ATP, 0);
+ 
+-  // If the element type isn't canonical or has qualifiers, or the array bound
+-  // is instantiation-dependent, this won't be a canonical type either, so fill
+-  // in the canonical type field.
+-  QualType Canon;
+-  if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
+-    SplitQualType canonSplit = getCanonicalType(EltTy).split();
+-    Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
+-                                 ASM, IndexTypeQuals);
+-    Canon = getQualifiedType(Canon, canonSplit.Quals);
++  if (!ATP) {
++    // If the element type isn't canonical or has qualifiers, or the array bound
++    // is instantiation-dependent, this won't be a canonical type either, so fill
++    // in the canonical type field.
++    QualType Canon;
++    if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers() || SizeExpr) {
++      SplitQualType canonSplit = getCanonicalType(EltTy).split();
++      Canon = getConstantArrayType(QualType(canonSplit.Ty, 0), ArySize, nullptr,
++                                   ASM, IndexTypeQuals);
++      Canon = getQualifiedType(Canon, canonSplit.Quals);
+ 
+-    // Get the new insert position for the node we care about.
+-    ConstantArrayType *NewIP =
+-      ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
+-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
++      // Get the new insert position for the node we care about.
++      ConstantArrayType *NewIP =
++        ConstantArrayTypes.FindNodeOrInsertPos(ID, InsertPos);
++      assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
++
++      // TODO(pag): Calculate a new insert position for orig expressions?
++    }
++
++    void *Mem = Allocate(
++        ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
++        TypeAlignment);
++    ATP = new (Mem)
++      ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
++    ConstantArrayTypes.InsertNode(ATP, InsertPos);
++    Types.push_back(ATP);
+   }
+ 
+-  void *Mem = Allocate(
+-      ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
+-      TypeAlignment);
+-  auto *New = new (Mem)
+-    ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
+-  ConstantArrayTypes.InsertNode(New, InsertPos);
+-  Types.push_back(New);
+-  return QualType(New, 0);
++  if (OrigSizeExpr && !OrigATP) {
++    void *OrigMem = Allocate(
++        ConstantArrayType::totalSizeToAlloc<const Expr *>(OrigSizeExpr ? 1 : 0),
++        TypeAlignment);
++    OrigATP = new (OrigMem)
++      ConstantArrayType(EltTy, ATP->getCanonicalTypeInternal(),
++                        ArySize, OrigSizeExpr, ASM, IndexTypeQuals);
++    ConstantArrayTypes.InsertNode(OrigATP, OrigInsertPos);
++    Types.push_back(OrigATP);
++  }
++
++  if (ATP && OrigATP)
++    return getAdjustedType(QualType(OrigATP, 0), QualType(ATP, 0));
++
++  return QualType(ATP, 0);
+ }
+ 
+ /// getVariableArrayDecayedType - Turns the given type, which may be
+@@ -3661,6 +3707,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
+                                   cat->getSizeExpr(),
+                                   cat->getSizeModifier(),
+                                   cat->getIndexTypeCVRQualifiers());
++
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
+     break;
+   }
+ 
+@@ -6792,11 +6844,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+   // qualifiers into the array element type and return a new array type.
+   QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
+ 
+-  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy))
+-    return cast<ArrayType>(getConstantArrayType(NewEltTy, CAT->getSize(),
++  if (const auto *CAT = dyn_cast<ConstantArrayType>(ATy)) {
++
++    // PASTA PATCH: `getConstantArrayType` might return an adjusted type.
++    QualType result = getConstantArrayType(NewEltTy, CAT->getSize(),
+                                                 CAT->getSizeExpr(),
+                                                 CAT->getSizeModifier(),
+-                                           CAT->getIndexTypeCVRQualifiers()));
++                                           CAT->getIndexTypeCVRQualifiers());
++
++    // PASTA PATCH: If we returned an adjusted type above, then we want to
++    //              desugar it to the internal type.
++    if (auto AT = dyn_cast<AdjustedType>(result.getTypePtr())) {
++      result = AT->getAdjustedType();
++    }
++    
++    return cast<ArrayType>(result);
++  }
++
+   if (const auto *IAT = dyn_cast<IncompleteArrayType>(ATy))
+     return cast<ArrayType>(getIncompleteArrayType(NewEltTy,
+                                                   IAT->getSizeModifier(),
+diff --git a/clang/lib/AST/ExprConstant.cpp b/clang/lib/AST/ExprConstant.cpp
+index 9d92c848c..50d445f49 100644
+--- a/clang/lib/AST/ExprConstant.cpp
++++ b/clang/lib/AST/ExprConstant.cpp
+@@ -13287,6 +13287,15 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
+                     Info.Ctx.getOpenMPDefaultSimdAlign(E->getArgumentType()))
+             .getQuantity(),
+         E);
++
++  // PASTA PATCH: Fake these XNU-specific type traits.
++  case UETT_PtrAuthTypeDiscriminator:
++  case UETT_XNUTypeSummary:
++  case UETT_TMOTypeGetMetadata:
++    return Success(0, E);
++
++  case UETT_XNUTypeSignature:
++    return false;
+   }
+ 
+   llvm_unreachable("unknown expr/type trait");
+diff --git a/clang/lib/AST/ItaniumMangle.cpp b/clang/lib/AST/ItaniumMangle.cpp
+index 91f41778e..08a6fdd15 100644
+--- a/clang/lib/AST/ItaniumMangle.cpp
++++ b/clang/lib/AST/ItaniumMangle.cpp
+@@ -4653,6 +4653,14 @@ recurse:
+     };
+ 
+     switch(SAE->getKind()) {
++
++    // PASTA PATCH: Sort of support these.
++    case UETT_PtrAuthTypeDiscriminator:
++    case UETT_XNUTypeSummary:
++    case UETT_TMOTypeGetMetadata:
++    case UETT_XNUTypeSignature:
++      break;
++
+     case UETT_SizeOf:
+       Out << 's';
+       MangleAlignofSizeofArg();
+diff --git a/clang/lib/AST/Type.cpp b/clang/lib/AST/Type.cpp
+index 0f168a518..cd5497be5 100644
+--- a/clang/lib/AST/Type.cpp
++++ b/clang/lib/AST/Type.cpp
+@@ -3994,9 +3994,14 @@ bool Type::hasUnnamedOrLocalType() const {
+ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
+   switch (T->getTypeClass()) {
+ #define TYPE(Class,Base)
+-#define NON_CANONICAL_TYPE(Class,Base) case Type::Class:
++
++// PASTA PATCH: For Multiplier Issue #130, we use AdjustedTypes for arrays
++//              and so we go and handle non-canonical types via desugarding
++//              where Clang normally does not.
++#define NON_CANONICAL_TYPE(Class,Base) \
++  case Type::Class: \
++    return computeTypeLinkageInfo(cast<Class ## Type>(T)->desugar());
+ #include "clang/AST/TypeNodes.inc"
+-    llvm_unreachable("didn't expect a non-canonical type here");
+ 
+ #define TYPE(Class,Base)
+ #define DEPENDENT_TYPE(Class,Base) case Type::Class:
+diff --git a/clang/lib/Lex/Lexer.cpp b/clang/lib/Lex/Lexer.cpp
+index a4cff403e..33f17b148 100644
+--- a/clang/lib/Lex/Lexer.cpp
++++ b/clang/lib/Lex/Lexer.cpp
+@@ -2921,6 +2921,14 @@ void Lexer::ReadToEndOfLine(SmallVectorImpl<char> *Result) {
+       }
+       assert(Tmp.is(tok::eod) && "Unexpected token!");
+ 
++      // PASTA PATCH: Visibility into all tokens.
++      if (PP) {
++        if (auto Callbacks = PP->getPPCallbacks()) {
++          Callbacks->Event(Tmp, PPCallbacks::TokenFromTokenLexer, 0u);
++          Callbacks->Event(Tmp, PPCallbacks::EndDirective, 0);
++        }
++      }
++
+       // Finally, we're done;
+       return;
+     }
+diff --git a/clang/lib/Lex/PPDirectives.cpp b/clang/lib/Lex/PPDirectives.cpp
+index 9a8fd4391..b20144c12 100644
+--- a/clang/lib/Lex/PPDirectives.cpp
++++ b/clang/lib/Lex/PPDirectives.cpp
+@@ -91,6 +91,12 @@ SourceRange Preprocessor::DiscardUntilEndOfDirective() {
+     LexUnexpandedToken(Tmp);
+   }
+   Res.setEnd(Tmp.getLocation());
++
++//  // PASTA PATCH:
++//  if (Callbacks) {
++//    Callbacks->Event(Tmp, PPCallbacks::EndDirective, 0);
++//  }
++
+   return Res;
+ }
+ 
+@@ -477,7 +483,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
+ /// If ElseOk is true, then \#else directives are ok, if not, then we have
+ /// already seen one so a \#else directive is a duplicate.  When this returns,
+ /// the caller can lex the first valid token.
+-void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
++void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,  // PASTA PATCH
+                                                 SourceLocation IfTokenLoc,
+                                                 bool FoundNonSkipPortion,
+                                                 bool FoundElse,
+@@ -504,6 +510,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+     CurPPLexer->pushConditionalLevel(IfTokenLoc, /*isSkipping*/ false,
+                                      FoundNonSkipPortion, FoundElse);
+ 
++  // PASTA PATCH
++  SourceLocation HashTokenLoc = HashToken.getLocation();
++  if (Callbacks) {
++    Callbacks->Event(HashToken, PPCallbacks::BeginSkippedArea, 0);
++  }
++
+   // Enter raw mode to disable identifier lookup (and thus macro expansion),
+   // disabling warnings, etc.
+   CurPPLexer->LexingRawMode = true;
+@@ -651,6 +663,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+       if (Sub.empty() ||   // "if"
+           Sub == "def" ||   // "ifdef"
+           Sub == "ndef") {  // "ifndef"
++
++        // PASTA PATCH:
++        if (Callbacks) {
++          Callbacks->Event(Tok, PPCallbacks::BeginSkippedArea, 0);
++        }
++
+         // We know the entire #if/#ifdef/#ifndef block will be skipped, don't
+         // bother parsing the condition.
+         DiscardUntilEndOfDirective();
+@@ -661,6 +679,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
+         SuggestTypoedDirective(Tok, Directive);
+       }
+     } else if (Directive[0] == 'e') {
++
++      // PASTA PATCH:
++      if (Callbacks) {
++        Callbacks->Event(Tok, PPCallbacks::BeginSkippedArea, 0);
++      }
++
+       StringRef Sub = Directive.substr(1);
+       if (Sub == "ndif") {  // "endif"
+         PPConditionalInfo CondInfo;
+@@ -1102,16 +1126,16 @@ private:
+ /// #define (to warn about macros that don't match the PCH)
+ /// #pragma (to check for pragma hdrstop).
+ /// All other directives are completely discarded.
+-void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(Token &Result,
+-                                                       SourceLocation HashLoc) {
++void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(  // PASTA PATCH
++    Token &Result, const Token &SavedHash) {  // PASTA PATCH
+   if (const IdentifierInfo *II = Result.getIdentifierInfo()) {
+     if (II->getPPKeywordID() == tok::pp_define) {
+-      return HandleDefineDirective(Result,
+-                                   /*ImmediatelyAfterHeaderGuard=*/false);
++      return HandleDefineDirective(SavedHash, Result,  // PASTA PATCH
++                                   /*ImmediatelyAfterHeaderGuard=*/false);  // PASTA PATCH
+     }
+     if (SkippingUntilPCHThroughHeader &&
+         II->getPPKeywordID() == tok::pp_include) {
+-      return HandleIncludeDirective(HashLoc, Result);
++      return HandleIncludeDirective(SavedHash, Result);  // PASTA PATCH
+     }
+     if (SkippingUntilPragmaHdrStop && II->getPPKeywordID() == tok::pp_pragma) {
+       Lex(Result);
+@@ -1150,10 +1174,36 @@ void Preprocessor::HandleDirective(Token &Result) {
+   // Save the '#' token in case we need to return it later.
+   Token SavedHash = Result;
+ 
++  // PASTA PATCH: Tell us when we're about to start a directive.
++  if (Callbacks) {
++    Callbacks->Event(SavedHash, PPCallbacks::BeginDirective, 0);
++  }
++
+   // Read the next token, the directive flavor.  This isn't expanded due to
+   // C99 6.10.3p8.
+   LexUnexpandedToken(Result);
+ 
++  // PASTA PATCH: Tell us when we're about to start a directive.
++  if (Callbacks) {
++    switch (Result.getKind()) {
++      case tok::identifier:
++      case tok::raw_identifier:
++      case tok::kw_if:
++      case tok::kw_else:
++        Callbacks->Event(SavedHash, PPCallbacks::SetNamedDirective,
++                         reinterpret_cast<uintptr_t>(&Result));
++        break;
++      case tok::eod:
++      case tok::code_completion:
++      case tok::numeric_constant:
++      case tok::string_literal:
++      default:
++        Callbacks->Event(SavedHash, PPCallbacks::SetUnnamedDirective,
++                         reinterpret_cast<uintptr_t>(&Result));
++        break;
++    }
++  }
++
+   // C99 6.10.3p11: Is this preprocessor directive in macro invocation?  e.g.:
+   //   #define A(x) #x
+   //   A(abc
+@@ -1187,7 +1237,7 @@ void Preprocessor::HandleDirective(Token &Result) {
+   ResetMacroExpansionHelper helper(this);
+ 
+   if (SkippingUntilPCHThroughHeader || SkippingUntilPragmaHdrStop)
+-    return HandleSkippedDirectiveWhileUsingPCH(Result, SavedHash.getLocation());
++    return HandleSkippedDirectiveWhileUsingPCH(Result, SavedHash);  // PASTA PATCH
+ 
+   switch (Result.getKind()) {
+   case tok::eod:
+@@ -1201,7 +1251,7 @@ void Preprocessor::HandleDirective(Token &Result) {
+   case tok::numeric_constant:  // # 7  GNU line marker directive.
+     if (getLangOpts().AsmPreprocessor)
+       break;  // # 4 is not a preprocessor directive in .S files.
+-    return HandleDigitDirective(Result);
++    return HandleDigitDirective(SavedHash, Result);  // PASTA PATCH
+   default:
+     IdentifierInfo *II = Result.getIdentifierInfo();
+     if (!II) break; // Not an identifier.
+@@ -1231,24 +1281,25 @@ void Preprocessor::HandleDirective(Token &Result) {
+     // C99 6.10.2 - Source File Inclusion.
+     case tok::pp_include:
+       // Handle #include.
+-      return HandleIncludeDirective(SavedHash.getLocation(), Result);
++      return HandleIncludeDirective(SavedHash, Result);  // PASTA PATCH
+     case tok::pp___include_macros:
+       // Handle -imacros.
+-      return HandleIncludeMacrosDirective(SavedHash.getLocation(), Result);
++      return HandleIncludeMacrosDirective(SavedHash, Result);  // PASTA PATCH
+ 
+     // C99 6.10.3 - Macro Replacement.
+     case tok::pp_define:
+-      return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef);
++      return HandleDefineDirective(SavedHash, Result,  // PASTA PATCH
++                                   ImmediatelyAfterTopLevelIfndef);  // PASTA PATCH
+     case tok::pp_undef:
+-      return HandleUndefDirective();
++      return HandleUndefDirective(SavedHash);  // PASTA PATCH
+ 
+     // C99 6.10.4 - Line Control.
+     case tok::pp_line:
+-      return HandleLineDirective();
++      return HandleLineDirective(SavedHash);  // PASTA PATCH
+ 
+     // C99 6.10.5 - Error Directive.
+     case tok::pp_error:
+-      return HandleUserDiagnosticDirective(Result, false);
++      return HandleUserDiagnosticDirective(SavedHash, Result, false);  // PASTA PATCH
+ 
+     // C99 6.10.6 - Pragma Directive.
+     case tok::pp_pragma:
+@@ -1256,9 +1307,9 @@ void Preprocessor::HandleDirective(Token &Result) {
+ 
+     // GNU Extensions.
+     case tok::pp_import:
+-      return HandleImportDirective(SavedHash.getLocation(), Result);
++      return HandleImportDirective(SavedHash, Result);  // PASTA PATCH
+     case tok::pp_include_next:
+-      return HandleIncludeNextDirective(SavedHash.getLocation(), Result);
++      return HandleIncludeNextDirective(SavedHash, Result);  // PASTA PATCH
+ 
+     case tok::pp_warning:
+       if (LangOpts.CPlusPlus)
+@@ -1271,11 +1322,11 @@ void Preprocessor::HandleDirective(Token &Result) {
+                                   : diag::ext_pp_warning_directive)
+             << /*C2x*/ 0;
+ 
+-      return HandleUserDiagnosticDirective(Result, true);
++      return HandleUserDiagnosticDirective(SavedHash, Result, true);  // PASTA PATCH
+     case tok::pp_ident:
+-      return HandleIdentSCCSDirective(Result);
++      return HandleIdentSCCSDirective(SavedHash, Result);  // PASTA PATCH
+     case tok::pp_sccs:
+-      return HandleIdentSCCSDirective(Result);
++      return HandleIdentSCCSDirective(SavedHash, Result);  // PASTA PATCH
+     case tok::pp_assert:
+       //isExtension = true;  // FIXME: implement #assert
+       break;
+@@ -1285,12 +1336,12 @@ void Preprocessor::HandleDirective(Token &Result) {
+ 
+     case tok::pp___public_macro:
+       if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
+-        return HandleMacroPublicDirective(Result);
++        return HandleMacroPublicDirective(SavedHash, Result);  // PASTA PATCH
+       break;
+ 
+     case tok::pp___private_macro:
+       if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
+-        return HandleMacroPrivateDirective();
++        return HandleMacroPrivateDirective(SavedHash);  // PASTA PATCH
+       break;
+     }
+     break;
+@@ -1301,6 +1352,11 @@ void Preprocessor::HandleDirective(Token &Result) {
+   // various pseudo-ops.  Just return the # token and push back the following
+   // token to be lexed next time.
+   if (getLangOpts().AsmPreprocessor) {
++    // PASTA PATCH: Get visibility on end of macro directives.
++    if (Callbacks) {
++      Callbacks->Event(SavedHash, PPCallbacks::EndNonDirective, 0);
++    }
++
+     auto Toks = std::make_unique<Token[]>(2);
+     // Return the # and the token after it.
+     Toks[0] = SavedHash;
+@@ -1389,7 +1445,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
+ ///   # line digit-sequence
+ ///   # line digit-sequence "s-char-sequence"
+ /// \endverbatim
+-void Preprocessor::HandleLineDirective() {
++void Preprocessor::HandleLineDirective(const Token &SavedHash) {  // PASTA PATCH
+   // Read the line # and string argument.  Per C99 6.10.4p5, these tokens are
+   // expanded.
+   Token DigitTok;
+@@ -1551,7 +1607,8 @@ static bool ReadLineMarkerFlags(bool &IsFileEntry, bool &IsFileExit,
+ ///     # 42 "file" ('1' | '2')?
+ ///     # 42 "file" ('1' | '2')? '3' '4'?
+ ///
+-void Preprocessor::HandleDigitDirective(Token &DigitTok) {
++void Preprocessor::HandleDigitDirective(  // PASTA PATCH
++    const Token &SavedHash, Token &DigitTok) {  // PASTA PATCH
+   // Validate the number and convert it to an unsigned.  GNU does not have a
+   // line # limit other than it fit in 32-bits.
+   unsigned LineNo;
+@@ -1627,8 +1684,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
+ 
+ /// HandleUserDiagnosticDirective - Handle a #warning or #error directive.
+ ///
+-void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
+-                                                 bool isWarning) {
++void Preprocessor::HandleUserDiagnosticDirective(const Token &SavedHash,  // PASTA PATCH
++                                                 Token &Tok, bool isWarning) {  // PASTA PATCH
+   // Read the rest of the line raw.  We do this because we don't want macros
+   // to be expanded and we don't require that the tokens be valid preprocessing
+   // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
+@@ -1649,7 +1706,8 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
+ 
+ /// HandleIdentSCCSDirective - Handle a #ident/#sccs directive.
+ ///
+-void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
++void Preprocessor::HandleIdentSCCSDirective(const Token &SavedHash,  // PASTA PATCH
++                                            Token &Tok) {  // PASTA PATCH
+   // Yes, this directive is an extension.
+   Diag(Tok, diag::ext_pp_ident_directive);
+ 
+@@ -1684,7 +1742,8 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
+ }
+ 
+ /// Handle a #public directive.
+-void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
++void Preprocessor::HandleMacroPublicDirective(const Token &SavedHash,  // PASTA PATCH
++                                              Token &Tok) {  // PASTA PATCH
+   Token MacroNameTok;
+   ReadMacroName(MacroNameTok, MU_Undef);
+ 
+@@ -1711,7 +1770,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
+ }
+ 
+ /// Handle a #private directive.
+-void Preprocessor::HandleMacroPrivateDirective() {
++void Preprocessor::HandleMacroPrivateDirective(const Token &SavedHash) {  // PASTA PATCH
+   Token MacroNameTok;
+   ReadMacroName(MacroNameTok, MU_Undef);
+ 
+@@ -1948,10 +2007,11 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
+ /// routine with functionality shared between \#include, \#include_next and
+ /// \#import.  LookupFrom is set when this is a \#include_next directive, it
+ /// specifies the file to start searching from.
+-void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
++void Preprocessor::HandleIncludeDirective(const Token &SavedHash,  // PASTA PATCH
+                                           Token &IncludeTok,
+                                           ConstSearchDirIterator LookupFrom,
+                                           const FileEntry *LookupFromFile) {
++  SourceLocation HashLoc = SavedHash.getLocation();  // PASTA PATCH
+   Token FilenameTok;
+   if (LexHeaderName(FilenameTok))
+     return;
+@@ -2574,7 +2634,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
+ 
+ /// HandleIncludeNextDirective - Implements \#include_next.
+ ///
+-void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
++void Preprocessor::HandleIncludeNextDirective(const Token &SavedHash,  // PASTA PATCH
+                                               Token &IncludeNextTok) {
+   Diag(IncludeNextTok, diag::ext_pp_include_next_directive);
+ 
+@@ -2582,7 +2642,7 @@ void Preprocessor::HandleIncludeNextDirective(SourceLocation HashLoc,
+   const FileEntry *LookupFromFile;
+   std::tie(Lookup, LookupFromFile) = getIncludeNextStart(IncludeNextTok);
+ 
+-  return HandleIncludeDirective(HashLoc, IncludeNextTok, Lookup,
++  return HandleIncludeDirective(SavedHash, IncludeNextTok, Lookup,
+                                 LookupFromFile);
+ }
+ 
+@@ -2602,21 +2662,21 @@ void Preprocessor::HandleMicrosoftImportDirective(Token &Tok) {
+ 
+ /// HandleImportDirective - Implements \#import.
+ ///
+-void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
+-                                         Token &ImportTok) {
++void Preprocessor::HandleImportDirective(const Token &SavedHash,  // PASTA PATCH
++                                         Token &ImportTok) {  // PASTA PATCH
+   if (!LangOpts.ObjC) {  // #import is standard for ObjC.
+     if (LangOpts.MSVCCompat)
+       return HandleMicrosoftImportDirective(ImportTok);
+     Diag(ImportTok, diag::ext_pp_import_directive);
+   }
+-  return HandleIncludeDirective(HashLoc, ImportTok);
++  return HandleIncludeDirective(SavedHash, ImportTok);  // PASTA PATCH
+ }
+ 
+ /// HandleIncludeMacrosDirective - The -imacros command line option turns into a
+ /// pseudo directive in the predefines buffer.  This handles it by sucking all
+ /// tokens through the preprocessor and discarding them (only keeping the side
+ /// effects on the preprocessor).
+-void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
++void Preprocessor::HandleIncludeMacrosDirective(const Token &SavedHash,  // PASTA PATCH
+                                                 Token &IncludeMacrosTok) {
+   // This directive should only occur in the predefines buffer.  If not, emit an
+   // error and reject it.
+@@ -2630,7 +2690,7 @@ void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
+ 
+   // Treat this as a normal #include for checking purposes.  If this is
+   // successful, it will push a new lexer onto the include stack.
+-  HandleIncludeDirective(HashLoc, IncludeMacrosTok);
++  HandleIncludeDirective(SavedHash, IncludeMacrosTok);  // PASTA PATCH
+ 
+   Token TmpTok;
+   do {
+@@ -3019,7 +3079,8 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
+ /// HandleDefineDirective - Implements \#define.  This consumes the entire macro
+ /// line then lets the caller lex the next real token.
+ void Preprocessor::HandleDefineDirective(
+-    Token &DefineTok, const bool ImmediatelyAfterHeaderGuard) {
++    const Token &SavedHash, Token &DefineTok,  // PASTA PATCH
++    const bool ImmediatelyAfterHeaderGuard) {  // PASTA PATCH
+   ++NumDefined;
+ 
+   Token MacroNameTok;
+@@ -3173,7 +3234,7 @@ void Preprocessor::HandleDefineDirective(
+ 
+ /// HandleUndefDirective - Implements \#undef.
+ ///
+-void Preprocessor::HandleUndefDirective() {
++void Preprocessor::HandleUndefDirective(const Token &SavedHash) {  // PASTA PATCH
+   ++NumUndefined;
+ 
+   Token MacroNameTok;
+@@ -3237,7 +3298,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
+   if (MacroNameTok.is(tok::eod)) {
+     // Skip code until we get to #endif.  This helps with recovery by not
+     // emitting an error when the #endif is reached.
+-    SkipExcludedConditionalBlock(HashToken.getLocation(),
++    SkipExcludedConditionalBlock(HashToken,  // PASTA PATCH
+                                  DirectiveTok.getLocation(),
+                                  /*Foundnonskip*/ false, /*FoundElse*/ false);
+     return;
+@@ -3292,7 +3353,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
+                                      /*foundelse*/false);
+   } else {
+     // No, skip the contents of this block.
+-    SkipExcludedConditionalBlock(HashToken.getLocation(),
++    SkipExcludedConditionalBlock(HashToken,  // PASTA PATCH
+                                  DirectiveTok.getLocation(),
+                                  /*Foundnonskip*/ false,
+                                  /*FoundElse*/ false);
+@@ -3345,7 +3406,7 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
+                                    /*foundnonskip*/true, /*foundelse*/false);
+   } else {
+     // No, skip the contents of this block.
+-    SkipExcludedConditionalBlock(HashToken.getLocation(), IfToken.getLocation(),
++    SkipExcludedConditionalBlock(HashToken, IfToken.getLocation(),  // PASTA PATCH
+                                  /*Foundnonskip*/ false,
+                                  /*FoundElse*/ false);
+   }
+@@ -3413,7 +3474,7 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
+   }
+ 
+   // Finally, skip the rest of the contents of this block.
+-  SkipExcludedConditionalBlock(HashToken.getLocation(), CI.IfLoc,
++  SkipExcludedConditionalBlock(HashToken, CI.IfLoc,  // PASTA PATCH
+                                /*Foundnonskip*/ true,
+                                /*FoundElse*/ true, Result.getLocation());
+ }
+@@ -3494,6 +3555,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
+ 
+   // Finally, skip the rest of the contents of this block.
+   SkipExcludedConditionalBlock(
+-      HashToken.getLocation(), CI.IfLoc, /*Foundnonskip*/ true,
++      HashToken, CI.IfLoc, /*Foundnonskip*/ true,  // PASTA PATCH
+       /*FoundElse*/ CI.FoundElse, ElifToken.getLocation());
+ }
+diff --git a/clang/lib/Lex/PPExpressions.cpp b/clang/lib/Lex/PPExpressions.cpp
+index bd35689f1..dd97bb3e2 100644
+--- a/clang/lib/Lex/PPExpressions.cpp
++++ b/clang/lib/Lex/PPExpressions.cpp
+@@ -101,6 +101,32 @@ struct DefinedTracker {
+ /// EvaluateDefined - Process a 'defined(sym)' expression.
+ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
+                             bool ValueLive, Preprocessor &PP) {
++  // PASTA PATCH
++  PPCallbacks *Callbacks = PP.getPPCallbacks();
++  Token SavedStart = PeekTok;
++  if (Callbacks) {
++    Callbacks->Event(SavedStart, PPCallbacks::BeginDelayedSubstitution, 0);
++  }
++  auto Expand = [&] (void) {
++    if (Callbacks) {
++      Token ResultTok;
++      ResultTok.startToken();
++      ResultTok.setKind(tok::numeric_constant);
++      const char *ResultStr = Result.Val.getExtValue() ? "1" : "0";
++      PP.CreateString(ResultStr, ResultTok, SavedStart.getLocation(),
++                      PeekTok.getEndLoc());
++
++      Callbacks->Event(PeekTok, PPCallbacks::SwitchToSubstitution,
++                       reinterpret_cast<uintptr_t>(&SavedStart));
++
++      Callbacks->Event(ResultTok, PPCallbacks::TokenFromTokenLexer,
++                       SavedStart.getLocation().getRawEncoding());
++
++      Callbacks->Event(SavedStart, PPCallbacks::EndSubstitution,
++                       reinterpret_cast<uintptr_t>(&SavedStart));
++    }
++  };
++
+   SourceLocation beginLoc(PeekTok.getLocation());
+   Result.setBegin(beginLoc);
+ 
+@@ -154,12 +180,14 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
+       PP.Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+       return true;
+     }
++    Expand();  // PASTA PATCH
+     // Consume the ).
+     PP.LexNonComment(PeekTok);
+     Result.setEnd(PeekTok.getLocation());
+   } else {
+     // Consume identifier.
+     Result.setEnd(PeekTok.getLocation());
++    Expand();  // PASTA PATCH
+     PP.LexNonComment(PeekTok);
+   }
+ 
+diff --git a/clang/lib/Lex/PPLexerChange.cpp b/clang/lib/Lex/PPLexerChange.cpp
+index 36d3aa59b..19697799e 100644
+--- a/clang/lib/Lex/PPLexerChange.cpp
++++ b/clang/lib/Lex/PPLexerChange.cpp
+@@ -29,6 +29,36 @@ using namespace clang;
+ // Miscellaneous Methods.
+ //===----------------------------------------------------------------------===//
+ 
++void Preprocessor::PopIncludeMacroStack() {
++
++  // PASTA PATCH: Tell us about the end of macro expansions.
++  if (Callbacks && CurTokenLexer && CurTokenLexer->Macro) {
++    Callbacks->Event(CurTokenLexer->MacroNameTok,
++                     PPCallbacks::EndMacroExpansion,
++                     reinterpret_cast<uintptr_t>(CurTokenLexer->Macro));
++  }
++
++  // PASTA PATCH: Make us aware of the end of `_Pragma` handling.
++  if (Callbacks && CurPPLexer && CurLexer.get() == CurPPLexer &&
++      CurLexer->isPragmaLexer()) {
++    Token PragmaTok;
++    PragmaTok.setKind(tok::raw_identifier);
++    PragmaTok.setLocation(SourceMgr.getExpansionLoc(CurLexer->getFileLoc()));
++    PragmaTok.setLength(7u);
++    PragmaTok.setRawIdentifierData(
++        SourceMgr.getCharacterData(PragmaTok.getLocation(), nullptr));
++    Callbacks->Event(PragmaTok, PPCallbacks::EndMacroExpansion, 0);
++  }
++
++  CurLexer = std::move(IncludeMacroStack.back().TheLexer);
++  CurPPLexer = IncludeMacroStack.back().ThePPLexer;
++  CurTokenLexer = std::move(IncludeMacroStack.back().TheTokenLexer);
++  CurDirLookup  = IncludeMacroStack.back().TheDirLookup;
++  CurLexerSubmodule = IncludeMacroStack.back().TheSubmodule;
++  CurLexerKind = IncludeMacroStack.back().CurLexerKind;
++  IncludeMacroStack.pop_back();
++}
++
+ /// isInPrimaryFile - Return true if we're in the top-level file, not in a
+ /// \#include.  This looks through macro expansions and active _Pragma lexers.
+ bool Preprocessor::isInPrimaryFile() const {
+@@ -587,6 +617,14 @@ bool Preprocessor::HandleEndOfTokenLexer(Token &Result) {
+   assert(CurTokenLexer && !CurPPLexer &&
+          "Ending a macro when currently in a #include file!");
+ 
++  // PASTA PATCH: Tell us about the end of macro expansions.
++  if (CurTokenLexer && CurTokenLexer->Macro) {
++    Callbacks->Event(CurTokenLexer->MacroNameTok,
++                     PPCallbacks::EndMacroExpansion,
++                     reinterpret_cast<uintptr_t>(CurTokenLexer->Macro));
++    CurTokenLexer->Macro = nullptr;
++  }
++
+   if (!MacroExpandingLexersStack.empty() &&
+       MacroExpandingLexersStack.back().first == CurTokenLexer.get())
+     removeCachedMacroExpandedTokensOfLastLexer();
+diff --git a/clang/lib/Lex/PPMacroExpansion.cpp b/clang/lib/Lex/PPMacroExpansion.cpp
+index c56f41c44..5f61b2476 100644
+--- a/clang/lib/Lex/PPMacroExpansion.cpp
++++ b/clang/lib/Lex/PPMacroExpansion.cpp
+@@ -60,6 +60,58 @@
+ 
+ using namespace clang;
+ 
++namespace {
++
++// PASTA PATCH: Tell us about the end of macro expansions. We have to add
++// this as a post-lex action, so that we can observe what is actually lexed
++// into `Identifier`.
++struct DeferExpansionEnd {
++  std::function<void(const Token &)> &PostLexAction;
++  PPCallbacks * const Callbacks;
++  Token Identifier;
++  MacroInfo * const MI;
++
++  DeferExpansionEnd(std::function<void(const Token &)> &PostLexAction_,
++                    PPCallbacks *Callbacks_, Token Identifier_, MacroInfo *MI_)
++      : PostLexAction(PostLexAction_),
++        Callbacks(Callbacks_),
++        Identifier(std::move(Identifier_)),
++        MI(MI_) {}
++
++  ~DeferExpansionEnd(void) {
++    if (Callbacks) {
++      PostLexAction = [CB = Callbacks, Ident = std::move(Identifier), Info = MI,
++                       PrevPostLexAction = std::move(PostLexAction)]
++                      (const Token &Tok) {
++        CB->Event(Ident, PPCallbacks::EndMacroExpansion,
++                  reinterpret_cast<uintptr_t>(Info));
++        PrevPostLexAction(Tok);
++      };
++    }
++  }
++};
++
++struct DeferExpansionCancellation {
++  std::function<void(void)> Action;
++  bool DoCancel{true};
++
++  template <typename CB>
++  DeferExpansionCancellation(CB Action_)
++      : Action(std::move(Action_)) {}
++
++  ~DeferExpansionCancellation(void) {
++    if (DoCancel) {
++      Action();
++    }
++  }
++
++  void DisableCancellation(void) {
++    DoCancel = false;
++  }
++};
++
++}  // namespace
++
+ MacroDirective *
+ Preprocessor::getLocalMacroDirectiveHistory(const IdentifierInfo *II) const {
+   if (!II->hadMacroDefinition())
+@@ -478,6 +530,19 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+ 
+   MacroInfo *MI = M.getMacroInfo();
+ 
++  // PASTA PATCH: Visibility into macro expansion.
++  Token SavedIdentifier = Identifier;
++  if (Callbacks) {
++    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroExpansion,
++                     reinterpret_cast<uintptr_t>(MI));
++  }
++  DeferExpansionCancellation CancelExpansion([&, this] (void) {
++    if (Callbacks) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::CancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
++  });
++
+   // If this is a macro expansion in the "#if !defined(x)" line for the file,
+   // then the macro could expand to different things in other contexts, we need
+   // to disable the optimization in this case.
+@@ -488,6 +553,8 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+     if (Callbacks)
+       Callbacks->MacroExpands(Identifier, M, Identifier.getLocation(),
+                               /*Args=*/nullptr);
++
++    CancelExpansion.DisableCancellation();  // PASTA PATCH
+     ExpandBuiltinMacro(Identifier);
+     return true;
+   }
+@@ -509,7 +576,22 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+     InMacroArgs = true;
+     ArgMacro = &Identifier;
+ 
+-    Args = ReadMacroCallArgumentList(Identifier, MI, ExpansionEnd);
++    // PASTA PATCH: Visibility into macro expansion.
++    if (Callbacks) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
++
++    // PASTA PATCH: Visibility to last token in argument list.
++    Token ExpansionEndTok;
++    Args = ReadMacroCallArgumentList(Identifier, MI, ExpansionEndTok);
++    ExpansionEnd = ExpansionEndTok.getLocation();
++
++    // PASTA PATCH: Visibility into macro expansion.
++    if (Callbacks) {
++      Callbacks->Event(ExpansionEndTok, PPCallbacks::EndMacroCallArgumentList,
++                       reinterpret_cast<uintptr_t>(Args));
++    }
+ 
+     // Finished parsing args.
+     InMacroArgs = false;
+@@ -568,7 +650,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+ 
+   // If this macro expands to no tokens, don't bother to push it onto the
+   // expansion stack, only to take it right back off.
+-  if (MI->getNumTokens() == 0) {
++  if (false && MI->getNumTokens() == 0) {  // PASTA PATCH
+     // No need for arg info.
+     if (Args) Args->destroy(*this);
+ 
+@@ -578,7 +660,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+     PropagateLineStartLeadingSpaceInfo(Identifier);
+     ++NumFastMacroExpanded;
+     return false;
+-  } else if (MI->getNumTokens() == 1 &&
++  } else if (false && MI->getNumTokens() == 1 &&  // PASTA PATCH
+              isTrivialSingleTokenExpansion(MI, Identifier.getIdentifierInfo(),
+                                            *this)) {
+     // Otherwise, if this macro expands into a single trivially-expanded
+@@ -626,6 +708,13 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
+     return true;
+   }
+ 
++  // PASTA PATCH: Switch state to now start expanding.
++  CancelExpansion.DisableCancellation();
++  if (Callbacks) {
++    Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                     reinterpret_cast<uintptr_t>(MI));
++  }
++
+   // Start expanding the macro.
+   EnterMacro(Identifier, ExpansionEnd, MI, Args);
+   return false;
+@@ -765,13 +854,13 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
+ /// error.
+ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+                                                    MacroInfo *MI,
+-                                                   SourceLocation &MacroEnd) {
++                                                   Token &Tok) {  // PASTA PATCH
+   // The number of fixed arguments to parse.
+   unsigned NumFixedArgsLeft = MI->getNumParams();
+   bool isVariadic = MI->isVariadic();
+ 
+   // Outer loop, while there are more arguments, keep reading them.
+-  Token Tok;
++  // Token Tok;  // PASTA PATCH: Taken from argument.
+ 
+   // Read arguments as unexpanded tokens.  This avoids issues, e.g., where
+   // an argument value in a macro could expand to ',' or '(' or ')'.
+@@ -784,6 +873,9 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+   SmallVector<Token, 64> ArgTokens;
+   bool ContainsCodeCompletionTok = false;
+   bool FoundElidedComma = false;
++  bool InVariadicSection = false;  // PASTA PATCH
++  bool InArgument = false;  // PASTA PATCH
++  Token ArgStartTok;  // PASTA PATCH
+ 
+   SourceLocation TooManyArgsLoc;
+ 
+@@ -798,6 +890,21 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+     size_t ArgTokenStart = ArgTokens.size();
+     SourceLocation ArgStartLoc = Tok.getLocation();
+ 
++    // PASTA PATCH: Visibility into macro expansion.
++    ArgStartTok = Tok;
++    if (Callbacks) {
++      if (isVariadic && !NumFixedArgsLeft) {
++        Callbacks->Event(ArgStartTok, PPCallbacks::BeginVariadicCallArgumentList,
++                         reinterpret_cast<uintptr_t>(&MacroName));
++        InVariadicSection = true;
++      }
++      if (NumFixedArgsLeft) {
++        Callbacks->Event(ArgStartTok, PPCallbacks::BeginMacroCallArgument,
++                         reinterpret_cast<uintptr_t>(&MacroName));
++        InArgument = true;
++      }
++    }
++
+     // C99 6.10.3p11: Keep track of the number of l_parens we have seen.  Note
+     // that we already consumed the first one.
+     unsigned NumParens = 0;
+@@ -824,7 +931,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+       } else if (Tok.is(tok::r_paren)) {
+         // If we found the ) token, the macro arg list is done.
+         if (NumParens-- == 0) {
+-          MacroEnd = Tok.getLocation();
++          // MacroEnd = Tok.getLocation();  // PASTA PATCH
+           if (!ArgTokens.empty() &&
+               ArgTokens.back().commaAfterElided()) {
+             FoundElidedComma = true;
+@@ -852,6 +959,27 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+             break;
+           if (NumFixedArgsLeft > 1)
+             break;
++
++          // PASTA PATCH: Visibility into variadic macro expansion.
++          if (Callbacks) {
++            if (InArgument) {
++              Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
++                               reinterpret_cast<uintptr_t>(&Tok));
++              InArgument = false;
++            }
++            ArgStartTok = Tok;
++
++            if (!InVariadicSection) {
++              Callbacks->Event(
++                  ArgStartTok, PPCallbacks::BeginVariadicCallArgumentList,
++                  reinterpret_cast<uintptr_t>(&MacroName));
++              InVariadicSection = true;
++            }
++
++            Callbacks->Event(ArgStartTok, PPCallbacks::BeginMacroCallArgument,
++                             reinterpret_cast<uintptr_t>(&MacroName));
++            InArgument = true;
++          }
+         }
+       } else if (Tok.is(tok::comment) && !KeepMacroComments) {
+         // If this is a comment token in the argument list and we're just in
+@@ -901,6 +1029,15 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+                     ? diag::warn_cxx98_compat_empty_fnmacro_arg
+                     : diag::ext_empty_fnmacro_arg);
+ 
++    // PASTA PATCH:
++    if (Callbacks) {
++      if (InArgument) {
++        InArgument = false;
++        Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
++                         reinterpret_cast<uintptr_t>(&Tok));
++      }
++    }
++
+     // Add a marker EOF token to the end of the token list for this argument.
+     Token EOFTok;
+     EOFTok.startToken();
+@@ -913,6 +1050,18 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
+       --NumFixedArgsLeft;
+   }
+ 
++  if (Callbacks) {
++    if (InArgument) {
++      InArgument = false;
++      Callbacks->Event(ArgStartTok, PPCallbacks::EndMacroCallArgument,
++                       reinterpret_cast<uintptr_t>(&Tok));
++    }
++    if (InVariadicSection) {
++      Callbacks->Event(ArgStartTok, PPCallbacks::EndVariadicCallArgumentList,
++                       reinterpret_cast<uintptr_t>(&Tok));
++    }
++  }
++
+   // Okay, we either found the r_paren.  Check to see if we parsed too few
+   // arguments.
+   unsigned MinArgsExpected = MI->getNumParams();
+@@ -1167,6 +1316,17 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+                                      Preprocessor &PP,
+                                      ConstSearchDirIterator LookupFrom,
+                                      const FileEntry *LookupFromFile) {
++  // PASTA PATCH: Visibility into macro expansion.
++  PPCallbacks *Callbacks = PP.getPPCallbacks();
++  Token SavedIdentifier = Tok;
++  SavedIdentifier.setIdentifierInfo(II);
++  MacroDefinition MD = PP.getMacroDefinition(II);
++  MacroInfo *MI = MD.getMacroInfo();
++  if (Callbacks) {
++    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
++                     reinterpret_cast<uintptr_t>(MI));
++  }
++
+   // Save the location of the current token.  If a '(' is later found, use
+   // that location.  If not, use the end of this location instead.
+   SourceLocation LParenLoc = Tok.getLocation();
+@@ -1186,6 +1346,8 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+       return false;
+   } while (Tok.getKind() == tok::comment);
+ 
++  Token LParenTok = Tok;  // PASTA PATCH
++
+   // Ensure we have a '('.
+   if (Tok.isNot(tok::l_paren)) {
+     // No '(', use end of last token.
+@@ -1196,6 +1358,10 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+     if (Tok.isNot(tok::header_name))
+       return false;
+   } else {
++    if (Callbacks) {  // PASTA PATCH
++      Callbacks->Event(LParenTok, PPCallbacks::BeginMacroCallArgument,
++                       reinterpret_cast<uintptr_t>(&SavedIdentifier));
++    }
+     // Save '(' location for possible missing ')' message.
+     LParenLoc = Tok.getLocation();
+     if (PP.LexHeaderName(Tok))
+@@ -1227,6 +1393,16 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
+     return false;
+   }
+ 
++  // PASTA PATCH
++  if (Callbacks) {
++    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgument,
++                     reinterpret_cast<uintptr_t>(&Tok));
++    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgumentList,
++                     0);
++    Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                     reinterpret_cast<uintptr_t>(MI));
++  }
++
+   bool isAngled = PP.GetIncludeFilenameSpelling(Tok.getLocation(), Filename);
+   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
+   // error.
+@@ -1270,6 +1446,13 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+                                             llvm::function_ref<
+                                               int(Token &Tok,
+                                                   bool &HasLexedNextTok)> Op) {
++  // PASTA PATCH: Visibility into macro expansion.
++  PPCallbacks *Callbacks = PP.getPPCallbacks();
++  Token SavedIdentifier = Tok;
++  SavedIdentifier.setIdentifierInfo(II);
++  MacroDefinition MD = PP.getMacroDefinition(II);
++  MacroInfo *MI = MD.getMacroInfo();
++
+   // Parse the initial '('.
+   PP.LexUnexpandedToken(Tok);
+   if (Tok.isNot(tok::l_paren)) {
+@@ -1288,6 +1471,15 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
+   SourceLocation LParenLoc = Tok.getLocation();
+   llvm::Optional<int> Result;
+ 
++  // PASTA PATCH
++  clang::Token ArgSepTok = Tok;
++  if (Callbacks) {
++    Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
++                     reinterpret_cast<uintptr_t>(MI));
++    Callbacks->Event(ArgSepTok, PPCallbacks::BeginMacroCallArgument,
++                     reinterpret_cast<uintptr_t>(&SavedIdentifier));
++  }
++
+   Token ResultTok;
+   bool SuppressDiagnostic = false;
+   while (true) {
+@@ -1307,6 +1499,15 @@ already_lexed:
+         return;
+ 
+       case tok::comma:
++        // PASTA PATCH
++        if (ParenDepth == 1 && Callbacks) {
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&Tok));
++          ArgSepTok = Tok;
++          Callbacks->Event(ArgSepTok, PPCallbacks::BeginMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&SavedIdentifier));
++        }
++
+         if (!SuppressDiagnostic) {
+           PP.Diag(Tok.getLocation(), diag::err_too_many_args_in_macro_invoc);
+           SuppressDiagnostic = true;
+@@ -1327,6 +1528,15 @@ already_lexed:
+         if (--ParenDepth > 0)
+           continue;
+ 
++        // PASTA PATCH
++        if (Callbacks) {
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgument,
++                           reinterpret_cast<uintptr_t>(&Tok));
++          Callbacks->Event(ArgSepTok, PPCallbacks::EndMacroCallArgumentList, 0);
++          Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                           reinterpret_cast<uintptr_t>(MI));
++        }
++
+         // The last ')' has been reached; return the value if one found or
+         // a diagnostic and a dummy value.
+         if (Result) {
+@@ -1493,7 +1703,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+   bool IsAtStartOfLine = Tok.isAtStartOfLine();
+   bool HasLeadingSpace = Tok.hasLeadingSpace();
+ 
++  // PASTA PATCH:
++  Token SavedIdentifier = Tok;
++  SavedIdentifier.setIdentifierInfo(II);
++  MacroDefinition MD = getMacroDefinition(II);
++  MacroInfo *MI = MD.getMacroInfo();
++  DeferExpansionEnd NotifyMacroEnd(PostLexAction, Callbacks.get(),
++                                   SavedIdentifier, MI);
++  auto SwitchToExpansion = [&] (void) {
++    if (Callbacks) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
++  };
++
+   if (II == Ident__LINE__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // C99 6.10.8: "__LINE__: The presumed line number (within the current
+     // source file) of the current source line (an integer constant)".  This can
+     // be affected by #line.
+@@ -1516,6 +1741,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+     Tok.setKind(tok::numeric_constant);
+   } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__ ||
+              II == Ident__FILE_NAME__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // C99 6.10.8: "__FILE__: The presumed name of the current source file (a
+     // character string literal)". This can be affected by #line.
+     PresumedLoc PLoc = SourceMgr.getPresumedLoc(Tok.getLocation());
+@@ -1555,6 +1781,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+     }
+     Tok.setKind(tok::string_literal);
+   } else if (II == Ident__DATE__) {
++    SwitchToExpansion();  // PASTA PATCH
+     Diag(Tok.getLocation(), diag::warn_pp_date_time);
+     if (!DATELoc.isValid())
+       ComputeDATE_TIME(DATELoc, TIMELoc, *this);
+@@ -1565,6 +1792,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+                                                  Tok.getLength()));
+     return;
+   } else if (II == Ident__TIME__) {
++    SwitchToExpansion();  // PASTA PATCH
+     Diag(Tok.getLocation(), diag::warn_pp_date_time);
+     if (!TIMELoc.isValid())
+       ComputeDATE_TIME(DATELoc, TIMELoc, *this);
+@@ -1575,6 +1803,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+                                                  Tok.getLength()));
+     return;
+   } else if (II == Ident__INCLUDE_LEVEL__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // Compute the presumed include depth of this token.  This can be affected
+     // by GNU line markers.
+     unsigned Depth = 0;
+@@ -1590,6 +1819,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+     OS << Depth;
+     Tok.setKind(tok::numeric_constant);
+   } else if (II == Ident__TIMESTAMP__) {
++    SwitchToExpansion();  // PASTA PATCH
+     Diag(Tok.getLocation(), diag::warn_pp_date_time);
+     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
+     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
+@@ -1614,6 +1844,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+     OS << '"' << StringRef(Result).drop_back() << '"';
+     Tok.setKind(tok::string_literal);
+   } else if (II == Ident__FLT_EVAL_METHOD__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // __FLT_EVAL_METHOD__ is set to the default value.
+     if (getTUFPEvalMethod() ==
+         LangOptions::FPEvalMethodKind::FEM_Indeterminable) {
+@@ -1646,6 +1877,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+       }
+     }
+   } else if (II == Ident__COUNTER__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // __COUNTER__ expands to a simple numeric value.
+     OS << CounterValue++;
+     Tok.setKind(tok::numeric_constant);
+@@ -1834,6 +2066,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+                (II->getName() == getLangOpts().CurrentModule);
+       });
+   } else if (II == Ident__MODULE__) {
++    SwitchToExpansion();  // PASTA PATCH
+     // The current module as an identifier.
+     OS << getLangOpts().CurrentModule;
+     IdentifierInfo *ModuleII = getIdentifierInfo(getLangOpts().CurrentModule);
+@@ -1842,6 +2075,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+   } else if (II == Ident__identifier) {
+     SourceLocation Loc = Tok.getLocation();
+ 
++    // PASTA PATCH
++    if (Callbacks) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
++                       0);
++    }
++
+     // We're expecting '__identifier' '(' identifier ')'. Try to recover
+     // if the parens are missing.
+     LexNonComment(Tok);
+@@ -1855,6 +2094,13 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+       return;
+     }
+ 
++    // PASTA PATCH
++    Token LParenTok = Tok;
++    if (Callbacks) {
++      Callbacks->Event(LParenTok, PPCallbacks::BeginMacroCallArgument,
++                       reinterpret_cast<uintptr_t>(&SavedIdentifier));
++    }
++
+     SourceLocation LParenLoc = Tok.getLocation();
+     LexNonComment(Tok);
+ 
+@@ -1883,6 +2129,15 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
+         << Tok.getKind() << tok::r_paren;
+       Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+     }
++
++    // PASTA PATCH
++    if (Callbacks) {
++      Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgument,
++                       reinterpret_cast<uintptr_t>(&Tok));
++      Callbacks->Event(Tok, PPCallbacks::EndMacroCallArgumentList, 0);
++    }
++    SwitchToExpansion();  // PASTA PATCH
++
+     return;
+   } else if (II == Ident__is_target_arch) {
+     EvaluateFeatureLikeBuiltinMacro(
+diff --git a/clang/lib/Lex/Pragma.cpp b/clang/lib/Lex/Pragma.cpp
+index fb4f2dc45..320b44466 100644
+--- a/clang/lib/Lex/Pragma.cpp
++++ b/clang/lib/Lex/Pragma.cpp
+@@ -206,10 +206,27 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+   // In Case #2, we check the syntax now, but then put the tokens back into the
+   // token stream for later consumption.
+ 
++  // PASTA PATCH
++  // If we're expanding a macro argument, let the checking and subsequent lexing
++  // happen, but tell the listener that we're going to be cancelling this.
++  Token SavedIdentifier = Tok;
++  MacroDefinition MD = getMacroDefinition(Tok.getIdentifierInfo());
++  MacroInfo *MI = MD.getMacroInfo();
++  if (Callbacks) {
++    if (InMacroArgPreExpansion) {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::PrepareToCancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    } else {
++      Callbacks->Event(SavedIdentifier, PPCallbacks::BeginMacroCallArgumentList,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
++  }
++
+   TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
+ 
+   // Remember the pragma token location.
+   SourceLocation PragmaLoc = Tok.getLocation();
++  SourceLocation PragmaEndLoc = Tok.getEndLoc();  // PASTA PATCH
+ 
+   // Read the '('.
+   Toks.lex();
+@@ -218,6 +235,13 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+     return;
+   }
+ 
++  // PASTA PATCH
++  Token LParenTok = Tok;
++  if (Callbacks && !InMacroArgPreExpansion) {
++    Callbacks->Event(LParenTok, PPCallbacks::BeginMacroCallArgument,
++                     reinterpret_cast<uintptr_t>(&SavedIdentifier));
++  }
++
+   // Read the '"..."'.
+   Toks.lex();
+   if (!tok::isStringLiteral(Tok.getKind())) {
+@@ -253,8 +277,43 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
+     return;
+   }
+ 
++  // PASTA PATCH: Go and simulate the directive events that would have happened
++  // if this had been an actual `#pragma` directive.
++  Token HashTok;
++  Token PragmaDirectiveTok;
++  if (Callbacks && !InMacroArgPreExpansion) {
++    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgument,
++                     reinterpret_cast<uintptr_t>(&Tok));
++    Callbacks->Event(LParenTok, PPCallbacks::EndMacroCallArgumentList, 0);
++    Callbacks->Event(SavedIdentifier, PPCallbacks::SwitchToExpansion,
++                     reinterpret_cast<uintptr_t>(MI));
++
++    HashTok.startToken();
++    HashTok.setKind(tok::hash);
++    CreateString("#", HashTok, PragmaLoc,
++                 PragmaLoc.getLocWithOffset(1));
++    HashTok.setLength(1u);
++    Callbacks->Event(HashTok, PPCallbacks::BeginDirective, 0);
++
++    PragmaDirectiveTok.startToken();
++    PragmaDirectiveTok.setKind(tok::raw_identifier);
++    CreateString("pragma", PragmaDirectiveTok, PragmaLoc.getLocWithOffset(1),
++                 PragmaEndLoc);
++    Callbacks->Event(PragmaDirectiveTok, PPCallbacks::TokenFromLexer, 0);
++    Callbacks->Event(HashTok, PPCallbacks::SetNamedDirective,
++                     reinterpret_cast<uintptr_t>(&PragmaDirectiveTok));
++  }
++
+   // If we're expanding a macro argument, put the tokens back.
+   if (InMacroArgPreExpansion) {
++    if (Callbacks) {  // PASTA PATCH
++//      Token EOD;
++//      EOD.startToken();
++//      EOD.setKind(tok::eod);
++//      Callbacks->Event(EOD, PPCallbacks::EndNonDirective, 0);
++      Callbacks->Event(SavedIdentifier, PPCallbacks::CancelExpansion,
++                       reinterpret_cast<uintptr_t>(MI));
++    }
+     Toks.revert();
+     return;
+   }
+diff --git a/clang/lib/Lex/Preprocessor.cpp b/clang/lib/Lex/Preprocessor.cpp
+index 5310db3c8..31f31736a 100644
+--- a/clang/lib/Lex/Preprocessor.cpp
++++ b/clang/lib/Lex/Preprocessor.cpp
+@@ -92,6 +92,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+       Identifiers(IILookup), PragmaHandlers(new PragmaNamespace(StringRef())),
+       TUKind(TUKind), SkipMainFilePreamble(0, true),
+       CurSubmoduleState(&NullSubmoduleState) {
++  PostLexAction = [] (const Token &) {};  // PASTA PATCH
+   OwnsHeaderSearch = OwnsHeaders;
+ 
+   // Default to discarding comments.
+@@ -686,9 +687,17 @@ void Preprocessor::replayPreambleConditionalStack() {
+            "CurPPLexer is null when calling replayPreambleConditionalStack.");
+     CurPPLexer->setConditionalLevels(PreambleConditionalStack.getStack());
+     PreambleConditionalStack.doneReplaying();
++
++    // PASTA PATCH
++    Token HashToken;
++    HashToken.startToken();
++    HashToken.setKind(tok::hash);
++    HashToken.setLocation(PreambleConditionalStack.SkipInfo->HashTokenLoc);
++    HashToken.setLength(1u);
++
+     if (PreambleConditionalStack.reachedEOFWhileSkipping())
+       SkipExcludedConditionalBlock(
+-          PreambleConditionalStack.SkipInfo->HashTokenLoc,
++          HashToken,  // PASTA PATCH
+           PreambleConditionalStack.SkipInfo->IfTokenLoc,
+           PreambleConditionalStack.SkipInfo->FoundNonSkipPortion,
+           PreambleConditionalStack.SkipInfo->FoundElse,
+@@ -904,27 +913,59 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
+ void Preprocessor::Lex(Token &Result) {
+   ++LexLevel;
+ 
++  auto InputRawLoc = Result.getLocation().getRawEncoding();  // PASTA PATCH
++
+   // We loop here until a lex function returns a token; this avoids recursion.
+   bool ReturnedToken;
+   do {
+     switch (CurLexerKind) {
+     case CLK_Lexer:
+       ReturnedToken = CurLexer->Lex(Result);
++
++      // PASTA PATCH: Visibility into all tokens.
++      if (ReturnedToken && Callbacks) {
++        Callbacks->Event(Result, PPCallbacks::TokenFromLexer, InputRawLoc);
++      }
+       break;
+     case CLK_TokenLexer:
+       ReturnedToken = CurTokenLexer->Lex(Result);
++
++      // PASTA PATCH: Visibility into all tokens.
++      if (ReturnedToken && Callbacks) {
++        Callbacks->Event(Result, PPCallbacks::TokenFromTokenLexer, InputRawLoc);
++      }
+       break;
+     case CLK_CachingLexer:
+       CachingLex(Result);
+       ReturnedToken = true;
++
++      // PASTA PATCH: Visibility into all tokens.
++      if (ReturnedToken && Callbacks) {
++        Callbacks->Event(Result, PPCallbacks::TokenFromCachingLexer,
++                         InputRawLoc);
++      }
+       break;
+     case CLK_DependencyDirectivesLexer:
+       ReturnedToken = CurLexer->LexDependencyDirectiveToken(Result);
+       break;
+     case CLK_LexAfterModuleImport:
+       ReturnedToken = LexAfterModuleImport(Result);
++
++      // PASTA PATCH: Visibility into all tokens.
++      if (ReturnedToken && Callbacks) {
++        Callbacks->Event(Result, PPCallbacks::TokenFromAfterModuleImportLexer,
++                         InputRawLoc);
++      }
+       break;
+     }
++
++    // PASTA PATCH
++    if (ReturnedToken && Callbacks && Result.is(tok::eod)) {
++      Callbacks->Event(Result, PPCallbacks::EndDirective, 0);
++    }
++    PostLexAction(Result);
++    PostLexAction = [] (const Token &) {};
++
+   } while (!ReturnedToken);
+ 
+   if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
+diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
+index efda6d004..4e8c9b78d 100644
+--- a/clang/lib/Lex/TokenLexer.cpp
++++ b/clang/lib/Lex/TokenLexer.cpp
+@@ -41,6 +41,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+   // associated with it.
+   destroy();
+ 
++  MacroNameTok = Tok;  // PASTA PATCH
++
+   Macro = MI;
+   ActualArgs = Actuals;
+   CurTokenIdx = 0;
+@@ -80,8 +82,33 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+ 
+   // If this is a function-like macro, expand the arguments and change
+   // Tokens to point to the expanded tokens.
+-  if (Macro->isFunctionLike() && Macro->getNumParams())
++  if (Macro->isFunctionLike() && Macro->getNumParams()) {  // PASTA PATCH
++    auto Callbacks = PP.getPPCallbacks();
++    if (ActualArgs && Callbacks) {
++      unsigned NumArgs = ActualArgs->getNumMacroArguments();
++      if (NumArgs && Macro->isVariadic() && ActualArgs->isVarargsElidedUse()) {
++        NumArgs -= 1u;  // Last argument is `VariadicArgIndex`.
++      }
++      
++      // In theory we only need to pre-expand what needs pre-expansion. In
++      // practice, Clang goes and sometimes requests pre-expansion for the
++      // sake of figuring out __VA_OPT__ stuff, via the
++      // `MacroArgs::invokedWithVariadicArgument` function.
++      Callbacks->Event(MacroNameTok, PPCallbacks::BeginPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
++
++      // Pre expand each argument, which internally caches the results.
++      for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
++        Callbacks->Event(MacroNameTok, PPCallbacks::BeginMacroCallArgument, 0);
++        (void) ActualArgs->getPreExpArgument(ArgNo, PP);
++        Callbacks->Event(MacroNameTok, PPCallbacks::EndMacroCallArgument, 0);
++      }
++
++      Callbacks->Event(MacroNameTok, PPCallbacks::EndPreArgumentExpansion,
++                       reinterpret_cast<uintptr_t>(Macro));
++    }
+     ExpandFunctionArguments();
++  }  // PASTA PATCH
+ 
+   // Mark the macro as currently disabled, so that it is not recursively
+   // expanded.  The macro must be disabled only after argument pre-expansion of
+@@ -251,6 +278,8 @@ void TokenLexer::ExpandFunctionArguments() {
+ 
+   VAOptExpansionContext VCtx(PP);
+ 
++  auto Callbacks = PP.getPPCallbacks();  // PASTA PATCH
++
+   for (unsigned I = 0, E = NumTokens; I != E; ++I) {
+     const Token &CurTok = Tokens[I];
+     // We don't want a space for the next token after a paste
+@@ -451,7 +480,7 @@ void TokenLexer::ExpandFunctionArguments() {
+       // Only preexpand the argument if it could possibly need it.  This
+       // avoids some work in common cases.
+       const Token *ArgTok = ActualArgs->getUnexpArgument(ArgNo);
+-      if (ActualArgs->ArgNeedsPreexpansion(ArgTok, PP))
++      if (Callbacks || ActualArgs->ArgNeedsPreexpansion(ArgTok, PP))  // PASTA PATCH
+         ResultArgToks = &ActualArgs->getPreExpArgument(ArgNo, PP)[0];
+       else
+         ResultArgToks = ArgTok;  // Use non-preexpanded tokens.
+@@ -625,6 +654,12 @@ bool TokenLexer::Lex(Token &Tok) {
+     // that it is no longer being expanded.
+     if (Macro) Macro->EnableMacro();
+ 
++//    // PASTA PATCH
++//    if (Macro && PP.Callbacks) {
++//      PP.Callbacks->Event(MacroNameTok, PPCallbacks::EndMacroExpansion,
++//                          reinterpret_cast<uintptr_t>(Macro));
++//    }
++
+     Tok.startToken();
+     Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
+     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
+diff --git a/clang/lib/Parse/ParseExpr.cpp b/clang/lib/Parse/ParseExpr.cpp
+index a6a946d7f..72dc2a006 100644
+--- a/clang/lib/Parse/ParseExpr.cpp
++++ b/clang/lib/Parse/ParseExpr.cpp
+@@ -1420,6 +1420,13 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
+   case tok::kw_sizeof:     // unary-expression: 'sizeof' unary-expression
+                            // unary-expression: 'sizeof' '(' type-name ')'
+   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
++
++  // PASTA PATCH: XNU-specific UETTs.
++  case tok::kw___builtin_ptrauth_type_discriminator:
++  case tok::kw___builtin_xnu_type_signature:
++  case tok::kw___builtin_xnu_type_summary:
++  case tok::kw___builtin_tmo_type_get_metadata:
++
+   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
+   case tok::kw___builtin_omp_required_simd_align:
+     if (NotPrimaryExpression)
+@@ -2284,7 +2291,13 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
+ 
+   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_sizeof, tok::kw___alignof,
+                        tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
+-                       tok::kw___builtin_omp_required_simd_align) &&
++                       tok::kw___builtin_omp_required_simd_align,
++
++                       // PASTA PATCH: XNU-specific UETTs.
++                       tok::kw___builtin_ptrauth_type_discriminator,
++                       tok::kw___builtin_xnu_type_signature,
++                       tok::kw___builtin_xnu_type_summary,
++                       tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a typeof/sizeof/alignof/vec_step expression!");
+ 
+   ExprResult Operand;
+@@ -2403,7 +2416,13 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
+ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
+                      tok::kw__Alignof, tok::kw_vec_step,
+-                     tok::kw___builtin_omp_required_simd_align) &&
++                     tok::kw___builtin_omp_required_simd_align,
++
++                     // PASTA PATCH: XNU-specific UETTs.
++                     tok::kw___builtin_ptrauth_type_discriminator,
++                     tok::kw___builtin_xnu_type_signature,
++                     tok::kw___builtin_xnu_type_summary,
++                     tok::kw___builtin_tmo_type_get_metadata) &&
+          "Not a sizeof/alignof/vec_step expression!");
+   Token OpTok = Tok;
+   ConsumeToken();
+@@ -2480,6 +2499,16 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
+   else if (OpTok.is(tok::kw___builtin_omp_required_simd_align))
+     ExprKind = UETT_OpenMPRequiredSimdAlign;
+ 
++  // PASTA PATCH: XNU-specific things.
++  else if (OpTok.is(tok::kw___builtin_ptrauth_type_discriminator))
++    ExprKind = UETT_PtrAuthTypeDiscriminator;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_signature))
++    ExprKind = UETT_XNUTypeSignature;
++  else if (OpTok.is(tok::kw___builtin_xnu_type_summary))
++    ExprKind = UETT_XNUTypeSummary;
++  else if (OpTok.is(tok::kw___builtin_tmo_type_get_metadata))
++    ExprKind = UETT_TMOTypeGetMetadata;
++
+   if (isCastExpr)
+     return Actions.ActOnUnaryExprOrTypeTraitExpr(OpTok.getLocation(),
+                                                  ExprKind,
+diff --git a/clang/lib/Parse/ParseTemplate.cpp b/clang/lib/Parse/ParseTemplate.cpp
+index e32ea6003..942c71526 100644
+--- a/clang/lib/Parse/ParseTemplate.cpp
++++ b/clang/lib/Parse/ParseTemplate.cpp
+@@ -1209,6 +1209,13 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
+     AfterGreaterLoc = PP.SplitToken(AfterGreaterLoc, Tok.getLength());
+   Tok.setLocation(AfterGreaterLoc);
+ 
++  // PASTA PATCH: We want to observe when tokens are split up so that we can
++  //              have this reflected in PASTA's token lists.
++  if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
++    Callbacks->Event(Greater, PPCallbacks::BeginSplitToken, 0);
++    Callbacks->Event(Tok, PPCallbacks::EndSplitToken, 0);
++  }
++
+   // Update the token cache to match what we just did if necessary.
+   if (CachingTokens) {
+     // If the previous cached token is being merged, delete it.
+diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
+index 75ffa8b0a..27cea9cdf 100644
+--- a/clang/lib/Sema/SemaDecl.cpp
++++ b/clang/lib/Sema/SemaDecl.cpp
+@@ -6261,6 +6261,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
+       Previous.setRedeclarationKind(ForExternalRedeclaration);
+     }
+ 
++    // PASTA PATCH: Disable auto-creation of builtins from things like `atoi`;
++    //              it ends up leading to a lot of source location information
++    //              being dropped.
++    CreateBuiltins = CreateBuiltins ? false : false;
++
+     LookupName(Previous, S, CreateBuiltins);
+   } else { // Something like "int foo::x;"
+     LookupQualifiedName(Previous, DC);
+@@ -6455,6 +6460,13 @@ FixInvalidVariablyModifiedTypeLoc(TypeLoc SrcTL, TypeLoc DstTL) {
+     DstPTL.setRParenLoc(SrcPTL.getRParenLoc());
+     return;
+   }
++
++  // PASTA PATCH: Might have an AdjustedTypeLoc for DstTL due to multiplier
++  //              patches for issue #130.
++  if (AdjustedTypeLoc AdjTL = DstTL.getAs<AdjustedTypeLoc>()) {
++    DstTL = AdjTL.getOriginalLoc();
++  }
++
+   ArrayTypeLoc SrcATL = SrcTL.castAs<ArrayTypeLoc>();
+   ArrayTypeLoc DstATL = DstTL.castAs<ArrayTypeLoc>();
+   TypeLoc SrcElemTL = SrcATL.getElementLoc();
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 83081bbf0..c9c19b9d8 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -4264,6 +4264,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
+   bool IsUnevaluatedOperand =
+       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
+        ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
++
++  // PASTA PATCH: Add in XNU-specific unary expr/type traits.
++  IsUnevaluatedOperand =
++      IsUnevaluatedOperand ||
++      ExprKind == UETT_PtrAuthTypeDiscriminator ||
++      ExprKind == UETT_XNUTypeSignature ||
++      ExprKind == UETT_XNUTypeSummary ||
++      ExprKind == UETT_TMOTypeGetMetadata;
++
+   if (IsUnevaluatedOperand) {
+     ExprResult Result = CheckUnevaluatedOperand(E);
+     if (Result.isInvalid())
+@@ -4632,8 +4641,14 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
+       TInfo->getType()->isVariablyModifiedType())
+     TInfo = TransformToPotentiallyEvaluated(TInfo);
+ 
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  QualType RetTy = Context.getSizeType();
++  if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++  }
++
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
++      ExprKind, TInfo, RetTy, OpLoc, R.getEnd());
+ }
+ 
+ /// Build a sizeof or alignof expression given an expression
+@@ -4647,6 +4662,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   E = PE.get();
+ 
++  // PASTA PATCH: We want a string literal array return type for the signature.
++  QualType RetTy = Context.getSizeType();
++
+   // Verify that the operand is valid.
+   bool isInvalid = false;
+   if (E->isTypeDependent()) {
+@@ -4661,6 +4679,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
+     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
+     isInvalid = true;
++
++  // PASTA PATCH: Let these through.
++  } else if (ExprKind == UETT_PtrAuthTypeDiscriminator ||
++             ExprKind == UETT_XNUTypeSummary ||
++             ExprKind == UETT_TMOTypeGetMetadata) {
++
++  // PASTA PATCH: This returns a string literal that is a type signature.
++  } else if (ExprKind == UETT_XNUTypeSignature) {
++    RetTy = Context.getStringLiteralArrayType(Context.CharTy, 0u);
++
+   } else {
+     isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
+   }
+@@ -4676,7 +4704,7 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+ 
+   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
+   return new (Context) UnaryExprOrTypeTraitExpr(
+-      ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());
++      ExprKind, E, RetTy, OpLoc, E->getSourceRange().getEnd());
+ }
+ 
+ /// ActOnUnaryExprOrTypeTraitExpr - Handle @c sizeof(type) and @c sizeof @c
+diff --git a/clang/lib/Sema/SemaExprCXX.cpp b/clang/lib/Sema/SemaExprCXX.cpp
+index 6f9e02528..431dd4ac1 100644
+--- a/clang/lib/Sema/SemaExprCXX.cpp
++++ b/clang/lib/Sema/SemaExprCXX.cpp
+@@ -5532,6 +5532,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
+   }
+   case BTT_IsSame:
+     return Self.Context.hasSameType(LhsT, RhsT);
++  case BTT_XNUTypeCompatible:  // PASTA PATCH
+   case BTT_TypeCompatible: {
+     // GCC ignores cv-qualifiers on arrays for this builtin.
+     Qualifiers LhsQuals, RhsQuals;
+diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
+index a8589191f..8047b0044 100644
+--- a/clang/lib/Sema/TreeTransform.h
++++ b/clang/lib/Sema/TreeTransform.h
+@@ -5212,6 +5212,12 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have either a ConstantArrayType or a VariableArrayType now:
+   // a ConstantArrayType is allowed to have an element type which is a
+   // VariableArrayType if the type is dependent.  Fortunately, all array
+@@ -5244,6 +5250,12 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   IncompleteArrayTypeLoc NewTL = TLB.push<IncompleteArrayTypeLoc>(Result);
+   NewTL.setLBracketLoc(TL.getLBracketLoc());
+   NewTL.setRBracketLoc(TL.getRBracketLoc());
+@@ -5289,6 +5301,12 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have constant size array now, but fortunately it has the same
+   // location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
+@@ -5337,6 +5355,12 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+       return QualType();
+   }
+ 
++  // PASTA PATCH: We might be dealing with an adjusted type due to Multiplier
++  //              issue #130.
++  if (auto AT = dyn_cast<AdjustedType>(Result.getTypePtr())) {
++    Result = AT->getAdjustedType();
++  }
++
+   // We might have any sort of array type now, but fortunately they
+   // all have the same location layout.
+   ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
+-- 
+2.39.0
+
