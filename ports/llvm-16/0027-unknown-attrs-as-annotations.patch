@@ -1,8 +1,23 @@
+From b3b2b93d3d0e28e2d1269c3fcbb8a509c2331858 Mon Sep 17 00:00:00 2001
+From: Peter Goodman <peter.goodman@gmail.com>
+Date: Fri, 24 Mar 2023 16:58:52 -0400
+Subject: [PATCH] Patches for supporting arbitrary attributes as annotation
+ attributes
+
+---
+ clang/include/clang/Basic/LangOptions.def |  2 ++
+ clang/include/clang/Driver/Options.td     |  5 ++++
+ clang/lib/Driver/ToolChains/Clang.cpp     |  5 ++++
+ clang/lib/Parse/ParseDeclCXX.cpp          | 24 +++++++++-------
+ clang/lib/Sema/SemaDeclAttr.cpp           | 25 ++++++++++++++--
+ clang/lib/Sema/SemaType.cpp               | 35 +++++++++++++++++++----
+ 6 files changed, 77 insertions(+), 19 deletions(-)
+
 diff --git a/clang/include/clang/Basic/LangOptions.def b/clang/include/clang/Basic/LangOptions.def
-index ad366821f..86c99507d 100644
+index d1cbe4306..4b2240d57 100644
 --- a/clang/include/clang/Basic/LangOptions.def
 +++ b/clang/include/clang/Basic/LangOptions.def
-@@ -309,6 +309,8 @@ LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
+@@ -311,6 +311,8 @@ LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
  BENIGN_LANGOPT(CLNoSignedZero , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
  COMPATIBLE_LANGOPT(CLUnsafeMath , 1, 0, "Unsafe Floating Point Math")
  COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
@@ -12,10 +27,10 @@ index ad366821f..86c99507d 100644
  BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
  COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
 diff --git a/clang/include/clang/Driver/Options.td b/clang/include/clang/Driver/Options.td
-index 3cab37b21..71a6a6600 100644
+index 652c15afc..64cb09a9a 100644
 --- a/clang/include/clang/Driver/Options.td
 +++ b/clang/include/clang/Driver/Options.td
-@@ -4277,6 +4277,11 @@ def working_directory : JoinedOrSeparate<["-"], "working-directory">, Flags<[CC1
+@@ -4377,6 +4377,11 @@ def working_directory : Separate<["-"], "working-directory">, Flags<[CC1Option]>
  def working_directory_EQ : Joined<["-"], "working-directory=">, Flags<[CC1Option]>,
    Alias<working_directory>;
  
@@ -28,10 +43,10 @@ index 3cab37b21..71a6a6600 100644
  // options.
  
 diff --git a/clang/lib/Driver/ToolChains/Clang.cpp b/clang/lib/Driver/ToolChains/Clang.cpp
-index 3704ed858..ae3935cc5 100644
+index ec6860113..02746500d 100644
 --- a/clang/lib/Driver/ToolChains/Clang.cpp
 +++ b/clang/lib/Driver/ToolChains/Clang.cpp
-@@ -4595,6 +4595,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
+@@ -4615,6 +4615,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
      }
    }
  
@@ -44,10 +59,10 @@ index 3704ed858..ae3935cc5 100644
      // We have to pass the triple of the host if compiling for an OpenMP device.
      std::string NormalizedTriple =
 diff --git a/clang/lib/Parse/ParseDeclCXX.cpp b/clang/lib/Parse/ParseDeclCXX.cpp
-index bf73ddfd1..b2832d4fc 100644
+index 227c1df2b..4d13a9b6a 100644
 --- a/clang/lib/Parse/ParseDeclCXX.cpp
 +++ b/clang/lib/Parse/ParseDeclCXX.cpp
-@@ -4276,18 +4276,22 @@ bool Parser::ParseCXX11AttributeArgs(
+@@ -4368,18 +4368,22 @@ bool Parser::ParseCXX11AttributeArgs(
        Syntax = ParsedAttr::AS_Microsoft;
    }
  
@@ -81,10 +96,10 @@ index bf73ddfd1..b2832d4fc 100644
  
    if (ScopeName && (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"))) {
 diff --git a/clang/lib/Sema/SemaDeclAttr.cpp b/clang/lib/Sema/SemaDeclAttr.cpp
-index 838fd4835..e8efeba90 100644
+index a303c7f57..228b54a61 100644
 --- a/clang/lib/Sema/SemaDeclAttr.cpp
 +++ b/clang/lib/Sema/SemaDeclAttr.cpp
-@@ -4168,6 +4168,21 @@ static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+@@ -4285,6 +4285,21 @@ static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
    S.AddAnnotationAttr(D, AL, Str, Args);
  }
  
@@ -106,7 +121,7 @@ index 838fd4835..e8efeba90 100644
  static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
    S.AddAlignValueAttr(D, AL, AL.getArgAsExpr(0));
  }
-@@ -8355,11 +8370,15 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+@@ -8594,11 +8609,15 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
    // though they were unknown attributes.
    if (AL.getKind() == ParsedAttr::UnknownAttribute ||
        !AL.existsInTarget(S.Context.getTargetInfo())) {
@@ -126,10 +141,10 @@ index 838fd4835..e8efeba90 100644
    }
  
 diff --git a/clang/lib/Sema/SemaType.cpp b/clang/lib/Sema/SemaType.cpp
-index edcac4d2e..9ed87b45d 100644
+index 8cb1ed28f..909ed3d74 100644
 --- a/clang/lib/Sema/SemaType.cpp
 +++ b/clang/lib/Sema/SemaType.cpp
-@@ -8186,6 +8186,24 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
+@@ -8287,6 +8287,24 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
      CurType = T;
  }
  
@@ -154,7 +169,7 @@ index edcac4d2e..9ed87b45d 100644
  static void HandleAnnotateTypeAttr(TypeProcessingState &State,
                                     QualType &CurType, const ParsedAttr &PA) {
    Sema &S = State.getSema();
-@@ -8289,12 +8307,17 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
+@@ -8390,12 +8408,17 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
  
      case ParsedAttr::UnknownAttribute:
        if (attr.isStandardAttributeSyntax()) {
@@ -178,3 +193,6 @@ index edcac4d2e..9ed87b45d 100644
        }
        break;
  
+-- 
+2.39.0
+
