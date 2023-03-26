@@ -329,6 +329,7 @@ vcpkg_cmake_configure(
         -DLLVM_TOOLS_INSTALL_DIR:STRING=tools/llvm
         -DCLANG_TOOLS_INSTALL_DIR:STRING=tools/llvm
         -DMLIR_TOOLS_INSTALL_DIR:STRING=tools/llvm
+        "-DRUNTIMES_CMAKE_ARGS=-DCMAKE_PREFIX_PATH=${CURRENT_INSTALLED_DIR}"
 )
 
 vcpkg_cmake_install(ADD_BIN_TO_PATH)
