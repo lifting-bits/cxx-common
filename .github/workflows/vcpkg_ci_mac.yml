@@ -195,7 +195,7 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -211,7 +211,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # Only run test on x64
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
@@ -219,7 +219,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -236,12 +236,12 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
+
       #- name: 'Anvill test'
       #  shell: 'bash'
       #  working-directory: anvill/build
-      #  if: matrix.target_arch == 'x64'
+      #  if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
       #  run: |
-      #    # Only run test on x64
       #    ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Cache cleanup and reporting
