@@ -9,15 +9,11 @@ vcpkg_from_github(
     SHA512 e0f7beb0742c6d64d4c0565d6d6f150919ba833e382c4f1ec41dfa9ef2e96047582ed930d8f400f3e484ef3d3b5d60bebe80a8365f0225852b5a220c0127c249
     HEAD_REF release/16.x
     PATCHES
-        0001-Fix-install-paths.patch    # This patch fixes paths in ClangConfig.cmake, LLVMConfig.cmake, LLDConfig.cmake etc.
-        0003-Fix-tools-path.patch
-        0004-Fix-compiler-rt-install-path.patch
-        0005-Fix-tools-install-path.patch
+        0001-Fix-install-paths.patch
         0006-Fix-libffi.patch
         0007-Fix-install-bolt.patch
         0020-fix-FindZ3.cmake.patch
         0021-fix-find_dependency.patch
-        0023-clang-sys-include-dir-path.patch
         0026-fix-prefix-path-calc.patch
 )
 
@@ -163,11 +159,6 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF
         )
     endif()
-    # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
-    # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
-    # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
-    # This needs to not include version suffixes like '-rc3'
-    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION_MAJOR})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
@@ -326,9 +317,6 @@ vcpkg_cmake_configure(
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
         "-DLLVM_PARALLEL_LINK_JOBS=${LLVM_LINK_JOBS}"
         -DCMAKE_INSTALL_PACKAGEDIR:STRING=share
-        -DLLVM_TOOLS_INSTALL_DIR:STRING=tools/llvm
-        -DCLANG_TOOLS_INSTALL_DIR:STRING=tools/llvm
-        -DMLIR_TOOLS_INSTALL_DIR:STRING=tools/llvm
         "-DRUNTIMES_CMAKE_ARGS=-DCMAKE_PREFIX_PATH=${CURRENT_INSTALLED_DIR}"
 )
 
@@ -347,7 +335,6 @@ function(llvm_cmake_package_config_fixup package_name)
         set(args)
         # Maintains case even if package_name name is case-sensitive
         list(APPEND args PACKAGE_NAME "${lower_package}")
-        list(APPEND args TOOLS_PATH "tools/llvm")
         if(arg_DO_NOT_DELETE_PARENT_CONFIG_PATH)
             list(APPEND args "DO_NOT_DELETE_PARENT_CONFIG_PATH")
         endif()
@@ -405,15 +392,28 @@ if(empty_dirs)
     endforeach()
 endif()
 
-vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)
-
 if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/tools"
+    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/bin"
         "${CURRENT_PACKAGES_DIR}/debug/include"
         "${CURRENT_PACKAGES_DIR}/debug/share"
         "${CURRENT_PACKAGES_DIR}/debug/lib/clang"
     )
 endif()
+
+# Use 'bin' instead of 'tools/llvm'
+file(GLOB_RECURSE release_targets
+    "${CURRENT_PACKAGES_DIR}/share/*/*Targets-*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/*/*Exports-*.cmake"
+)
+foreach(release_target IN LISTS release_targets)
+    file(READ "${release_target}" contents)
+    string(REPLACE "${CURRENT_INSTALLED_DIR}" "\${_IMPORT_PREFIX}" contents "${contents}")
+    string(REGEX REPLACE
+        "\\\${_IMPORT_PREFIX}/tools/llvm-16/([^ \"]+${EXECUTABLE_SUFFIX})"
+        "\${_IMPORT_PREFIX}/bin/\\1"
+        contents "${contents}")
+    file(WRITE "${release_target}" "${contents}")
+endforeach()
 
 if("mlir" IN_LIST FEATURES)
     vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/mlir/MLIRConfig.cmake" "set(MLIR_MAIN_SRC_DIR \"${SOURCE_PATH}/mlir\")" "")
