@@ -49,7 +49,7 @@ Passing `--export-dir <DIR>` to the `./build_dependencies.sh` script, you can in
 ./build_dependencies.sh --export-dir vcpkg-llvm-15-install llvm-15
 ```
 
-will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 14 and install into a local directory named `vcpkg-llvm-15-install`.
+will build all of the dependencies listed in `dependencies.txt` _and_ LLVM 15 and install into a local directory named `vcpkg-llvm-15-install`.
 
 Furthermore, you are able to install additional dependencies into an existing exported directory created by this script by setting the `--export-dir <path>` to the same path:
 
@@ -163,4 +163,4 @@ This command will do similar things as the above command, except it will `remove
 
 This repo is under the Apache-2.0 LICENSE, unless where specified. See below.
 
-The LLVM version port directories (ports/llvm-{14,15}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.
+The LLVM version port directories (ports/llvm-{15,16}) were initially copied from the upstream [vcpkg](https://github.com/microsoft/vcpkg) repo as a starting point. Eventually, we plan to submit the relevant patches for upstream when we have thoroughly tested these changes. More info can be found in the respective `LICENSE` and `NOTICE` files in those directories.
