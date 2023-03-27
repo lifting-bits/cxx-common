@@ -110,6 +110,11 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}_logs
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
+      - name: 'Adhoc codesign'
+        shell: 'bash'
+        run: |
+          find ./${{ env.ARTIFACT_NAME }} \( -path '**/bin/*' -or -path '**/libexec/*' -or -path '**/tools/*'  \) -type f -perm +111 -exec codesign --force -s - \{\} \;
+
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         shell: 'bash'
