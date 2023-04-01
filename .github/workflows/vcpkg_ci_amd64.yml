@@ -27,6 +27,10 @@ on:
     branches:
       - 'master'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
@@ -37,7 +41,7 @@ jobs:
         image:
           - { name: 'ubuntu', tag: '20.04' }
           - { name: 'ubuntu', tag: '22.04' }
-        llvm: [ 'llvm-15', 'llvm-15[pasta]' ]
+        llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
@@ -66,6 +70,7 @@ jobs:
       - name: Get commit message
         shell: bash
         run: |
+          git config --global --add safe.directory /__w/cxx-common/cxx-common
           echo 'COMMIT_MESSAGE<<EOF' >> "$GITHUB_ENV"
           if   [[ '${{ github.event_name }}' == 'push' ]]; then
             echo "$(git log --format=%B -n 1 HEAD)" >> "$GITHUB_ENV"

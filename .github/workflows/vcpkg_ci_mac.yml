@@ -26,14 +26,18 @@ on:
     branches:
       - 'master'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-11', xcode: '13.0' }
-        llvm: [ 'llvm-15', 'llvm-15[pasta]' ]
+          - { runner: 'macos-12', xcode: '14.2' }
+        llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
         target_arch: [ 'x64', 'arm64' ]
 
     runs-on: ${{ matrix.os.runner }}
@@ -105,6 +109,11 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}_logs
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
+      - name: 'Adhoc codesign'
+        shell: 'bash'
+        run: |
+          find ./${{ env.ARTIFACT_NAME }} \( -path '**/bin/*' -or -path '**/libexec/*' -or -path '**/tools/*'  \) -type f -perm +111 -exec codesign --force -s - \{\} \;
 
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
@@ -191,7 +200,7 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -207,7 +216,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # Only run test on x64
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
@@ -215,7 +224,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -232,12 +241,12 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
+
       #- name: 'Anvill test'
       #  shell: 'bash'
       #  working-directory: anvill/build
-      #  if: matrix.target_arch == 'x64'
+      #  if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
       #  run: |
-      #    # Only run test on x64
       #    ./install/bin/anvill-decompile-json -spec ../bin/Decompile/tests/specs/ret0.json -bc_out ./ret0.bc -ir_out ret0.ir
 
       - name: Cache cleanup and reporting

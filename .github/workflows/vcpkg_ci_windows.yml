@@ -29,13 +29,18 @@ on:
     branches:
       - 'master'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         llvm: [
-          'llvm-15'
+          'llvm-15',
+          'llvm-16'
           ]
 
     runs-on: ['self-hosted', 'Windows', 'X64']
