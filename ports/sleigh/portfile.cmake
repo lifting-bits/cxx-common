@@ -1,19 +1,19 @@
 # NOTE: A large part of this file is the same as sleigh-speccompiler port
-set(ghidra_version "10.2.2")
+vcpkg_minimum_required(VERSION 2022-10-12) # for ${VERSION}
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO lifting-bits/sleigh
-    REF "v${ghidra_version}"
-    SHA512 40a75cf4c57a751c45c5401881646aae94c22d5c047b86647372240a81abb79870275a4ba8874d0bd3c1d5aec7d13141abfa091893abecdeeb77d33a579390ad
+    REF "v${VERSION}"
+    SHA512 e5c4d30e00904807d1495d6f063fcf18c37763928d43c784905ec357c95f83e1fbffddef2536beb0d25cc5f744235b815e61d5c861304fcbc0b6b3e258b561f0
     HEAD_REF master
 )
 
 vcpkg_from_github(
     OUT_SOURCE_PATH GHIDRA_SOURCE_PATH
     REPO NationalSecurityAgency/ghidra
-    REF "Ghidra_${ghidra_version}_build"
-    SHA512 443cc6a3b5883c612d81883399dc32147245a4a7b501d4ddd1a559874e22d6ff074530d011f1994892a9f2c05eed02304f2accc61b017d7f01d1bf75c57aea0a
+    REF "Ghidra_${VERSION}_build"
+    SHA512 f5dbc828e43acabe8e30f293726b7afa7f96aa29eb2d0ea1ccd4688012e9fdf2950fab2cfa7b8a2b94feaa8ec5ffba5d39017c8ec152e592818d6e3b67df3fc7
     HEAD_REF master
 )
 
@@ -25,6 +25,10 @@ z_vcpkg_apply_patches(
         "${SOURCE_PATH}/src/patches/stable/0002-Add-include-guards-to-decompiler-C-headers.patch"
         "${SOURCE_PATH}/src/patches/stable/0003-Fix-UBSAN-errors-in-decompiler.patch"
         "${SOURCE_PATH}/src/patches/stable/0004-Use-stroull-instead-of-stroul-to-parse-address-offse.patch"
+        "${SOURCE_PATH}/src/patches/stable/0005-1-4-decompiler-Add-using-namespace-std-to-all-.cc.patch"
+        "${SOURCE_PATH}/src/patches/stable/0006-2-4-decompiler-Remusing-automated-std-namespace-fix.patch"
+        "${SOURCE_PATH}/src/patches/stable/0007-3-4-decompiler-Manually-fix-std-namespace-in-generat.patch"
+        "${SOURCE_PATH}/src/patches/stable/0008-4-4-decompiler-Manually-fix-missed-std-variable-usag.patch"
 )
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
@@ -33,14 +37,19 @@ FEATURES
     "support"   sleigh_BUILD_SUPPORT      # support libraries
 )
 
+vcpkg_list(SET OPTIONS)
+if("specs" IN_LIST FEATURES)
+    vcpkg_list(APPEND OPTIONS "-DSLEIGH_EXECUTABLE=${SLEIGH_SPECCOMPILER}")
+endif()
+
 vcpkg_find_acquire_program(GIT)
 
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         ${FEATURE_OPTIONS}
+        ${OPTIONS}
         "-DGIT_EXECUTABLE=${GIT}"
-        "-DSLEIGH_EXECUTABLE=${SLEIGH_SPECCOMPILER}"
         "-DFETCHCONTENT_SOURCE_DIR_GHIDRASOURCE=${GHIDRA_SOURCE_PATH}"
         -Dsleigh_BUILD_TOOLS=OFF
 )

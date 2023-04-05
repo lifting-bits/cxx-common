@@ -15,7 +15,7 @@ zstd
 lz4
 doctest
 sqlite3[fts5]
-sleigh[specs,support]
-sleigh-speccompiler
-lief
 gmp
+lief
+sleigh[support]
+sleigh-speccompiler

@@ -1,6 +1,6 @@
 {
   "name": "sleigh",
-  "version": "10.2.2",
+  "version": "10.2.3",
   "description": "Unofficial CMake build for Ghidra Sleigh and decompiler libraries",
   "homepage": "https://github.com/lifting-bits/sleigh",
   "dependencies": [
