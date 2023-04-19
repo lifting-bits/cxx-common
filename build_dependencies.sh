@@ -179,11 +179,11 @@ if [[ ${ASAN} == "true" ]]; then
 fi
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-vcpkg_dir="${repo_dir:?}/vcpkg"
+vcpkg_dir=${repo_dir:?}/vcpkg
 
 if [[ -z ${EXPORT_DIR} ]]; then
   # Set default export directory variable. Used for printing end message
-  EXPORT_DIR="${vcpkg_dir}"
+  EXPORT_DIR=${vcpkg_dir}
 fi
 
 extra_vcpkg_args+=("--triplet=${target_triplet}" "--host-triplet=${host_triplet}" "--x-install-root=${EXPORT_DIR}/installed")
@@ -248,6 +248,11 @@ msg "Building dependencies"
 msg "Passing extra args to 'vcpkg install':"
 msg " " "${VCPKG_ARGS[@]}"
 
+overlays=()
+if [ -f "${repo_dir}/overlays.txt" ] ; then
+  readarray -t overlays < <(cat "${repo_dir}/overlays.txt")
+fi
+
 # Check if we should upgrade ports
 if [[ ${UPGRADE_PORTS} == "true" ]]; then
   echo ""
@@ -256,14 +261,15 @@ if [[ ${UPGRADE_PORTS} == "true" ]]; then
     cd "${repo_dir}"
     (
       set -x
-      "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" '@overlays.txt' --no-dry-run --allow-unsupported
+      # shellcheck disable=SC2046
+      "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" "${overlays[@]}" --no-dry-run --allow-unsupported
     )
   ) || exit 1
 fi
 
-dep_file='@dependencies.txt'
-if [ ! -f "${repo_dir}/dependencies.txt" ] ; then
-  dep_file=''
+deps=()
+if [ -f "${repo_dir}/dependencies.txt" ] ; then
+  readarray -t deps < <(cat "${repo_dir}/dependencies.txt")
 fi
 
 # Run the vcpkg installation of our packages
@@ -272,7 +278,7 @@ fi
   (
     set -x
 
-    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" '@overlays.txt' "${dep_file}" "${VCPKG_ARGS[@]}"
+    "${vcpkg_dir}/vcpkg" install "${extra_vcpkg_args[@]}" "${overlays[@]}" "${deps[@]}" "${VCPKG_ARGS[@]}"
   )
 ) || exit 1
 

@@ -1,6 +1,6 @@
 {
   "name": "llvm-16",
-  "version": "16.0.0",
+  "version": "16.0.2",
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
@@ -24,6 +24,7 @@
     "compiler-rt",
     "cxx-common-targets",
     "default-options",
+    "lld",
     "mlir",
     "tools",
     "utils"
