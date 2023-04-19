@@ -23,6 +23,7 @@ if("pasta" IN_LIST FEATURES)
         PATCHES
             0025-PASTA-patches.patch
             0027-unknown-attrs-as-annotations.patch
+            0028-Fixes-to-clang-s-tablegen-of-attributes.patch
     )
 endif()
 
