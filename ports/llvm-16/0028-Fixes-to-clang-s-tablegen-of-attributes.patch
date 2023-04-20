@@ -24,7 +24,7 @@ index de608c780..e092aec8d 100644
 +
 +      std::string output;
 +      llvm::raw_string_ostream OS(output);
-+      OS << "(get" << getUpperName() << "() != nullptr)";
++      OS << "(get" << getUpperName() << "() == nullptr)";
 +      return output;
 +    }
    };
