@@ -1,14 +1,14 @@
-From 6fa9c9acbce6bb5d0e8464951ab383e9776b6ca8 Mon Sep 17 00:00:00 2001
+From e65c2af81d78a78474cf2a3cb3bc862f7105940a Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
-Date: Wed, 19 Apr 2023 13:41:58 -0400
-Subject: [PATCH] Fixes to clang's tablegen of attributes.
+Date: Thu, 20 Apr 2023 00:30:19 -0400
+Subject: [PATCH] Patches a null pointer deref in Clang.
 
 ---
  clang/utils/TableGen/ClangAttrEmitter.cpp | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
 diff --git a/clang/utils/TableGen/ClangAttrEmitter.cpp b/clang/utils/TableGen/ClangAttrEmitter.cpp
-index de608c780..e092aec8d 100644
+index de608c780..1d447703c 100644
 --- a/clang/utils/TableGen/ClangAttrEmitter.cpp
 +++ b/clang/utils/TableGen/ClangAttrEmitter.cpp
 @@ -1233,6 +1233,18 @@ namespace {
@@ -32,4 +32,3 @@ index de608c780..e092aec8d 100644
    class VariadicExprArgument : public VariadicArgument {
 -- 
 2.40.0
-
