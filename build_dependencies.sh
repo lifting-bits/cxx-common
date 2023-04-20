@@ -102,7 +102,7 @@ if [[ -z "${CC+unset}" || -z "${CC}" ]]; then
     export CC="${CC:-$(which clang)}"
     msg "Using default clang as CC=${CC}"
   else
-    msg "Using default C comiler"
+    msg "Using default C compiler"
   fi
 else
   msg "Using custom CC=${CC}"
