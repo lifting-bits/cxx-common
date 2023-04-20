@@ -11,10 +11,8 @@ set(VCPKG_USE_SANITIZER "Address")
 
 # If the following flags cause errors during build, you might need to manually
 # ignore the PORT and check VCPKG_USE_SANITIZER
-if(NOT PORT MATCHES "^((upb))$")
-  set(VCPKG_CXX_FLAGS "-fsanitize=address")
-  set(VCPKG_C_FLAGS "-fsanitize=address")
-endif()
+set(VCPKG_CXX_FLAGS "-fsanitize=address")
+set(VCPKG_C_FLAGS "-fsanitize=address")
 
 # Always apply sanitizer to linker flags
 set(VCPKG_LINKER_FLAGS "-fsanitize=address")
