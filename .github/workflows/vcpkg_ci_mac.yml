@@ -86,8 +86,6 @@ jobs:
       - name: Initialize vcpkg
         shell: bash
         run: |
-          which clang
-          clang --version
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
