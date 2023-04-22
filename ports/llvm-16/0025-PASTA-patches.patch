@@ -1,7 +1,7 @@
-From 3e4fd6242c4c32a301a80bf0aca15ad67ec2ee74 Mon Sep 17 00:00:00 2001
+From 9d2260a0e0fae9132206d2ff93378d3630743251 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
-Date: Wed, 22 Mar 2023 15:01:59 -0400
-Subject: [PATCH] PASTA patches
+Date: Thu, 20 Apr 2023 00:23:41 -0400
+Subject: [PATCH] Patches for PASTA.
 
 ---
  clang/include/clang/Basic/TokenKinds.def      |   7 +
@@ -9,7 +9,7 @@ Subject: [PATCH] PASTA patches
  .../include/clang/Lex/PPCallbacksEventKind.h  | 168 +++++++++++
  clang/include/clang/Lex/Preprocessor.h        |  46 ++-
  clang/include/clang/Lex/TokenLexer.h          |   7 +-
- clang/lib/AST/ASTContext.cpp                  | 126 ++++++--
+ clang/lib/AST/ASTContext.cpp                  | 130 +++++++--
  clang/lib/AST/ExprConstant.cpp                |   9 +
  clang/lib/AST/ItaniumMangle.cpp               |   8 +
  clang/lib/AST/Type.cpp                        |   9 +-
@@ -20,14 +20,14 @@ Subject: [PATCH] PASTA patches
  clang/lib/Lex/PPMacroExpansion.cpp            | 268 +++++++++++++++++-
  clang/lib/Lex/Pragma.cpp                      |  76 ++++-
  clang/lib/Lex/Preprocessor.cpp                |  44 ++-
- clang/lib/Lex/TokenLexer.cpp                  | 216 +++++++++++++-
+ clang/lib/Lex/TokenLexer.cpp                  | 226 ++++++++++++++-
  clang/lib/Parse/ParseExpr.cpp                 |  32 ++-
  clang/lib/Parse/ParseTemplate.cpp             |   8 +
  clang/lib/Sema/SemaDecl.cpp                   |  12 +
  clang/lib/Sema/SemaExpr.cpp                   |  32 ++-
  clang/lib/Sema/SemaExprCXX.cpp                |   1 +
  clang/lib/Sema/TreeTransform.h                |  24 ++
- 23 files changed, 1209 insertions(+), 123 deletions(-)
+ 23 files changed, 1223 insertions(+), 123 deletions(-)
  create mode 100644 clang/include/clang/Lex/PPCallbacksEventKind.h
 
 diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
@@ -400,10 +400,10 @@ index 4d229ae61..923107b84 100644
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
-index 2884fe660..2996203eb 100644
+index 2884fe660..660887abc 100644
 --- a/clang/lib/AST/ASTContext.cpp
 +++ b/clang/lib/AST/ASTContext.cpp
-@@ -3545,49 +3545,95 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
+@@ -3545,49 +3545,99 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
            EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
           "Constant array of VLAs is illegal!");
  
@@ -509,6 +509,10 @@ index 2884fe660..2996203eb 100644
 -  ConstantArrayTypes.InsertNode(New, InsertPos);
 -  Types.push_back(New);
 -  return QualType(New, 0);
++  // PASTA PATCH: Go get the original type. We need to re-calculate the
++  //              `OrigInsertPos` because the buckets in `ConstantArrayTypes`
++  //              may have changed.
++  OrigATP = ConstantArrayTypes.FindNodeOrInsertPos(OrigID, OrigInsertPos);
 +  if (OrigSizeExpr && !OrigATP) {
 +    void *OrigMem = Allocate(
 +        ConstantArrayType::totalSizeToAlloc<const Expr *>(OrigSizeExpr ? 1 : 0),
@@ -527,7 +531,7 @@ index 2884fe660..2996203eb 100644
  }
  
  /// getVariableArrayDecayedType - Turns the given type, which may be
-@@ -3688,6 +3734,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
+@@ -3688,6 +3738,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
                                    cat->getSizeExpr(),
                                    cat->getSizeModifier(),
                                    cat->getIndexTypeCVRQualifiers());
@@ -540,7 +544,7 @@ index 2884fe660..2996203eb 100644
      break;
    }
  
-@@ -6867,11 +6919,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+@@ -6867,11 +6923,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
    // qualifiers into the array element type and return a new array type.
    QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
  
@@ -1953,7 +1957,7 @@ index 0d411abf8..03e08ac24 100644
  
    if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
 diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
-index ebe7dd66c..85479f066 100644
+index ebe7dd66c..d3382d3c3 100644
 --- a/clang/lib/Lex/TokenLexer.cpp
 +++ b/clang/lib/Lex/TokenLexer.cpp
 @@ -21,6 +21,7 @@
@@ -1964,7 +1968,24 @@ index ebe7dd66c..85479f066 100644
  #include "clang/Lex/Preprocessor.h"
  #include "clang/Lex/Token.h"
  #include "clang/Lex/VariadicMacroSupport.h"
-@@ -43,6 +44,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+@@ -35,6 +36,16 @@
+ 
+ using namespace clang;
+ 
++// PASTA PATCH
++static const Token &TokenReference(const Token *Ptr, size_t NumToks) {
++  if (Ptr && NumToks) {
++    return *Ptr;
++  } else {
++    static const Token kInvalidToken{};
++    return kInvalidToken;
++  }
++}
++
+ /// Create a TokenLexer for the specified macro with the specified actual
+ /// arguments.  Note that this ctor takes ownership of the ActualArgs pointer.
+ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+@@ -43,6 +54,8 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
    // associated with it.
    destroy();
  
@@ -1973,7 +1994,7 @@ index ebe7dd66c..85479f066 100644
    Macro = MI;
    ActualArgs = Actuals;
    CurTokenIdx = 0;
-@@ -82,8 +85,42 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
+@@ -82,8 +95,42 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
  
    // If this is a function-like macro, expand the arguments and change
    // Tokens to point to the expanded tokens.
@@ -2009,7 +2030,7 @@ index ebe7dd66c..85479f066 100644
 +    }
      ExpandFunctionArguments();
 +    if (Callbacks) {  // PASTA PATCH
-+      Callbacks->Event(*Tokens,
++      Callbacks->Event(TokenReference(Tokens, NumTokens),
 +                       PPCallbacks::AfterParameterSubstitutions,
 +                       NumTokens);
 +    }
@@ -2017,14 +2038,14 @@ index ebe7dd66c..85479f066 100644
  
    // Mark the macro as currently disabled, so that it is not recursively
    // expanded.  The macro must be disabled only after argument pre-expansion of
-@@ -166,6 +203,14 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
+@@ -166,6 +213,14 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
    if (HasPasteOperator)
      PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma);
  
 +  auto Callbacks = PP.getPPCallbacks();  // PASTA PATCH
 +  if (Callbacks) {
 +    Callbacks->Event(
-+        *ResultToks.data(),
++        TokenReference(ResultToks.data(), ResultToks.size()),
 +        PPCallbacks::BeforeRemoveCommas,
 +        reinterpret_cast<uintptr_t>(ResultToks.size()));
 +  }
@@ -2032,13 +2053,13 @@ index ebe7dd66c..85479f066 100644
    // Remove the comma.
    ResultToks.pop_back();
  
-@@ -181,6 +226,13 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
+@@ -181,6 +236,13 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
      ResultToks.back().setFlag(Token::CommaAfterElided);
    }
  
 +  if (Callbacks) {  // PASTA PATCH
 +    Callbacks->Event(
-+        *ResultToks.data(),
++        TokenReference(ResultToks.data(), ResultToks.size()),
 +        PPCallbacks::AfterRemoveCommas,
 +        reinterpret_cast<uintptr_t>(ResultToks.size()));
 +  }
@@ -2046,7 +2067,7 @@ index ebe7dd66c..85479f066 100644
    // Never add a space, even if the comma, ##, or arg had a space.
    NextTokGetsSpace = false;
    return true;
-@@ -253,6 +305,8 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -253,6 +315,8 @@ void TokenLexer::ExpandFunctionArguments() {
  
    VAOptExpansionContext VCtx(PP);
  
@@ -2055,7 +2076,7 @@ index ebe7dd66c..85479f066 100644
    for (unsigned I = 0, E = NumTokens; I != E; ++I) {
      const Token &CurTok = Tokens[I];
      // We don't want a space for the next token after a paste
-@@ -269,6 +323,17 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -269,6 +333,17 @@ void TokenLexer::ExpandFunctionArguments() {
        assert(Tokens[I + 1].is(tok::l_paren) &&
               "__VA_OPT__ must be followed by '('");
  
@@ -2063,7 +2084,7 @@ index ebe7dd66c..85479f066 100644
 +        ResultToks.push_back(CurTok);
 +        ResultToks.push_back(Tokens[I + 1]);
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::BeforeVAOpt,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        ResultToks.pop_back();
@@ -2073,7 +2094,7 @@ index ebe7dd66c..85479f066 100644
        ++I;             // Skip the l_paren
        VCtx.sawVAOptFollowedByOpeningParens(CurTok.getLocation(),
                                             ResultToks.size());
-@@ -302,12 +367,24 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -302,12 +377,24 @@ void TokenLexer::ExpandFunctionArguments() {
                ActualArgs->invokedWithVariadicArgument(Macro, PP);
          }
          if (!*CalledWithVariadicArguments) {
@@ -2090,7 +2111,7 @@ index ebe7dd66c..85479f066 100644
 +        if (Callbacks) {  // PASTA PATCH
 +          ResultToks.push_back(CurTok);
 +          Callbacks->Event(
-+              *ResultToks.data(),
++              TokenReference(ResultToks.data(), ResultToks.size()),
 +              PPCallbacks::AfterVAOpt,
 +              reinterpret_cast<uintptr_t>(ResultToks.size()));
 +          ResultToks.pop_back();
@@ -2098,27 +2119,27 @@ index ebe7dd66c..85479f066 100644
          // Current token is the closing r_paren which marks the end of the
          // __VA_OPT__ invocation, so handle any place-marker pasting (if
          // empty) by removing hashhash either before (if exists) or after. And
-@@ -323,6 +400,12 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -323,6 +410,12 @@ void TokenLexer::ExpandFunctionArguments() {
            // is a token that represents an empty string.
            stringifyVAOPTContents(ResultToks, VCtx,
                                   /*ClosingParenLoc*/ Tokens[I].getLocation());
 +          if (Callbacks) {  // PASTA PATCH
 +            Callbacks->Event(
-+                *ResultToks.data(),
++                TokenReference(ResultToks.data(), ResultToks.size()),
 +                PPCallbacks::AfterStringify,
 +                reinterpret_cast<uintptr_t>(ResultToks.size()));
 +          }
  
          } else if (/*No tokens within VAOPT*/
                     ResultToks.size() == VCtx.getNumberOfTokensPriorToVAOpt()) {
-@@ -369,6 +452,15 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -369,6 +462,15 @@ void TokenLexer::ExpandFunctionArguments() {
      // parameter or __VA_OPT__ when the #define was lexed.
  
      if (CurTok.isOneOf(tok::hash, tok::hashat)) {
 +      if (Callbacks) {  // PASTA PATCH
 +        ResultToks.push_back(CurTok);
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::BeforeStringify,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        ResultToks.pop_back();
@@ -2127,14 +2148,14 @@ index ebe7dd66c..85479f066 100644
        int ArgNo = Macro->getParameterNum(Tokens[I+1].getIdentifierInfo());
        assert((ArgNo != -1 || VCtx.isVAOptToken(Tokens[I + 1])) &&
               "Token following # is not an argument or __VA_OPT__!");
-@@ -396,7 +488,36 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -396,7 +498,36 @@ void TokenLexer::ExpandFunctionArguments() {
        if (NextTokGetsSpace)
          Res.setFlag(Token::LeadingSpace);
  
 +      if (Callbacks) {  // PASTA PATCH
 +        ResultToks.push_back(Tokens[I+1]);  // Parameter name.
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::BeforeMacroParameterUse,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        ResultToks.pop_back();
@@ -2146,7 +2167,7 @@ index ebe7dd66c..85479f066 100644
 +          ResultToks.push_back(*ParamArgToks);  // Argument token.
 +        }
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::AfterMacroParameterUse,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        ResultToks.resize(OldSize);
@@ -2156,7 +2177,7 @@ index ebe7dd66c..85479f066 100644
 +
 +      if (Callbacks) { // PASTA PATCH
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::AfterStringify,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +      }
@@ -2164,13 +2185,13 @@ index ebe7dd66c..85479f066 100644
        MadeChange = true;
        ++I;  // Skip arg name.
        NextTokGetsSpace = false;
-@@ -430,6 +551,13 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -430,6 +561,13 @@ void TokenLexer::ExpandFunctionArguments() {
        continue;
      }
  
 +    if (PasteAfter && Callbacks) {  // PASTA PATCH
 +      Callbacks->Event(
-+          *ResultToks.data(),
++          TokenReference(ResultToks.data(), ResultToks.size()),
 +          PPCallbacks::BeforeConcatenation,
 +          reinterpret_cast<uintptr_t>(ResultToks.size()));
 +    }
@@ -2178,7 +2199,7 @@ index ebe7dd66c..85479f066 100644
      // An argument is expanded somehow, the result is different than the
      // input.
      MadeChange = true;
-@@ -444,6 +572,16 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -444,6 +582,16 @@ void TokenLexer::ExpandFunctionArguments() {
                                       Macro, ArgNo, PP))
        continue;
  
@@ -2186,7 +2207,7 @@ index ebe7dd66c..85479f066 100644
 +    if (Callbacks) {  // PASTA PATCH
 +      ResultToks.push_back(CurTok);
 +      Callbacks->Event(
-+          *ResultToks.data(),
++          TokenReference(ResultToks.data(), ResultToks.size()),
 +          PPCallbacks::BeforeMacroParameterUse,
 +          reinterpret_cast<uintptr_t>(ResultToks.size()));
 +      ResultToks.pop_back();
@@ -2195,7 +2216,7 @@ index ebe7dd66c..85479f066 100644
      // If it is not the LHS/RHS of a ## operator, we must pre-expand the
      // argument and substitute the expanded tokens into the result.  This is
      // C99 6.10.3.1p1.
-@@ -453,7 +591,7 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -453,7 +601,7 @@ void TokenLexer::ExpandFunctionArguments() {
        // Only preexpand the argument if it could possibly need it.  This
        // avoids some work in common cases.
        const Token *ArgTok = ActualArgs->getUnexpArgument(ArgNo);
@@ -2204,14 +2225,14 @@ index ebe7dd66c..85479f066 100644
          ResultArgToks = &ActualArgs->getPreExpArgument(ArgNo, PP)[0];
        else
          ResultArgToks = ArgTok;  // Use non-preexpanded tokens.
-@@ -504,6 +642,14 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -504,6 +652,14 @@ void TokenLexer::ExpandFunctionArguments() {
          if (RParenAfter)
            VCtx.hasPlaceholderBeforeRParen();
        }
 +
 +      if (Callbacks) {  // PASTA PATCH
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::AfterMacroParameterUse,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +      }
@@ -2219,19 +2240,19 @@ index ebe7dd66c..85479f066 100644
        continue;
      }
  
-@@ -552,10 +698,38 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -552,10 +708,38 @@ void TokenLexer::ExpandFunctionArguments() {
              Token::LeadingSpace, NextTokGetsSpace);
        }
  
 +      if (Callbacks) {  // PASTA PATCH
 +        Callbacks->Event(
-+            *ResultToks.data(),
++            TokenReference(ResultToks.data(), ResultToks.size()),
 +            PPCallbacks::AfterMacroParameterUse,
 +            reinterpret_cast<uintptr_t>(ResultToks.size()));
 +
 +        if (PasteBefore) {
 +          Callbacks->Event(
-+              *ResultToks.data(),
++              TokenReference(ResultToks.data(), ResultToks.size()),
 +              PPCallbacks::AfterConcatenation,
 +              reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        }
@@ -2243,13 +2264,13 @@ index ebe7dd66c..85479f066 100644
  
 +    if (Callbacks) {  // PASTA PATCH
 +      Callbacks->Event(
-+          *ResultToks.data(),
++          TokenReference(ResultToks.data(), ResultToks.size()),
 +          PPCallbacks::AfterMacroParameterUse,
 +          reinterpret_cast<uintptr_t>(ResultToks.size()));
 +
 +      if (PasteBefore) {
 +          Callbacks->Event(
-+              *ResultToks.data(),
++              TokenReference(ResultToks.data(), ResultToks.size()),
 +              PPCallbacks::AfterConcatenation,
 +              reinterpret_cast<uintptr_t>(ResultToks.size()));
 +        }
@@ -2258,7 +2279,7 @@ index ebe7dd66c..85479f066 100644
      // If an empty argument is on the LHS or RHS of a paste, the standard (C99
      // 6.10.3.3p2,3) calls for a bunch of placemarker stuff to occur.  We
      // implement this by eating ## operators when a LHS or RHS expands to
-@@ -581,9 +755,9 @@ void TokenLexer::ExpandFunctionArguments() {
+@@ -581,9 +765,9 @@ void TokenLexer::ExpandFunctionArguments() {
        // of removing the paste operator if __VA_OPT__ reduces to the notional
        // placemarker above when we encounter the closing paren of VA_OPT.
        if (!VCtx.isInVAOpt() ||
@@ -2270,7 +2291,7 @@ index ebe7dd66c..85479f066 100644
          VCtx.hasPlaceholderAfterHashhashAtStart();
      }
  
-@@ -627,6 +801,12 @@ bool TokenLexer::Lex(Token &Tok) {
+@@ -627,6 +811,12 @@ bool TokenLexer::Lex(Token &Tok) {
      // that it is no longer being expanded.
      if (Macro) Macro->EnableMacro();
  
@@ -2283,7 +2304,7 @@ index ebe7dd66c..85479f066 100644
      Tok.startToken();
      Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
      Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
-@@ -657,9 +837,20 @@ bool TokenLexer::Lex(Token &Tok) {
+@@ -657,9 +847,20 @@ bool TokenLexer::Lex(Token &Tok) {
         // 'L#macro_arg' construct in a function-like macro.
         (PP.getLangOpts().MSVCCompat &&
          isWideStringLiteralFromMacro(Tok, Tokens[CurTokenIdx])))) {
@@ -2305,7 +2326,7 @@ index ebe7dd66c..85479f066 100644
        return true;
  
      TokenIsFromPaste = true;
-@@ -755,6 +946,8 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
+@@ -755,6 +956,8 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
      return TokenStream.size() == CurIdx;
    };
  
@@ -2314,7 +2335,7 @@ index ebe7dd66c..85479f066 100644
    do {
      // Consume the ## operator if any.
      PasteOpLoc = TokenStream[CurIdx].getLocation();
-@@ -765,6 +958,19 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
+@@ -765,6 +968,19 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
      // Get the RHS token.
      const Token &RHS = TokenStream[CurIdx];
  
@@ -2596,4 +2617,3 @@ index 48bb28b56..8e3243b86 100644
    ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
 -- 
 2.40.0
-

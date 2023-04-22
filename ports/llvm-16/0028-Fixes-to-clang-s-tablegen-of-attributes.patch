@@ -1,0 +1,34 @@
+From e65c2af81d78a78474cf2a3cb3bc862f7105940a Mon Sep 17 00:00:00 2001
+From: Peter Goodman <peter.goodman@gmail.com>
+Date: Thu, 20 Apr 2023 00:30:19 -0400
+Subject: [PATCH] Patches a null pointer deref in Clang.
+
+---
+ clang/utils/TableGen/ClangAttrEmitter.cpp | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/clang/utils/TableGen/ClangAttrEmitter.cpp b/clang/utils/TableGen/ClangAttrEmitter.cpp
+index de608c780..1d447703c 100644
+--- a/clang/utils/TableGen/ClangAttrEmitter.cpp
++++ b/clang/utils/TableGen/ClangAttrEmitter.cpp
+@@ -1233,6 +1233,18 @@ namespace {
+     }
+ 
+     void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
++
++    // PASTA PATCH: Check the optionality of an attribute.
++    std::string getIsOmitted() const override {
++      if (!isOptional()) {
++        return this->SimpleArgument::getIsOmitted();
++      }
++
++      std::string output;
++      llvm::raw_string_ostream OS(output);
++      OS << "(get" << getUpperName() << "() == nullptr)";
++      return output;
++    }
+   };
+ 
+   class VariadicExprArgument : public VariadicArgument {
+-- 
+2.40.0

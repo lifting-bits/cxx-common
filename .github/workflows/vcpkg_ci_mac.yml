@@ -78,6 +78,11 @@ jobs:
           echo "Selecting XCode Version ${{ matrix.os.xcode }}"
           sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
+      - name: Install latest LLVM
+        run: |
+          brew install llvm
+          echo "/usr/local/opt/llvm/bin" >> "$GITHUB_PATH"
+
       - name: Initialize vcpkg
         shell: bash
         run: |

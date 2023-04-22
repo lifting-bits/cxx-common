@@ -1,2 +1,2 @@
-https://github.com/microsoft/vcpkg.git
-2023.01.09
+https://github.com/trail-of-forks/vcpkg.git
+fix-find-program-search-path-host-tools

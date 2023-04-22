@@ -1,4 +1,4 @@
-set(LLVM_VERSION "16.0.0")
+set(LLVM_VERSION "16.0.2")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 e0f7beb0742c6d64d4c0565d6d6f150919ba833e382c4f1ec41dfa9ef2e96047582ed930d8f400f3e484ef3d3b5d60bebe80a8365f0225852b5a220c0127c249
+    SHA512 56ddd825cf1470fc932dfa9b58ec37e37cffae368cf60a4ab20bc86525220ac1e8606cd0b925d59ecd239e42151e0776596c86ba4efae99ff50d2eaf0853d86b
     HEAD_REF release/16.x
     PATCHES
         0001-Fix-install-paths.patch
@@ -23,6 +23,7 @@ if("pasta" IN_LIST FEATURES)
         PATCHES
             0025-PASTA-patches.patch
             0027-unknown-attrs-as-annotations.patch
+            0028-Fixes-to-clang-s-tablegen-of-attributes.patch
     )
 endif()
 
@@ -163,9 +164,6 @@ endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
 endif()
-if("compiler-rt" IN_LIST FEATURES)
-    list(APPEND LLVM_ENABLE_PROJECTS "compiler-rt")
-endif()
 if("flang" IN_LIST FEATURES)
     if(VCPKG_DETECTED_CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND VCPKG_TARGET_ARCHITECTURE STREQUAL "x86")
         message(FATAL_ERROR "Building Flang with MSVC is not supported on x86. Disable it until issues are fixed.")
@@ -222,6 +220,9 @@ if("libcxxabi" IN_LIST FEATURES)
         message(FATAL_ERROR "Building libcxxabi with MSVC is not supported. Disable it until issues are fixed.")
     endif()
     list(APPEND LLVM_ENABLE_RUNTIMES "libcxxabi")
+endif()
+if("compiler-rt" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
 endif()
 if("libunwind" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_RUNTIMES "libunwind")

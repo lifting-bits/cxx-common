@@ -25,6 +25,7 @@
     "compiler-rt",
     "cxx-common-targets",
     "default-options",
+    "lld",
     "mlir",
     "tools",
     "utils"
