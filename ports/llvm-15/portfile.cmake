@@ -81,6 +81,10 @@ if(VCPKG_TARGET_IS_LINUX)
     else()
       list(APPEND FEATURE_OPTIONS
           -DLLVM_USE_LINKER=gold
+          # Cross compiling to arm with gcc doesn't work naturally because gcc
+          # has different executables for each architecture unlike clang, which
+          # is a native crosscompilation toolchain
+          "-DCROSS_TOOLCHAIN_FLAGS_NATIVE:STRING=-DCMAKE_C_COMPILER=gcc\\;-DCMAKE_CXX_COMPILER=g++"
       )
       message(STATUS "Using (default) gold linker for linking")
     endif()
@@ -292,12 +296,28 @@ vcpkg_add_to_path(${PYTHON3_DIR})
 
 set(LLVM_LINK_JOBS 2)
 
-# Cross compilation for M1
-if (VCPKG_TARGET_IS_OSX)
-    set(LLVM_HOST_TRIPLE "${VCPKG_OSX_ARCHITECTURES}-apple-darwin")
-    list(APPEND OPTIONS "-DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}")
-    message(STATUS "Default host triple ${LLVM_HOST_TRIPLE}")
+# Cross compilation
+if (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    set(arch "aarch64")
+elseif (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm")
+    set(arch "arm")
+elseif (VCPKG_TARGET_ARCHITECTURE STREQUAL "x64")
+    set(arch "x86_64")
 endif()
+if (VCPKG_TARGET_IS_OSX)
+    set(LLVM_HOST_TRIPLE "${arch}-apple-darwin")
+elseif (VCPKG_TARGET_IS_LINUX)
+    set(LLVM_HOST_TRIPLE "${arch}-linux-gnu")
+elseif (VCPKG_TARGET_IS_WINDOWS)
+    set(LLVM_HOST_TRIPLE "${arch}-windows-msvc")
+else()
+    message(WARNING "Could not determine LLVM Host triple")
+endif()
+list(APPEND OPTIONS "-DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}")
+if("compiler-rt" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-DCOMPILER_RT_DEFAULT_TARGET_TRIPLE=${LLVM_HOST_TRIPLE}")
+endif()
+message(STATUS "Default host triple '${LLVM_HOST_TRIPLE}'")
 
 if (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
     set(LLVM_TARGET_ARCH "AArch64")

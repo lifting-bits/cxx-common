@@ -5,6 +5,7 @@ env:
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
   # Self-hosted runners can hopefully reuse already downloaded packages
   VCPKG_USE_NUGET_CACHE: 1
+  VCPKG_DEFAULT_HOST_TRIPLET: 'x64-linux-rel'
 
 on:
   release:
@@ -36,29 +37,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host:
-          - { arch: 'amd64', triplet: 'x64-linux-rel' }
         image:
           - { name: 'ubuntu', tag: '20.04' }
           - { name: 'ubuntu', tag: '22.04' }
         llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
+        target_arch: [ 'x64', 'arm64' ]
 
     container:
-      image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
+      image: docker.pkg.github.com/lifting-bits/cxx-common/test-ekilmer_version-docker-images-vcpkg-builder-ubuntu-v2:${{ matrix.image.tag }}
+      # image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    env:
-      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
-
-    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.host.arch}}
+    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.target_arch}}
     runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
       - name: Set Artifact Name
         run: |
           # Need to fix because paths with brackets cause issues
-          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}' | tr '[' '-' | tr -d ']')"
+          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.target_arch == 'x64' && 'amd64' || matrix.target_arch }}' | tr '[' '-' | tr -d ']')"
           echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v3
@@ -116,10 +114,10 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
+          ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
-          echo "TARGET_TRIPLET=${{ matrix.host.triplet }}" >> $GITHUB_ENV
+          echo "TARGET_TRIPLET=${{ matrix.target_arch }}-linux-rel" >> $GITHUB_ENV
 
       - name: Upload CMake logs on error
         if: failure()
@@ -165,9 +163,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target_arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target_arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
@@ -191,7 +189,7 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic/build
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
 
@@ -222,7 +220,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true
@@ -249,7 +247,7 @@ jobs:
       #- name: 'Anvill test'
       #  shell: 'bash'
       #  working-directory: anvill/build
-      #  # if: matrix.target_arch == 'x64'
+      #  # if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
       #  run: |
       #    ./install/bin/anvill-decompile-spec --spec ../bin/Decompile/tests/specs/ret0.json --bc_out ./ret0.bc --ir_out ret0.ir
 

@@ -1,2 +1,2 @@
 https://github.com/trail-of-forks/vcpkg.git
-fix-find-program-search-path-host-tools
+fix-cross-compile-linux
