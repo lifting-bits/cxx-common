@@ -117,7 +117,7 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
+          ./build_dependencies.sh --release --target-arch ${{ matrix.target.triplet }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
           echo "TARGET_TRIPLET=${{ matrix.target.triplet }}" >> $GITHUB_ENV
