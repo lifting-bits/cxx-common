@@ -36,10 +36,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host:
+        target:
           - { arch: 'amd64', triplet: 'x64-linux-rel' }
+          - { arch: 'arm64', triplet: 'arm64-linux-rel' }
         image:
-          - { name: 'ubuntu', tag: '20.04' }
           - { name: 'ubuntu', tag: '22.04' }
         llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
 
@@ -50,15 +50,16 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     env:
-      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
+      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.target.triplet }}
+      VCPKG_DEFAULT_TARGET_TRIPLET: ${{ matrix.target.triplet }}
 
-    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.host.arch}}
+    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.target.arch}}
     runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
       - name: Set Artifact Name
         run: |
           # Need to fix because paths with brackets cause issues
-          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}' | tr '[' '-' | tr -d ']')"
+          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.target.arch }}' | tr '[' '-' | tr -d ']')"
           echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v3
@@ -119,7 +120,7 @@ jobs:
           ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
-          echo "TARGET_TRIPLET=${{ matrix.host.triplet }}" >> $GITHUB_ENV
+          echo "TARGET_TRIPLET=${{ matrix.target.triplet }}" >> $GITHUB_ENV
 
       - name: Upload CMake logs on error
         if: failure()
@@ -165,9 +166,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target.arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
