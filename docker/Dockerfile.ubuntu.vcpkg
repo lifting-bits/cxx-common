@@ -1,10 +1,12 @@
 ARG DISTRO_VERSION=focal
-ARG LLVM_VERSION=14
+ARG LLVM_VERSION=16
 
 ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
 FROM ${BUILD_BASE} as base
 ARG DISTRO_VERSION
 ARG LLVM_VERSION
+
+COPY update_llvm_ver_alternatives.sh /
 
 # All build dependencies for vcpkg packages
 # First row is build dependencies for lifting tools
@@ -15,18 +17,26 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install --yes apt-utils && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
     apt-add-repository ppa:git-core/ppa --yes && \
+    \
     wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    echo "deb http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
-    echo "deb-src http://apt.llvm.org/${DISTRO_VERSION}/ llvm-toolchain-${DISTRO_VERSION}-${LLVM_VERSION} main" >> /etc/apt/sources.list && \
+    \
+    wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh ${LLVM_VERSION} clang lld && \
+    /update_llvm_ver_alternatives.sh ${LLVM_VERSION} 1000 && \
+    update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.lld" 20 && \
+    update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.bfd" 10 && \
+    \
     apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
-      "$( [ "$(uname -m)" != "aarch64" ] && echo "g++-multilib")" \
-      "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" \
       libtinfo-dev libzstd-dev python3-pip python3-setuptools python-setuptools \
-      build-essential g++ gcc clang lld clang-${LLVM_VERSION} lld-${LLVM_VERSION} ninja-build \
+      build-essential binutils-multiarch g++ gcc ninja-build \
       pixz xz-utils make rpm curl unzip tar git zip python3 pkg-config && \
+    apt-get install --yes --no-install-recommends \
+      "$( [ "$(uname -m)" = "x86_64" ] && echo "g++-multilib")" \
+      "$( [ "$(uname -m)" = "x86_64" ] && echo "libstdc++-$(gcc -dumpversion | cut -f1 -d.)-dev-arm64-cross")" \
+      "$( [ "$(uname -m)" = "aarch64" ] && echo "libstdc++-*-dev:armhf")" && \
     apt-get clean --yes && \
     rm -rf /var/lib/apt/lists/* && \
     \
@@ -37,7 +47,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cmake --build build --target install && \
     cd .. && rm -rf ccache-ccache-*
 
-# Default to system clang because things will break if mixing objects compiled with system clang and clang-14
 ENV CC=/usr/bin/clang \
     CXX=/usr/bin/clang++
 
