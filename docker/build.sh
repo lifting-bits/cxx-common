@@ -13,7 +13,7 @@ for version in "${UBUNTU_VERSION_MATRIX[@]}"; do
   docker pull "ubuntu:${version}"
 
   # Image identification
-  tag="vcpkg-builder-ubuntu:${version}"
+  tag="vcpkg-builder-ubuntu-v2:${version}"
 
   # Build
   docker build \
