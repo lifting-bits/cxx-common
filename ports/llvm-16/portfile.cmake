@@ -1,4 +1,4 @@
-set(LLVM_VERSION "16.0.2")
+set(LLVM_VERSION "16.0.3")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 56ddd825cf1470fc932dfa9b58ec37e37cffae368cf60a4ab20bc86525220ac1e8606cd0b925d59ecd239e42151e0776596c86ba4efae99ff50d2eaf0853d86b
+    SHA512 a6ce82ab402a0360cad673561bc7bd53dfdff9230fcb63b3264a4fe28b5a347c4787b087da604a6e890958e6be22cbd3630657debda1ef3380e466b9d983a37f
     HEAD_REF release/16.x
     PATCHES
         0001-Fix-install-paths.patch

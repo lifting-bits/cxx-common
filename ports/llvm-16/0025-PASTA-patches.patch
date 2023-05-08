@@ -1,18 +1,20 @@
-From 9d2260a0e0fae9132206d2ff93378d3630743251 Mon Sep 17 00:00:00 2001
+From 663bfa3a1a437c1538fc43d9c0e1fcaefb3a8d09 Mon Sep 17 00:00:00 2001
 From: Peter Goodman <peter.goodman@gmail.com>
-Date: Thu, 20 Apr 2023 00:23:41 -0400
-Subject: [PATCH] Patches for PASTA.
+Date: Mon, 8 May 2023 12:48:13 -0400
+Subject: [PATCH] PASTA patches for LLVM 16.0.3.
 
 ---
+ clang/include/clang/AST/PrettyPrinter.h       |  10 +-
  clang/include/clang/Basic/TokenKinds.def      |   7 +
  clang/include/clang/Lex/PPCallbacks.h         |  14 +
  .../include/clang/Lex/PPCallbacksEventKind.h  | 168 +++++++++++
  clang/include/clang/Lex/Preprocessor.h        |  46 ++-
  clang/include/clang/Lex/TokenLexer.h          |   7 +-
- clang/lib/AST/ASTContext.cpp                  | 130 +++++++--
+ clang/lib/AST/ASTContext.cpp                  | 129 +++++++--
  clang/lib/AST/ExprConstant.cpp                |   9 +
  clang/lib/AST/ItaniumMangle.cpp               |   8 +
  clang/lib/AST/Type.cpp                        |   9 +-
+ clang/lib/Basic/SourceManager.cpp             |   3 +-
  clang/lib/Lex/Lexer.cpp                       |   9 +
  clang/lib/Lex/PPDirectives.cpp                | 148 +++++++---
  clang/lib/Lex/PPExpressions.cpp               |  29 ++
@@ -27,9 +29,37 @@ Subject: [PATCH] Patches for PASTA.
  clang/lib/Sema/SemaExpr.cpp                   |  32 ++-
  clang/lib/Sema/SemaExprCXX.cpp                |   1 +
  clang/lib/Sema/TreeTransform.h                |  24 ++
- 23 files changed, 1223 insertions(+), 123 deletions(-)
+ 25 files changed, 1233 insertions(+), 125 deletions(-)
  create mode 100644 clang/include/clang/Lex/PPCallbacksEventKind.h
 
+diff --git a/clang/include/clang/AST/PrettyPrinter.h b/clang/include/clang/AST/PrettyPrinter.h
+index 5aeaca7be..643cd7e5d 100644
+--- a/clang/include/clang/AST/PrettyPrinter.h
++++ b/clang/include/clang/AST/PrettyPrinter.h
+@@ -76,7 +76,8 @@ struct PrintingPolicy {
+         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
+         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
+         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
+-        UseEnumerators(true) {}
++        UseEnumerators(true), PrintAdjustedArrayType(true),
++        PrintSubstitutedTemplateParameters(false) {}
+ 
+   /// Adjust this printing policy for cases where it's known that we're
+   /// printing C++ code (for instance, if AST dumping reaches a C++-only
+@@ -299,6 +300,13 @@ struct PrintingPolicy {
+   /// enumerator name or via cast of an integer.
+   unsigned UseEnumerators : 1;
+ 
++  /// PASTA PATCH: Should we print the adjusted array type, or the original
++  /// array type?
++  unsigned PrintAdjustedArrayType : 1;
++
++  /// PASTA PATCH: Should we print substituted template parameters?
++  unsigned PrintSubstitutedTemplateParameters : 1;
++
+   /// Callbacks to use to allow the behavior of printing to be customized.
+   const PrintingCallbacks *Callbacks = nullptr;
+ };
 diff --git a/clang/include/clang/Basic/TokenKinds.def b/clang/include/clang/Basic/TokenKinds.def
 index 96feae991..0fa2f84d5 100644
 --- a/clang/include/clang/Basic/TokenKinds.def
@@ -400,10 +430,10 @@ index 4d229ae61..923107b84 100644
  public:
    /// Create a TokenLexer for the specified macro with the specified actual
 diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
-index 2884fe660..660887abc 100644
+index 2884fe660..3248f650d 100644
 --- a/clang/lib/AST/ASTContext.cpp
 +++ b/clang/lib/AST/ASTContext.cpp
-@@ -3545,49 +3545,99 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
+@@ -3545,49 +3545,98 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
            EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
           "Constant array of VLAs is illegal!");
  
@@ -447,8 +477,7 @@ index 2884fe660..660887abc 100644
 +  void *OrigInsertPos = nullptr;
 +  ConstantArrayType *OrigATP = nullptr;
 +  if (OrigSizeExpr) {
-+    ConstantArrayType::Profile(OrigID, *this, EltTy, ArySize, OrigSizeExpr, ASM,
-+                               IndexTypeQuals);
++    OrigID.AddPointer(OrigSizeExpr);  // Want uniqueness.
 +    OrigATP = ConstantArrayTypes.FindNodeOrInsertPos(OrigID, OrigInsertPos);
 +  }
 +
@@ -531,7 +560,7 @@ index 2884fe660..660887abc 100644
  }
  
  /// getVariableArrayDecayedType - Turns the given type, which may be
-@@ -3688,6 +3738,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
+@@ -3688,6 +3737,12 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
                                    cat->getSizeExpr(),
                                    cat->getSizeModifier(),
                                    cat->getIndexTypeCVRQualifiers());
@@ -544,7 +573,7 @@ index 2884fe660..660887abc 100644
      break;
    }
  
-@@ -6867,11 +6923,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
+@@ -6867,11 +6922,23 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
    // qualifiers into the array element type and return a new array type.
    QualType NewEltTy = getQualifiedType(ATy->getElementType(), qs);
  
@@ -631,6 +660,20 @@ index 54e62a193..324468784 100644
  
  #define TYPE(Class,Base)
  #define DEPENDENT_TYPE(Class,Base) case Type::Class:
+diff --git a/clang/lib/Basic/SourceManager.cpp b/clang/lib/Basic/SourceManager.cpp
+index 3d7a53879..8942ff1f7 100644
+--- a/clang/lib/Basic/SourceManager.cpp
++++ b/clang/lib/Basic/SourceManager.cpp
+@@ -865,7 +865,8 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
+ /// local one.
+ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
+   if (SLocOffset < CurrentLoadedOffset) {
+-    assert(0 && "Invalid SLocOffset or bad function choice");
++    // PASTA PATCH: https://github.com/trailofbits/pasta/issues/57.
++    // assert(0 && "Invalid SLocOffset or bad function choice");
+     return FileID();
+   }
+ 
 diff --git a/clang/lib/Lex/Lexer.cpp b/clang/lib/Lex/Lexer.cpp
 index d49d9e9e4..56a8dbe9e 100644
 --- a/clang/lib/Lex/Lexer.cpp
@@ -1957,7 +2000,7 @@ index 0d411abf8..03e08ac24 100644
  
    if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
 diff --git a/clang/lib/Lex/TokenLexer.cpp b/clang/lib/Lex/TokenLexer.cpp
-index ebe7dd66c..d3382d3c3 100644
+index ebe7dd66c..6b6805e29 100644
 --- a/clang/lib/Lex/TokenLexer.cpp
 +++ b/clang/lib/Lex/TokenLexer.cpp
 @@ -21,6 +21,7 @@
@@ -2344,7 +2387,7 @@ index ebe7dd66c..d3382d3c3 100644
 +        Callbacks->Event(
 +            TokenStream[CurIdx - 1u],
 +            PPCallbacks::ConcatenationOperatorToken,
-+            reinterpret_cast<uintptr_t>(&LHSTok)); 
++            reinterpret_cast<uintptr_t>(&LHSTok));
 +      }
 +      Callbacks->Event(
 +          RHS,
@@ -2560,10 +2603,10 @@ index abf5a72e7..f6eb0ca11 100644
      // GCC ignores cv-qualifiers on arrays for this builtin.
      Qualifiers LhsQuals, RhsQuals;
 diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
-index 48bb28b56..8e3243b86 100644
+index 4244bbc1e..83046c48c 100644
 --- a/clang/lib/Sema/TreeTransform.h
 +++ b/clang/lib/Sema/TreeTransform.h
-@@ -5309,6 +5309,12 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
+@@ -5306,6 +5306,12 @@ TreeTransform<Derived>::TransformConstantArrayType(TypeLocBuilder &TLB,
        return QualType();
    }
  
@@ -2576,7 +2619,7 @@ index 48bb28b56..8e3243b86 100644
    // We might have either a ConstantArrayType or a VariableArrayType now:
    // a ConstantArrayType is allowed to have an element type which is a
    // VariableArrayType if the type is dependent.  Fortunately, all array
-@@ -5341,6 +5347,12 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
+@@ -5338,6 +5344,12 @@ QualType TreeTransform<Derived>::TransformIncompleteArrayType(
        return QualType();
    }
  
@@ -2589,7 +2632,7 @@ index 48bb28b56..8e3243b86 100644
    IncompleteArrayTypeLoc NewTL = TLB.push<IncompleteArrayTypeLoc>(Result);
    NewTL.setLBracketLoc(TL.getLBracketLoc());
    NewTL.setRBracketLoc(TL.getRBracketLoc());
-@@ -5386,6 +5398,12 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
+@@ -5383,6 +5395,12 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
        return QualType();
    }
  
@@ -2602,7 +2645,7 @@ index 48bb28b56..8e3243b86 100644
    // We might have constant size array now, but fortunately it has the same
    // location layout.
    ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
-@@ -5434,6 +5452,12 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+@@ -5431,6 +5449,12 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
        return QualType();
    }
  
@@ -2617,3 +2660,4 @@ index 48bb28b56..8e3243b86 100644
    ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
 -- 
 2.40.0
+
