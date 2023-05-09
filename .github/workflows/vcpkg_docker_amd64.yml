@@ -69,13 +69,13 @@ jobs:
           for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
 
           # NOTE: Docker Hub only allows one slash in tag
-          # DOCKER_TAG="trailofbits/cxx-common-${IMAGE_NAME}"
-          # docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" -t "${DOCKER_TAG}" .
+          DOCKER_TAG="trailofbits/cxx-common-${IMAGE_NAME}"
+          docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" -t "${DOCKER_TAG}" .
           # Smaller Docker image without NuGet support goes to Docker Hub for users
-          #if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-          #  docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
-          #  for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
-          #fi
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
+            docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
+            for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
+          fi
         env:
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
           # DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
