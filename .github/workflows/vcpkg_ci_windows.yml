@@ -178,7 +178,7 @@ jobs:
           # env CTEST_OUTPUT_ON_FAILURE=1 cmake --build . --target test || true
 
       - name: 'Anvill build'
-        # if: ${{ matrix.llvm == 'llvm-15' }}
+        if: ${{ matrix.llvm == 'llvm-15' }}
         run: |
           cd anvill
           Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build

@@ -230,7 +230,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        # if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
