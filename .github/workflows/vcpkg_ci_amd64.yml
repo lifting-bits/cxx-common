@@ -207,7 +207,6 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        # if: contains(matrix.llvm, 'llvm-15')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -222,7 +221,6 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        # if: contains(matrix.llvm, 'llvm-15')
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true

@@ -205,7 +205,6 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        # if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         if: matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
@@ -222,7 +221,6 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        # if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         if: matrix.target_arch == 'x64'
         run: |
           # Only run test on x64
@@ -232,7 +230,6 @@ jobs:
         shell: 'bash'
         working-directory: anvill
         if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
-        # if: matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
