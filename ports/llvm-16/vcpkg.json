@@ -1,6 +1,6 @@
 {
   "name": "llvm-16",
-  "version": "16.0.2",
+  "version": "16.0.3",
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
