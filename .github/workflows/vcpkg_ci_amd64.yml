@@ -208,7 +208,6 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        if: contains(matrix.llvm, 'llvm-15')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -247,10 +246,12 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
+      # NOTE: This is an old test that doesn't make sense anymore
+      # Need to find some other way to run a smoketest
       #- name: 'Anvill test'
       #  shell: 'bash'
-      #  working-directory: anvill/build
-      #  # if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+      #  working-directory: anvill
+      #  if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
       #  run: |
       #    ./install/bin/anvill-decompile-spec --spec ../bin/Decompile/tests/specs/ret0.json --bc_out ./ret0.bc --ir_out ret0.ir
 
