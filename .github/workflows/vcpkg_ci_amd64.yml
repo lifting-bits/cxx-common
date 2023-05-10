@@ -175,8 +175,11 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
+          # Does not compile with gcc
+          export CC="$(which clang)"
+          export CXX="$(which clang++)"
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
