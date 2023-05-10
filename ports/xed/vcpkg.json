@@ -1,7 +1,7 @@
 {
   "name": "xed",
   "version-date": "2022-04-17",
-  "port-version": 2,
+  "port-version": 1,
   "description": "x86 encoder decoder",
   "homepage": "https://intelxed.github.io/",
   "license": "Apache-2.0"
