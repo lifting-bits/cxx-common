@@ -12,7 +12,8 @@ vcpkg_from_github(
         compile_options.patch
 )
 
-string(COMPARE EQUAL "${TARGET_TRIPLET}" "${HOST_TRIPLET}" protobuf_BUILD_PROTOC_BINARIES)
+# Always build binaries
+set(protobuf_BUILD_PROTOC_BINARIES ON)
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" protobuf_BUILD_SHARED_LIBS)
 string(COMPARE EQUAL "${VCPKG_CRT_LINKAGE}" "static" protobuf_MSVC_STATIC_RUNTIME)
 
