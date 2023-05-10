@@ -184,7 +184,7 @@ jobs:
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             -S . -B build
           cmake --build build
@@ -198,6 +198,7 @@ jobs:
 
       - name: 'Remill dependencies'
         shell: 'bash'
+        if: contains(matrix.llvm, 'llvm-15')
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -207,13 +208,19 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
+        if: contains(matrix.llvm, 'llvm-15')
         working-directory: remill
         run: |
+          if [[ '${{ matrix.image.tag }}' == '20.04' }} ]]; then
+            # Remill uses C++20 concepts that aren't supported by gcc-9 in 20.04
+            export CC="$(which clang)"
+            export CXX="$(which clang++)"
+          fi
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             -S . -B build
           cmake --build build
@@ -237,7 +244,7 @@ jobs:
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             -DANVILL_ENABLE_TESTS=true \
             -DANVILL_ENABLE_INSTALL=true \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
