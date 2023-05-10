@@ -11,8 +11,8 @@ vcpkg_from_github(
 vcpkg_from_github(
     OUT_SOURCE_PATH MBUILD_SOURCE_PATH
     REPO intelxed/mbuild
-    REF v2022.07.28
-    SHA512 3f7b4337a101f9c31735184aa81f521c18ddb571f8d8504cfab09733b8cd01ff0c3a286bfec0e09d0527d9e1ad518ff7444bf2eb29e068587da72320bd6ffe3a
+    REF 09b6654be0c52bf1df44e88c88b411a67b624cbd
+    SHA512 63797a1763ec7ea5ab5897fbd457c0bf715e1a144ae34e44f18c17ab1bbaaa848da479212518eb356d64dd3f46372fb69e955a0033adafc8211f5b4120016ab5
     HEAD_REF main
     PATCHES
         # For arm cross compilation
