@@ -211,7 +211,7 @@ jobs:
         if: contains(matrix.llvm, 'llvm-15')
         working-directory: remill
         run: |
-          if [[ '${{ matrix.image.tag }}' == '20.04' }} ]]; then
+          if [[ '${{ matrix.image.tag }}' == '20.04' ]]; then
             # Remill uses C++20 concepts that aren't supported by gcc-9 in 20.04
             export CC="$(which clang)"
             export CXX="$(which clang++)"
