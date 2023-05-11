@@ -239,6 +239,10 @@ jobs:
         working-directory: anvill
         if: contains(matrix.llvm, 'llvm-15')
         run: |
+          # TODO: Does not support compilation with gcc
+          export CC="$(which clang)"
+          export CXX="$(which clang++)"
+
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
