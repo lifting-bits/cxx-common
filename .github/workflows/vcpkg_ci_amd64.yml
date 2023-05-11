@@ -180,10 +180,10 @@ jobs:
           # Does not compile with gcc
           export CC="$(which clang)"
           export CXX="$(which clang++)"
-          # PIC/PIE changes in Ubuntu 22.04 compared to 20.04
+          # PIC/PIE defaults change in Ubuntu 22.04 compared to 20.04
           pic=""
           if [[ '${{ matrix.image.tag }}' == '22.04' ]]; then
-            pic=-DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            pic=-DCMAKE_POSITION_INDEPENDENT_CODE=OFF
           fi
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
