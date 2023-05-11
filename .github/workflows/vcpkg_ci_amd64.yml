@@ -180,12 +180,18 @@ jobs:
           # Does not compile with gcc
           export CC="$(which clang)"
           export CXX="$(which clang++)"
+          # PIC/PIE changes in Ubuntu 22.04 compared to 20.04
+          pic=""
+          if [[ '${{ matrix.image.tag }}' == '22.04' ]]; then
+            pic=-DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          fi
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
             -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
+            "${pic}" \
             -S . -B build
           cmake --build build
           cmake --build build --target install
