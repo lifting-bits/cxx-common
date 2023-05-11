@@ -204,7 +204,7 @@ jobs:
 
       - name: 'Remill dependencies'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -214,7 +214,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         working-directory: remill
         run: |
           if [[ '${{ matrix.image.tag }}' == '20.04' ]]; then
@@ -243,7 +243,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # TODO: Does not support compilation with gcc
           export CC="$(which clang)"
