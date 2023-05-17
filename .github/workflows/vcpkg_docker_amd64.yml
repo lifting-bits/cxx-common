@@ -78,5 +78,5 @@ jobs:
           fi
         env:
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
-          # DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
-          # DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
+          DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
+          DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
