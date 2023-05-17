@@ -56,7 +56,7 @@ jobs:
           fi
           echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
 
-      - name: Build caching image
+      - name: Build image
         working-directory: docker
         run: |
           # Pull freshest ubuntu Docker image
@@ -72,18 +72,5 @@ jobs:
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push caching image
+      - name: Push image
         run: docker push "${IMAGE_NAME}"
-
-      - name: Build and Push non-caching image
-        if: github.ref == 'refs/heads/master'
-        working-directory: docker
-        run: |
-          # Only push smaller image on default branch. This could change in the
-          # future if we actually need to test the smaller image before merging
-          docker build -f Dockerfile.ubuntu.vcpkg \
-              --target base \
-              --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
-              -t "${IMAGE_NAME}" \
-              .
-          docker push "${IMAGE_NAME}"
