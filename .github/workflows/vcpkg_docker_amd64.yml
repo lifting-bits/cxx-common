@@ -63,7 +63,10 @@ jobs:
               --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
               -t "${IMAGE_NAME}" \
               .
-          docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
+
+          # Authenticate with container registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+
           for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
 
           docker build -f Dockerfile.ubuntu.vcpkg \
@@ -76,5 +79,3 @@ jobs:
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
             for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
           fi
-        env:
-          GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
