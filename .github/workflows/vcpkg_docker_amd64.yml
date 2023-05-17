@@ -56,30 +56,33 @@ jobs:
           fi
           echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
 
-      - name: Build and Push
+      - name: Build caching image
         working-directory: docker
         run: |
           # Pull freshest ubuntu Docker image
           docker pull ubuntu:${{ matrix.container.version}}
 
-          docker build -f Dockerfile.ubuntu.vcpkg --no-cache \
+          docker build -f Dockerfile.ubuntu.vcpkg \
+              --no-cache \
               --target caching \
               --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
               -t "${IMAGE_NAME}" \
               .
 
-          # Authenticate with container registry
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
-          for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
+      - name: Push caching image
+        run: docker push "${IMAGE_NAME}"
 
+      - name: Build and Push non-caching image
+        if: github.ref == 'refs/heads/master'
+        run: |
+          # Only push smaller image on default branch. This could change in the
+          # future if we actually need to test the smaller image before merging
           docker build -f Dockerfile.ubuntu.vcpkg \
               --target base \
               --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
               -t "${IMAGE_NAME}" \
               .
-          # Only push smaller image on default branch. This could change in the
-          # future if we actually need to test the smaller image before merging
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
-          fi
+          docker push "${IMAGE_NAME}"
