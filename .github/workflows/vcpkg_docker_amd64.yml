@@ -1,5 +1,9 @@
 name: Docker Build Images (AMD64)
 
+env:
+  # Also remember to change the 'docker/build.sh' script
+  IMAGE_VER: "v2"
+
 on:
   schedule:
     # Once every Wednesday at 00:00
@@ -26,40 +30,59 @@ jobs:
       matrix:
         # arch is to tag docker images for uniqueness
         host:
-          - { name: 'ubuntu-20.04', arch: '' }
+          - { name: 'ubuntu-22.04', arch: '' }
         container:
-          - { distro: 'ubuntu', version: '20.04', codename: 'focal' }
-          - { distro: 'ubuntu', version: '22.04', codename: 'jammy' }
+          - { version: '20.04', codename: 'focal' }
+          - { version: '22.04', codename: 'jammy' }
 
     runs-on: ${{ matrix.host.name }}
+
+    permissions:
+      packages: write
+      contents: read
 
     steps:
       - name: Cleanup working directory with container root
         run: |
           docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:latest find . -name . -o -prune -exec rm -rf -- {} + || true
       - uses: actions/checkout@v3
-      - name: Build and Push
+      - name: Generate Image Name
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          test_name=""
+          if [[ "${GITHUB_REF}" != "refs/heads/master" ]] ; then
+            test_name="test-${BRANCH_NAME////_}-"
+          fi
+          echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
+
+      - name: Build caching image
         working-directory: docker
         run: |
           # Pull freshest ubuntu Docker image
           docker pull ubuntu:${{ matrix.container.version}}
 
-          docker build -f Dockerfile.ubuntu.vcpkg --target caching --no-cache --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" -t "docker.pkg.github.com/${DOCKER_TAG}" .
-          # Docker image with NuGet support goes to github packages for CI use only
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
-            for i in 1 2 3; do docker push "docker.pkg.github.com/${DOCKER_TAG}" && break || sleep 10; done
-          fi
+          docker build -f Dockerfile.ubuntu.vcpkg \
+              --no-cache \
+              --target caching \
+              --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
+              -t "${IMAGE_NAME}" \
+              .
 
-          # NOTE: Docker Hub only allows one slash in tag
-          docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" -t "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" .
-          # Smaller Docker image without NuGet support goes to Docker Hub for users
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
-            for i in 1 2 3; do docker push "trailofbits/cxx-common-vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}" && break || sleep 10; done
-          fi
-        env:
-          DOCKER_TAG: lifting-bits/cxx-common/vcpkg-builder-${{ matrix.container.distro }}:${{ matrix.container.version }}${{ matrix.host.arch }}
-          GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
-          DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
-          DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push caching image
+        run: docker push "${IMAGE_NAME}"
+
+      - name: Build and Push non-caching image
+        if: github.ref == 'refs/heads/master'
+        run: |
+          # Only push smaller image on default branch. This could change in the
+          # future if we actually need to test the smaller image before merging
+          docker build -f Dockerfile.ubuntu.vcpkg \
+              --target base \
+              --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
+              -t "${IMAGE_NAME}" \
+              .
+          docker push "${IMAGE_NAME}"
