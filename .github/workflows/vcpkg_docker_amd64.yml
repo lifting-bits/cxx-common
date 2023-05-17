@@ -37,6 +37,10 @@ jobs:
 
     runs-on: ${{ matrix.host.name }}
 
+    permissions:
+      packages: write
+      contents: read
+
     steps:
       - name: Cleanup working directory with container root
         run: |
