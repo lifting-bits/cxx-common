@@ -1,6 +1,7 @@
 name: Docker Build Images (AMD64)
 
 env:
+  # Also remember to change the 'docker/build.sh' script
   IMAGE_VER: "v2"
 
 on:
@@ -49,7 +50,7 @@ jobs:
           if [[ "${GITHUB_REF}" != "refs/heads/master" ]] ; then
             test_name="test-${BRANCH_NAME////_}-"
           fi
-          echo "IMAGE_NAME=${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
+          echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
 
       - name: Build and Push
         working-directory: docker
@@ -57,26 +58,23 @@ jobs:
           # Pull freshest ubuntu Docker image
           docker pull ubuntu:${{ matrix.container.version}}
 
-          # Build for GitHub Actions registry
-          # Docker image with NuGet support goes to github packages for CI use only
-          DOCKER_TAG="docker.pkg.github.com/lifting-bits/cxx-common/${IMAGE_NAME}"
           docker build -f Dockerfile.ubuntu.vcpkg --no-cache \
               --target caching \
               --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
-              -t "${DOCKER_TAG}" \
+              -t "${IMAGE_NAME}" \
               .
           docker login docker.pkg.github.com -u publisher -p "${GITHUB_PACKAGE_REGISTRY_TOKEN}"
-          for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
+          for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
 
-          # NOTE: Docker Hub only allows one slash in tag
-          DOCKER_TAG="trailofbits/cxx-common-${IMAGE_NAME}"
-          docker build -f Dockerfile.ubuntu.vcpkg --target base --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" -t "${DOCKER_TAG}" .
-          # Smaller Docker image without NuGet support goes to Docker Hub for users
+          docker build -f Dockerfile.ubuntu.vcpkg \
+              --target base \
+              --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
+              -t "${IMAGE_NAME}" \
+              .
+          # Only push smaller image on default branch. This could change in the
+          # future if we actually need to test the smaller image before merging
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]] ; then
-            docker login -u "${DOCKER_HUB_USER}" -p "${DOCKER_HUB_TOKEN}"
-            for i in 1 2 3; do docker push "${DOCKER_TAG}" && break || sleep 10; done
+            for i in 1 2 3; do docker push "${IMAGE_NAME}" && break || sleep 10; done
           fi
         env:
           GITHUB_PACKAGE_REGISTRY_TOKEN: ${{  secrets.GITHUB_PACKAGE_REGISTRY_TOKEN  }}
-          DOCKER_HUB_USER: ${{  secrets.DOCKER_HUB_USER  }}
-          DOCKER_HUB_TOKEN: ${{  secrets.DOCKER_HUB_TOKEN  }}
