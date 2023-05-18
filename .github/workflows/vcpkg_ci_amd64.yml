@@ -5,6 +5,7 @@ env:
   VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
   # Self-hosted runners can hopefully reuse already downloaded packages
   VCPKG_USE_NUGET_CACHE: 1
+  VCPKG_DEFAULT_HOST_TRIPLET: 'x64-linux-rel'
 
 on:
   release:
@@ -36,12 +37,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        host:
-          - { arch: 'amd64', triplet: 'x64-linux-rel' }
         image:
-          - { name: 'ubuntu', tag: '20.04' }
-          - { name: 'ubuntu', tag: '22.04' }
+          - { name: 'ubuntu-v2', tag: '20.04' }
+          - { name: 'ubuntu-v2', tag: '22.04' }
         llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
+        target_arch: [ 'x64', 'arm64' ]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
@@ -49,16 +49,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    env:
-      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.host.triplet }}
-
-    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.host.arch}}
+    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.target_arch}}
     runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
       - name: Set Artifact Name
         run: |
           # Need to fix because paths with brackets cause issues
-          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.host.arch }}' | tr '[' '-' | tr -d ']')"
+          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.target_arch == 'x64' && 'amd64' || matrix.target_arch }}' | tr '[' '-' | tr -d ']')"
           echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v3
@@ -116,10 +113,10 @@ jobs:
             -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             "${{ secrets.GITHUB_TOKEN }}"
 
-          ./build_dependencies.sh --release --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
+          ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
-          echo "TARGET_TRIPLET=${{ matrix.host.triplet }}" >> $GITHUB_ENV
+          echo "TARGET_TRIPLET=${{ matrix.target_arch }}-linux-rel" >> $GITHUB_ENV
 
       - name: Upload CMake logs on error
         if: failure()
@@ -165,9 +162,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{  github.workspace }}/.ccache
-          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
+          key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target_arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.host.arch }}-${{ matrix.llvm }}-
+            ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target_arch }}-${{ matrix.llvm }}-
 
       - name: ccache Initial stats
         shell: bash
@@ -177,13 +174,16 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
+          # Does not compile with gcc
+          export CC="$(which clang)"
+          export CXX="$(which clang++)"
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             -S . -B build
           cmake --build build
@@ -191,12 +191,13 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic/build
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
 
       - name: 'Remill dependencies'
         shell: 'bash'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -206,13 +207,19 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         working-directory: remill
         run: |
+          if [[ '${{ matrix.image.tag }}' == '20.04' ]]; then
+            # Remill uses C++20 concepts that aren't supported by gcc-9 in 20.04
+            export CC="$(which clang)"
+            export CXX="$(which clang++)"
+          fi
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             -S . -B build
           cmake --build build
@@ -221,6 +228,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true
@@ -228,14 +236,18 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: contains(matrix.llvm, 'llvm-15')
+        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
         run: |
+          # TODO: Does not support compilation with gcc
+          export CC="$(which clang)"
+          export CXX="$(which clang++)"
+
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_INSTALL_PREFIX=$(pwd)/install" \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${TARGET_TRIPLET} \
-            -DVCPKG_HOST_TRIPLET=${TARGET_TRIPLET} \
+            -DVCPKG_HOST_TRIPLET=${VCPKG_DEFAULT_HOST_TRIPLET} \
             -DANVILL_ENABLE_TESTS=true \
             -DANVILL_ENABLE_INSTALL=true \
             -DANVILL_ENABLE_PYTHON3_LIBS=OFF \
@@ -249,7 +261,7 @@ jobs:
       #- name: 'Anvill test'
       #  shell: 'bash'
       #  working-directory: anvill
-      #  if: contains(matrix.llvm, 'llvm-15')
+      #  if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
       #  run: |
       #    ./install/bin/anvill-decompile-spec --spec ../bin/Decompile/tests/specs/ret0.json --bc_out ./ret0.bc --ir_out ret0.ir
 

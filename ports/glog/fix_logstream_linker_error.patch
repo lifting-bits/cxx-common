@@ -1,0 +1,33 @@
+From 674d45068454718433aa46a40bd553bcbb142f71 Mon Sep 17 00:00:00 2001
+From: Eric Kilmer <eric.d.kilmer@gmail.com>
+Date: Tue, 16 May 2023 14:34:53 -0400
+Subject: [PATCH] logging: Prevent LogStream constructor from being discarded
+
+Fixes linker error reported in https://github.com/google/glog/issues/922
+---
+ src/glog/logging.h.in | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/glog/logging.h.in b/src/glog/logging.h.in
+index e8e6c41..ad25a65 100644
+--- a/src/glog/logging.h.in
++++ b/src/glog/logging.h.in
+@@ -1344,6 +1344,15 @@ GLOG_MSVC_PUSH_DISABLE_WARNING(4275)
+   class GLOG_EXPORT LogStream : public std::ostream {
+ GLOG_MSVC_POP_WARNING()
+   public:
++#if defined __has_attribute
++#  if __has_attribute (used)
++    // In some cases, like when compiling glog as a static library with GCC and
++    // linking against a Clang-built executable, this constructor will be
++    // removed by the linker. We use this attribute to prevent the linker from
++    // discarding it.
++    __attribute__ ((used))
++#  endif
++#endif
+     LogStream(char *buf, int len, int64 ctr)
+         : std::ostream(NULL),
+           streambuf_(buf, len),
+-- 
+2.40.1
+

@@ -1,4 +1,4 @@
-set(LLVM_VERSION "16.0.3")
+set(LLVM_VERSION "16.0.4")
 
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
@@ -6,7 +6,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
     REF llvmorg-${LLVM_VERSION}
-    SHA512 a6ce82ab402a0360cad673561bc7bd53dfdff9230fcb63b3264a4fe28b5a347c4787b087da604a6e890958e6be22cbd3630657debda1ef3380e466b9d983a37f
+    SHA512 6d115fcd673d19daf31ea033419a839c26309f308df0348eedd21a1fd2a489226381274f7a4a1c814f01588edfdde56f157ff67d993c1b01ebb5527dc4d5ebe5
     HEAD_REF release/16.x
     PATCHES
         0001-Fix-install-paths.patch
@@ -77,6 +77,10 @@ if(VCPKG_TARGET_IS_LINUX)
     else()
       list(APPEND FEATURE_OPTIONS
           -DLLVM_USE_LINKER=gold
+          # Cross compiling to arm with gcc doesn't work naturally because gcc
+          # has different executables for each architecture unlike clang, which
+          # is a native crosscompilation toolchain
+          "-DCROSS_TOOLCHAIN_FLAGS_NATIVE:STRING=-DCMAKE_C_COMPILER=gcc\\;-DCMAKE_CXX_COMPILER=g++"
       )
       message(STATUS "Using (default) gold linker for linking")
     endif()
@@ -277,12 +281,28 @@ vcpkg_add_to_path(${PYTHON3_DIR})
 
 set(LLVM_LINK_JOBS 2)
 
-# Cross compilation for M1
-if (VCPKG_TARGET_IS_OSX)
-    set(LLVM_HOST_TRIPLE "${VCPKG_OSX_ARCHITECTURES}-apple-darwin")
-    list(APPEND OPTIONS "-DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}")
-    message(STATUS "Default host triple ${LLVM_HOST_TRIPLE}")
+# Cross compilation
+if (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    set(arch "aarch64")
+elseif (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm")
+    set(arch "arm")
+elseif (VCPKG_TARGET_ARCHITECTURE STREQUAL "x64")
+    set(arch "x86_64")
 endif()
+if (VCPKG_TARGET_IS_OSX)
+    set(LLVM_HOST_TRIPLE "${arch}-apple-darwin")
+elseif (VCPKG_TARGET_IS_LINUX)
+    set(LLVM_HOST_TRIPLE "${arch}-linux-gnu")
+elseif (VCPKG_TARGET_IS_WINDOWS)
+    set(LLVM_HOST_TRIPLE "${arch}-windows-msvc")
+else()
+    message(WARNING "Could not determine LLVM Host triple")
+endif()
+list(APPEND OPTIONS "-DLLVM_HOST_TRIPLE=${LLVM_HOST_TRIPLE}")
+if("compiler-rt" IN_LIST FEATURES)
+    list(APPEND OPTIONS "-DCOMPILER_RT_DEFAULT_TARGET_TRIPLE=${LLVM_HOST_TRIPLE}")
+endif()
+message(STATUS "Default host triple '${LLVM_HOST_TRIPLE}'")
 
 if (VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
     set(LLVM_TARGET_ARCH "AArch64")

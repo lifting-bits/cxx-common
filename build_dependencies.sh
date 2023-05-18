@@ -96,30 +96,6 @@ do
   die_if_not_installed ${pkg}
 done
 
-# check if CC is not set or a null string
-if [[ -z "${CC+unset}" || -z "${CC}" ]]; then
-  if type clang &>/dev/null; then
-    export CC="${CC:-$(which clang)}"
-    msg "Using default clang as CC=${CC}"
-  else
-    msg "Using default C compiler"
-  fi
-else
-  msg "Using custom CC=${CC}"
-fi
-
-# check if CXX is not set or a null string
-if [[ -z "${CXX+unset}" || -z "${CXX}" ]]; then
-  if type clang++ &>/dev/null; then
-    export CXX="${CXX:-$(which clang++)}"
-    msg "Using default clang++ as CXX=${CXX}"
-  else
-    msg "Using default C++ compiler"
-  fi
-else
-  msg "Using custom CXX=${CXX}"
-fi
-
 if [[ "$(uname -m)" = "aarch64" ]]; then
   export VCPKG_FORCE_SYSTEM_BINARIES=1
 fi
