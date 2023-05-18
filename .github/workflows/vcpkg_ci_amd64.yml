@@ -197,7 +197,7 @@ jobs:
 
       - name: 'Remill dependencies'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -207,7 +207,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         working-directory: remill
         run: |
           if [[ '${{ matrix.image.tag }}' == '20.04' ]]; then
@@ -228,7 +228,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true

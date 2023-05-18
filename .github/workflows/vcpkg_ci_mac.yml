@@ -200,6 +200,7 @@ jobs:
       - name: 'Remill dependencies'
         shell: 'bash'
         working-directory: remill
+        if: matrix.target_arch == 'x64'
         run: |
           python3 -m pip install poetry
           python3 -m pip install --user ./scripts/diff_tester_export_insns
