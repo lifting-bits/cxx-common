@@ -100,7 +100,7 @@ jobs:
         shell: 'bash'
         run: |
           export VCPKG_DISABLE_METRICS=1
-          brew install bash ninja mono
+          brew install bash ninja mono pkg-config
 
           # Setup NuGet authentication
           mono "$(${VCPKG_ROOT}/vcpkg fetch nuget | tail -n 1)" setapikey \
