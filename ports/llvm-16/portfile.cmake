@@ -15,6 +15,7 @@ vcpkg_from_github(
         0020-fix-FindZ3.cmake.patch
         0021-fix-find_dependency.patch
         0026-fix-prefix-path-calc.patch
+        0029-Do-not-attempt-macro-expansion-on-invalid-sourceloc.patch
 )
 
 if("pasta" IN_LIST FEATURES)
