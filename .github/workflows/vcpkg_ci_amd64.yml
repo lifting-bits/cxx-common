@@ -38,8 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - { name: 'ubuntu-v2', tag: '20.04' }
-          - { name: 'ubuntu-v2', tag: '22.04' }
+          # 'name' is Docker image name whereas 'os' is more generic
+          - { os: 'ubuntu', name: 'ubuntu-v2', tag: '20.04' }
+          - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
         llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
         target_arch: [ 'x64', 'arm64' ]
 
@@ -49,13 +50,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    name: ${{matrix.image.name}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.target_arch}}
+    name: ${{matrix.image.os}}-${{matrix.image.tag}} ${{matrix.llvm}} ${{matrix.target_arch}}
     runs-on: ubuntu-latest # run the job on the newly created runner
     steps:
       - name: Set Artifact Name
         run: |
           # Need to fix because paths with brackets cause issues
-          NAME="$(echo 'vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.target_arch == 'x64' && 'amd64' || matrix.target_arch }}' | tr '[' '-' | tr -d ']')"
+          NAME="$(echo 'vcpkg_${{ matrix.image.os }}-${{ matrix.image.tag }}_${{ matrix.llvm }}_${{ matrix.target_arch == 'x64' && 'amd64' || matrix.target_arch }}' | tr '[' '-' | tr -d ']')"
           echo "ARTIFACT_NAME=${NAME}" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v3
