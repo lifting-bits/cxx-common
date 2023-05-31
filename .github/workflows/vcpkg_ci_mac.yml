@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-12', xcode: '14.2' }
+          - { runner: 'macos-12', xcode: '14.3' }
         llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
         target_arch: [ 'x64', 'arm64' ]
 
@@ -78,7 +78,7 @@ jobs:
           echo "Selecting XCode Version ${{ matrix.os.xcode }}"
           sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
-      # Crosscompiling LLVM 16 requires a newer clang than available in XCode 14.2
+      # Crosscompiling LLVM 16 requires a newer clang than available in XCode 14.3
       - name: Install latest LLVM
         if: contains(matrix.llvm, 'llvm-16') && matrix.target_arch == 'arm64'
         run: |
