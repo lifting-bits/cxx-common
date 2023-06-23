@@ -1,9 +1,9 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO lifting-bits/remill
-  REF 6752679638d04400e26b91efb9c5641b93d4df52
-  SHA512 b4c7ba1edb04c23d13ec62d5ec02c620dcc32c93efaf2b1dbd2a2865db55d3e77a7f275e195710d23cc79fb44d43e2c5184f1845c70de3376b78f1303aaaa144
-  HEAD_REF vcpkg-manifest
+  REF 36b1901eacb1564f62c8fe9205b59825a03e3ae2
+  SHA512 0c8d5bd8bd291adb9ea369574fee7a8a3629e12030270da77f541d1d8b531ce1305d061616c582ec734ee8ee7ba917ab0e3a1e688204aab4b486360fb5adb814
+  HEAD_REF vcpkg-manifest-llvm-16
 )
 
 vcpkg_cmake_configure(
