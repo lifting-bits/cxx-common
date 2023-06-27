@@ -1,6 +1,6 @@
 {
     "name": "remill",
-    "version": "5.0.2",
+    "version": "5.0.7",
     "description": "A static binary translator.",
     "homepage": "https://github.com/lifting-bits/remill",
     "license": "Apache-2.0",
