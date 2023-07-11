@@ -82,7 +82,7 @@ while [[ $# -gt 0 ]] ; do
   esac
   shift
 done
-msg "Passing extra args to 'vcpkg install':"
+msg "Passing extra args to vcpkg:"
 msg " " "${VCPKG_ARGS[@]}"
 
 function die_if_not_installed {
@@ -237,10 +237,19 @@ if [[ ${UPGRADE_PORTS} == "true" ]]; then
     cd "${repo_dir}"
     (
       set -x
-      # shellcheck disable=SC2046
-      "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" "${overlays[@]}" --no-dry-run --allow-unsupported
+      "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" "${overlays[@]}" --allow-unsupported "${VCPKG_ARGS[@]}" || true
+
+      set +x
+      read -p "Are you sure? If so, enter 'y' " -n 1 -r
+      echo ""
+      if [[ $REPLY =~ ^[Yy]$ ]]
+      then
+        set -x
+        "${vcpkg_dir}/vcpkg" upgrade "${extra_vcpkg_args[@]}" "${overlays[@]}" --no-dry-run --allow-unsupported "${VCPKG_ARGS[@]}" || exit 1
+      fi
     )
-  ) || exit 1
+  )
+  exit 0
 fi
 
 deps=()

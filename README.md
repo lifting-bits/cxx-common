@@ -128,6 +128,8 @@ See [the vcpkg docs](https://github.com/microsoft/vcpkg/blob/master/docs/example
 
 Installing additional dependencies will not update any existing dependencies by default. We do not update/upgrade by default because this could cause unexpected rebuilds that could potentially take hours (in the case of LLVM). To update dependencies, pass the `--upgrade-ports` option to the build script along with the respective options affecting vcpkg triplet selection (like `--release`).
 
+You must specify the exact package/ports you want to upgrade. If the port does not exist, this will fail.
+
 ## Useful manual vcpkg commands
 
 Sometimes it is useful to run vcpkg commands manually for testing a single package. Ideally, someone who wants to do this would read the [vcpkg documentation](https://github.com/microsoft/vcpkg/tree/master/docs), but below we list some commonly used commands. Inspecting the output of the build script will also show all of the vcpkg commands executed.
