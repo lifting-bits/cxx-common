@@ -83,11 +83,17 @@ jobs:
       - name: Initialize vcpkg
         shell: bash
         run: |
+          df -h
+          ls -lah
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
+          df -h
+          ls -lah
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
+          df -h
+          ls -lah
 
       - name: 'vcpkg install dependencies'
         shell: 'bash'
