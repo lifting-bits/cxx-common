@@ -39,9 +39,8 @@ jobs:
       matrix:
         image:
           # 'name' is Docker image name whereas 'os' is more generic
-          - { os: 'ubuntu', name: 'ubuntu-v2', tag: '20.04' }
           - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
-        llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
+        llvm: [ 'llvm-16[pasta]', 'llvm-16' ]
         target_arch: [ 'x64', 'arm64' ]
 
     container:
@@ -175,7 +174,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         run: |
           # Does not compile with gcc
           export CC="$(which clang)"
@@ -192,7 +191,7 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic/build
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         run: |
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
 

@@ -37,7 +37,7 @@ jobs:
       matrix:
         os:
           - { runner: 'macos-12', xcode: '14.2' }
-        llvm: [ 'llvm-15', 'llvm-16[pasta]', 'llvm-16' ]
+        llvm: [ 'llvm-16[pasta]', 'llvm-16' ]
         target_arch: [ 'x64', 'arm64' ]
 
     runs-on: ${{ matrix.os.runner }}
@@ -177,7 +177,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -192,7 +192,7 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic/build
-        if: contains(matrix.llvm, 'llvm-15') && matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64'
         run: |
           # Test only should run when we're not cross compiling
           ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
