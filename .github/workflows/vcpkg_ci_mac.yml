@@ -195,7 +195,7 @@ jobs:
         if: matrix.target_arch == 'x64'
         run: |
           # Test only should run when we're not cross compiling
-          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/tools/llvm/clang"
+          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/bin/clang"
 
       - name: 'Remill dependencies'
         shell: 'bash'
