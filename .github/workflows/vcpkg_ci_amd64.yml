@@ -160,8 +160,8 @@ jobs:
           echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
           echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
           echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
-          #echo "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
-          #echo "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=$(which ccache)" >> $GITHUB_ENV
           echo "timestamp=$(date +"%Y-%m-%d-%H:%M:%S" --utc)" >> ${GITHUB_OUTPUT}
 
       - name: ccache cache files
@@ -183,8 +183,8 @@ jobs:
         if: matrix.target_arch == 'x64'
         run: |
           # Does not compile with gcc
-          export CC="$(which clang-16)"
-          export CXX="$(which clang++-16)"
+          export CC="$(which clang)"
+          export CXX="$(which clang++)"
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
