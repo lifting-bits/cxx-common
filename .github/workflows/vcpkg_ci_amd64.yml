@@ -83,17 +83,11 @@ jobs:
       - name: Initialize vcpkg
         shell: bash
         run: |
-          df -h
-          ls -lah
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
-          df -h
-          ls -lah
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
-          df -h
-          ls -lah
 
       - name: 'vcpkg install dependencies'
         shell: 'bash'
@@ -176,6 +170,8 @@ jobs:
         shell: bash
         run: |
           ccache --show-stats
+          df -h
+          ls -lah
 
       - name: 'Rellic build'
         shell: 'bash'
@@ -196,10 +192,11 @@ jobs:
           cmake --build build --target install
       - name: 'Rellic test'
         shell: 'bash'
-        working-directory: rellic/build
         if: matrix.target_arch == 'x64'
         run: |
-          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/bin/clang"
+          df -h
+          ls -lah
+          cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
@@ -216,11 +213,6 @@ jobs:
         if: matrix.target_arch == 'x64'
         working-directory: remill
         run: |
-          if [[ '${{ matrix.image.tag }}' == '20.04' ]]; then
-            # Remill uses C++20 concepts that aren't supported by gcc-9 in 20.04
-            export CC="$(which clang)"
-            export CXX="$(which clang++)"
-          fi
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
             "-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \

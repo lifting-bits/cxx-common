@@ -191,11 +191,9 @@ jobs:
           cmake --install build
       - name: 'Rellic test'
         shell: 'bash'
-        working-directory: rellic/build
         if: matrix.target_arch == 'x64'
         run: |
-          # Test only should run when we're not cross compiling
-          ../scripts/roundtrip.py ./tools/rellic-decomp ../tests/tools/decomp "${VCPKG_ROOT}/installed/${TARGET_TRIPLET}/bin/clang"
+          cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
