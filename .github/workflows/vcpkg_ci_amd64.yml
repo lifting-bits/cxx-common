@@ -173,6 +173,7 @@ jobs:
         run: |
           ccache --show-stats
           df -h
+          du -sh * .*
           ls -lah
 
       - name: 'Rellic build'
