@@ -191,6 +191,7 @@ jobs:
           cmake --install build
       - name: 'Rellic test'
         shell: 'bash'
+        working-directory: rellic
         if: matrix.target_arch == 'x64'
         run: |
           cmake --build build --target test

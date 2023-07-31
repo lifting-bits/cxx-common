@@ -83,6 +83,8 @@ jobs:
       - name: Initialize vcpkg
         shell: bash
         run: |
+          df -h
+          ls -lah
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
@@ -192,6 +194,7 @@ jobs:
           cmake --build build --target install
       - name: 'Rellic test'
         shell: 'bash'
+        working-directory: rellic
         if: matrix.target_arch == 'x64'
         run: |
           df -h
