@@ -79,6 +79,8 @@ jobs:
       - name: Clear prior vcpkg directory
         run: |
           rm -rf "${{ github.workspace }}/vcpkg"
+          du -sh ~/* ~/.*
+          ls -lah ~
 
       - name: Initialize vcpkg
         shell: bash
@@ -175,6 +177,8 @@ jobs:
           df -h
           du -sh * .*
           ls -lah
+          du -sh ~/* ~/.*
+          ls -lah ~
 
       - name: 'Rellic build'
         shell: 'bash'
