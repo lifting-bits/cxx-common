@@ -177,7 +177,7 @@ jobs:
           ls -lah
           cd /github/home
           ls -lah
-          du -sh * .*
+          du -sh .local .nuget .config
 
       - name: 'Rellic build'
         shell: 'bash'
