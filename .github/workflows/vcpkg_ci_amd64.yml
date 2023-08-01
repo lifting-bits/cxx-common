@@ -83,8 +83,6 @@ jobs:
       - name: Initialize vcpkg
         shell: bash
         run: |
-          df -h
-          ls -lah
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
@@ -119,6 +117,12 @@ jobs:
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
           echo "TARGET_TRIPLET=${{ matrix.target_arch }}-linux-rel" >> $GITHUB_ENV
+
+      - name: Cleanup NuGet
+        shell: 'bash'
+        run: |
+          du -sh ~/.nuget || true
+          rm -rf ~/.nuget || true
 
       - name: Upload CMake logs on error
         if: failure()
@@ -172,12 +176,6 @@ jobs:
         shell: bash
         run: |
           ccache --show-stats
-          df -h
-          du -sh * .*
-          ls -lah
-          cd /github/home
-          ls -lah
-          du -sh .local .nuget .config
 
       - name: 'Rellic build'
         shell: 'bash'
@@ -201,8 +199,6 @@ jobs:
         working-directory: rellic
         if: matrix.target_arch == 'x64'
         run: |
-          df -h
-          ls -lah
           cmake --build build --target test
 
       - name: 'Remill dependencies'
