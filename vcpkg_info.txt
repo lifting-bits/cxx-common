@@ -1,2 +1,2 @@
 https://github.com/trail-of-forks/vcpkg.git
-fix-cross-compile-linux
+cxx-common
