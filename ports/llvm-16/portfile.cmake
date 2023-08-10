@@ -25,6 +25,7 @@ if("pasta" IN_LIST FEATURES)
             0025-PASTA-patches.patch
             0028-Fixes-to-clang-s-tablegen-of-attributes.patch
             0030-UnknownAttrsAsAnnotate-and-AttributedType-Attrs.patch
+            0031-TemplateInstantiation-Out-of-Line-Definition.patch
     )
 endif()
 
