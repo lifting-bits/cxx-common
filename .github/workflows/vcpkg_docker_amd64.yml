@@ -45,7 +45,7 @@ jobs:
       - name: Cleanup working directory with container root
         run: |
           docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:latest find . -name . -o -prune -exec rm -rf -- {} + || true
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Generate Image Name
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
