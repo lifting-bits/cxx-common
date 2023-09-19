@@ -40,7 +40,12 @@ jobs:
         image:
           # 'name' is Docker image name whereas 'os' is more generic
           - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
-        llvm: [ 'llvm-16[pasta]', 'llvm-16' ]
+        llvm: [
+          'llvm-16[pasta]',
+          'llvm-16',
+          'llvm-17[pasta]',
+          'llvm-17'
+        ]
         target_arch: [ 'x64', 'arm64' ]
 
     container:

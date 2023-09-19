@@ -1,7 +1,6 @@
 {
-  "name": "llvm-15",
-  "version": "15.0.7",
-  "port-version": 3,
+  "name": "llvm-17",
+  "version": "17.0.1",
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
@@ -35,7 +34,7 @@
       "description": "BOLT is a post-link optimizer developed to speed up large applications.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "tools"
@@ -47,7 +46,7 @@
       "description": "Include C Language Family Front-end.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "compiler-rt",
@@ -66,7 +65,7 @@
       "description": "Build with cxx-common target set",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-aarch64",
@@ -83,7 +82,7 @@
       "description": "Build with default options.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "enable-assertions",
@@ -101,7 +100,7 @@
       "description": "Build with platform-specific default targets.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-aarch64"
@@ -109,7 +108,7 @@
           "platform": "arm64"
         },
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-x86"
@@ -117,7 +116,7 @@
           "platform": "x86 | x64"
         },
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-arm"
@@ -125,7 +124,7 @@
           "platform": "arm & !arm64"
         },
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-all"
@@ -153,7 +152,7 @@
       "description": "Build LLVM with exception handler.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "enable-rtti"
@@ -192,7 +191,7 @@
       "description": "Compile with Z3 SMT solver support for Clang static analyzer.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "clang"
@@ -217,7 +216,7 @@
       "description": "Include Fortran front end.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "clang",
@@ -234,7 +233,7 @@
       "description": "Include libcxx library.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "libcxxabi"
@@ -252,7 +251,7 @@
       "description": "Include LLVM linker.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "tools"
@@ -264,7 +263,7 @@
       "description": "Include LLVM debugger.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "tools"
@@ -276,7 +275,7 @@
       "description": "Include MLIR (Multi-Level IR Compiler Framework) project.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "tools"
@@ -288,7 +287,7 @@
       "description": "Include LLVM OpenMP libraries.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "utils"
@@ -303,7 +302,7 @@
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "tools",
@@ -323,7 +322,7 @@
       "description": "Build with all backends.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "target-aarch64",
@@ -407,7 +406,7 @@
       "description": "Build LLVM tools.",
       "dependencies": [
         {
-          "name": "llvm-15",
+          "name": "llvm-17",
           "default-features": false,
           "features": [
             "enable-threads"
