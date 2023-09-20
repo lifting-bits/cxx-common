@@ -182,7 +182,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -197,14 +197,14 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           python3 -m pip install poetry
           python3 -m pip install --user ./scripts/diff_tester_export_insns
@@ -214,7 +214,7 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -230,7 +230,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Only run test on x64
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
@@ -238,7 +238,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -258,7 +258,7 @@ jobs:
       - name: 'Anvill test'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 

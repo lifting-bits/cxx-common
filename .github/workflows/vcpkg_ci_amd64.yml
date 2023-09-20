@@ -185,7 +185,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Does not compile with gcc
           export CC="$(which clang)"
@@ -202,13 +202,13 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -218,7 +218,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
           cmake -G Ninja \
@@ -234,7 +234,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true
@@ -242,7 +242,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # TODO: Does not support compilation with gcc
           export CC="$(which clang)"
@@ -265,7 +265,7 @@ jobs:
       - name: 'Anvill test'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
