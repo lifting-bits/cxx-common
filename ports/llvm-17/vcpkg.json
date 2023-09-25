@@ -295,9 +295,6 @@
         }
       ]
     },
-    "pasta": {
-      "description": "Include patches for PASTA tool."
-    },
     "polly": {
       "description": "Include Polly (Polyhedral optimizations for LLVM) project.",
       "dependencies": [
@@ -332,18 +329,24 @@
             "target-bpf",
             "target-hexagon",
             "target-lanai",
+            "target-loongarch",
             "target-mips",
             "target-msp430",
             "target-nvptx",
             "target-powerpc",
             "target-riscv",
             "target-sparc",
-            "target-spirv",
             "target-systemz",
             "target-ve",
             "target-webassembly",
             "target-x86",
-            "target-xcore"
+            "target-xcore",
+            "target-arc",
+            "target-csky",
+            "target-directx",
+            "target-m68k",
+            "target-spirv",
+            "target-xtensa"
           ]
         }
       ]
@@ -366,6 +369,9 @@
     "target-lanai": {
       "description": "Build with Lanai backend."
     },
+    "target-loongarch": {
+      "description": "Build with LoongArch backend."
+    },
     "target-mips": {
       "description": "Build with Mips backend."
     },
@@ -384,9 +390,6 @@
     "target-sparc": {
       "description": "Build with Sparc backend."
     },
-    "target-spirv": {
-      "description": "Build with Spriv backend."
-    },
     "target-systemz": {
       "description": "Build with SystemZ backend."
     },
@@ -401,6 +404,24 @@
     },
     "target-xcore": {
       "description": "Build with XCore backend."
+    },
+    "target-arc": {
+      "description": "Build with ARC backend (experimental)."
+    },
+    "target-csky": {
+      "description": "Build with CSKY backend (experimental)."
+    },
+    "target-directx": {
+      "description": "Build with DirectX backend (experimental)."
+    },
+    "target-m68k": {
+      "description": "Build with M68k backend (experimental)."
+    },
+    "target-spirv": {
+      "description": "Build with SPIRV backend (experimental)."
+    },
+    "target-xtensa": {
+      "description": "Build with Xtensa backend (experimental)."
     },
     "tools": {
       "description": "Build LLVM tools.",

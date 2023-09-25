@@ -18,16 +18,6 @@ vcpkg_from_github(
         0029-Do-not-attempt-macro-expansion-on-invalid-sourceloc.patch
 )
 
-if("pasta" IN_LIST FEATURES)
-    z_vcpkg_apply_patches(
-        SOURCE_PATH "${SOURCE_PATH}"
-        PATCHES
-            0025-PASTA-patches.patch
-            0028-Fixes-to-clang-s-tablegen-of-attributes.patch
-            0030-UnknownAttrsAsAnnotate-and-AttributedType-Attrs.patch
-    )
-endif()
-
 string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
 list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
 list(GET VERSION_LIST 1 LLVM_VERSION_MINOR)
