@@ -32,7 +32,6 @@ jobs:
         host:
           - { name: 'ubuntu-22.04', arch: '' }
         container:
-          - { version: '20.04', codename: 'focal' }
           - { version: '22.04', codename: 'jammy' }
 
     runs-on: ${{ matrix.host.name }}

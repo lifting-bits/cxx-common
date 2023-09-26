@@ -8,7 +8,7 @@ name: release
 jobs:
   release:
     name: Publish Release on GitHub
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     - name: Create Release
