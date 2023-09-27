@@ -40,7 +40,10 @@ jobs:
         image:
           # 'name' is Docker image name whereas 'os' is more generic
           - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
-        llvm: [ 'llvm-16[pasta]', 'llvm-16' ]
+        llvm: [
+          'llvm-16',
+          'llvm-17'
+        ]
         target_arch: [ 'x64', 'arm64' ]
 
     container:
@@ -86,6 +89,7 @@ jobs:
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
+          export VCPKG_DISABLE_METRICS=1
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
@@ -180,7 +184,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Does not compile with gcc
           export CC="$(which clang)"
@@ -197,13 +201,13 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
           python3 -m pip install poetry
@@ -213,7 +217,7 @@ jobs:
 
       - name: 'Remill build'
         shell: 'bash'
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
           cmake -G Ninja \
@@ -229,7 +233,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true
@@ -237,7 +241,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # TODO: Does not support compilation with gcc
           export CC="$(which clang)"
@@ -260,7 +264,7 @@ jobs:
       - name: 'Anvill test'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 

@@ -36,8 +36,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-12', xcode: '14.2' }
-        llvm: [ 'llvm-16[pasta]', 'llvm-16' ]
+          - { runner: 'macos-13', xcode: '15.0' }
+        llvm: [
+          'llvm-16',
+          'llvm-17'
+        ]
         target_arch: [ 'x64', 'arm64' ]
 
     runs-on: ${{ matrix.os.runner }}
@@ -78,21 +81,13 @@ jobs:
           echo "Selecting XCode Version ${{ matrix.os.xcode }}"
           sudo xcode-select -s /Applications/Xcode_${{ matrix.os.xcode }}.app/Contents/Developer
 
-      # Crosscompiling LLVM 16 requires a newer clang than available in XCode 14.2
-      - name: Install latest LLVM
-        if: contains(matrix.llvm, 'llvm-16') && matrix.target_arch == 'arm64'
-        run: |
-          brew install llvm
-          echo "/usr/local/opt/llvm/bin" >> "$GITHUB_PATH"
-          echo "CC=/usr/local/opt/llvm/bin/clang" >> "$GITHUB_ENV"
-          echo "CXX=/usr/local/opt/llvm/bin/clang++" >> "$GITHUB_ENV"
-
       - name: Initialize vcpkg
         shell: bash
         run: |
           { read -r vcpkg_repo_url && read -r vcpkg_commit; } <./vcpkg_info.txt || exit 1
           git clone "${vcpkg_repo_url}"
           git -C vcpkg checkout "${vcpkg_commit}"
+          export VCPKG_DISABLE_METRICS=1
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
@@ -177,7 +172,7 @@ jobs:
       - name: 'Rellic build'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -192,14 +187,14 @@ jobs:
       - name: 'Rellic test'
         shell: 'bash'
         working-directory: rellic
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: 'Remill dependencies'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           python3 -m pip install poetry
           python3 -m pip install --user ./scripts/diff_tester_export_insns
@@ -209,7 +204,7 @@ jobs:
       - name: 'Remill build'
         shell: 'bash'
         working-directory: remill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -225,7 +220,7 @@ jobs:
       - name: 'Remill test'
         shell: 'bash'
         working-directory: remill/build
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Only run test on x64
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
@@ -233,7 +228,7 @@ jobs:
       - name: 'Anvill build'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake -G Ninja \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -253,7 +248,7 @@ jobs:
       - name: 'Anvill test'
         shell: 'bash'
         working-directory: anvill
-        if: matrix.target_arch == 'x64'
+        if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 

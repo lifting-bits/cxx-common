@@ -1,37 +1,21 @@
-set(LLVM_VERSION "15.0.7")
-
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO llvm/llvm-project
-    REF llvmorg-${LLVM_VERSION}
-    SHA512 99beff9ee6f8c26f16ea53f03ba6209a119099cbe361701b0d5f4df9d5cc5f2f0da7c994c899a4cec876da8428564dc7a8e798226a9ba8b5c18a3ef8b181d39e
-    HEAD_REF release/15.x
+    REF llvmorg-${VERSION}
+    SHA512 ad75af49394b8cf2e6152ded55754901f48dc8f4efacfdc6d0651d3b5532893630773571c4fda5e853b9784a8a8a9d286a6a89511a8319726d774b801166ac33
+    HEAD_REF release/17.x
     PATCHES
-        0001-Fix-install-paths.patch    # This patch fixes paths in ClangConfig.cmake, LLVMConfig.cmake, LLDConfig.cmake etc.
-        0002-Fix-DR-1734.patch
-        0003-Fix-tools-path.patch
-        0004-Fix-compiler-rt-install-path.patch
-        0005-Fix-tools-install-path.patch
+        0001-Fix-install-paths.patch
         0006-Fix-libffi.patch
-        0007-Fix-install-bolt.patch
         0020-fix-FindZ3.cmake.patch
         0021-fix-find_dependency.patch
-        0023-clang-sys-include-dir-path.patch
         0026-fix-prefix-path-calc.patch
+        0029-Do-not-attempt-macro-expansion-on-invalid-sourceloc.patch
 )
 
-if("pasta" IN_LIST FEATURES)
-    z_vcpkg_apply_patches(
-        SOURCE_PATH "${SOURCE_PATH}"
-        PATCHES
-            0025-PASTA-patches.patch
-            0027-unknown-attrs-as-annotations.patch
-    )
-endif()
-
-string(REPLACE "." ";" VERSION_LIST ${LLVM_VERSION})
+string(REPLACE "." ";" VERSION_LIST ${VERSION})
 list(GET VERSION_LIST 0 LLVM_VERSION_MAJOR)
 list(GET VERSION_LIST 1 LLVM_VERSION_MINOR)
 list(GET VERSION_LIST 2 LLVM_VERSION_PATCH)
@@ -168,23 +152,9 @@ if("clang" IN_LIST FEATURES OR "clang-tools-extra" IN_LIST FEATURES)
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF
         )
     endif()
-    if(VCPKG_TARGET_IS_OSX)
-        list(APPEND FEATURE_OPTIONS
-            -DDEFAULT_SYSROOT:FILEPATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
-            -DLLVM_CREATE_XCODE_TOOLCHAIN=ON
-        )
-    endif()
-    # 1) LLVM/Clang tools are relocated from ./bin/ to ./tools/llvm/ (LLVM_TOOLS_INSTALL_DIR=tools/llvm)
-    # 2) Clang resource files are relocated from ./lib/clang/<version> to ./tools/llvm/lib/clang/<version> (see patch 0007-fix-compiler-rt-install-path.patch)
-    # So, the relative path should be changed from ../lib/clang/<version> to ./lib/clang/<version>
-    # This needs to not include version suffixes like '-rc3'
-    list(APPEND FEATURE_OPTIONS -DCLANG_RESOURCE_DIR=lib/clang/${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
 endif()
 if("clang-tools-extra" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_PROJECTS "clang-tools-extra")
-endif()
-if("compiler-rt" IN_LIST FEATURES)
-    list(APPEND LLVM_ENABLE_PROJECTS "compiler-rt")
 endif()
 if("flang" IN_LIST FEATURES)
     if(VCPKG_DETECTED_CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND VCPKG_TARGET_ARCHITECTURE STREQUAL "x86")
@@ -243,6 +213,9 @@ if("libcxxabi" IN_LIST FEATURES)
     endif()
     list(APPEND LLVM_ENABLE_RUNTIMES "libcxxabi")
 endif()
+if("compiler-rt" IN_LIST FEATURES)
+    list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
+endif()
 if("libunwind" IN_LIST FEATURES)
     list(APPEND LLVM_ENABLE_RUNTIMES "libunwind")
 endif()
@@ -256,6 +229,7 @@ set(known_llvm_targets
     BPF
     Hexagon
     Lanai
+    LoongArch
     Mips
     MSP430
     NVPTX
@@ -279,7 +253,12 @@ endforeach()
 
 # this is for experimental targets
 set(known_llvm_experimental_targets
-    SPRIV
+    ARC
+    CSKY
+    DirectX
+    M68k
+    SPIRV
+    Xtensa
 )
 
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "")
@@ -349,13 +328,11 @@ vcpkg_cmake_configure(
         "-DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES}"
         "-DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}"
         "-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}"
-        -DPACKAGE_VERSION=${LLVM_VERSION}
+        -DPACKAGE_VERSION=${VERSION}
         # Limit the maximum number of concurrent link jobs to 1. This should fix low amount of memory issue for link.
         "-DLLVM_PARALLEL_LINK_JOBS=${LLVM_LINK_JOBS}"
         -DCMAKE_INSTALL_PACKAGEDIR:STRING=share
-        -DLLVM_TOOLS_INSTALL_DIR:STRING=tools/llvm
-        -DCLANG_TOOLS_INSTALL_DIR:STRING=tools/llvm
-        -DMLIR_TOOLS_INSTALL_DIR:STRING=tools/llvm
+        "-DRUNTIMES_CMAKE_ARGS=-DCMAKE_PREFIX_PATH=${CURRENT_INSTALLED_DIR}"
 )
 
 vcpkg_cmake_install(ADD_BIN_TO_PATH)
@@ -373,7 +350,6 @@ function(llvm_cmake_package_config_fixup package_name)
         set(args)
         # Maintains case even if package_name name is case-sensitive
         list(APPEND args PACKAGE_NAME "${lower_package}")
-        list(APPEND args TOOLS_PATH "tools/llvm")
         if(arg_DO_NOT_DELETE_PARENT_CONFIG_PATH)
             list(APPEND args "DO_NOT_DELETE_PARENT_CONFIG_PATH")
         endif()
@@ -431,15 +407,28 @@ if(empty_dirs)
     endforeach()
 endif()
 
-vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/llvm)
-
 if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/tools"
+    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/bin"
         "${CURRENT_PACKAGES_DIR}/debug/include"
         "${CURRENT_PACKAGES_DIR}/debug/share"
         "${CURRENT_PACKAGES_DIR}/debug/lib/clang"
     )
 endif()
+
+# Use 'bin' instead of 'tools/llvm'
+file(GLOB_RECURSE release_targets
+    "${CURRENT_PACKAGES_DIR}/share/*/*Targets-*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/*/*Exports-*.cmake"
+)
+foreach(release_target IN LISTS release_targets)
+    file(READ "${release_target}" contents)
+    string(REPLACE "${CURRENT_INSTALLED_DIR}" "\${_IMPORT_PREFIX}" contents "${contents}")
+    string(REGEX REPLACE
+        "\\\${_IMPORT_PREFIX}/tools/llvm-17/([^ \"]+${EXECUTABLE_SUFFIX})"
+        "\${_IMPORT_PREFIX}/bin/\\1"
+        contents "${contents}")
+    file(WRITE "${release_target}" "${contents}")
+endforeach()
 
 if("mlir" IN_LIST FEATURES)
     vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/mlir/MLIRConfig.cmake" "set(MLIR_MAIN_SRC_DIR \"${SOURCE_PATH}/mlir\")" "")
