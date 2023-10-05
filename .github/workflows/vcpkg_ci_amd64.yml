@@ -120,20 +120,12 @@ jobs:
           ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} --clean-after-build --debug
 
           rm -rf vcpkg/downloads
+          rm -rf ~/.nuget/packages
 
-          du -hs vcpkg/*
-          du -sh ~/.nuget/* || true
-
-          # ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
+          ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
           echo "TARGET_TRIPLET=${{ matrix.target_arch }}-linux-rel" >> $GITHUB_ENV
-
-      - name: Cleanup NuGet
-        shell: 'bash'
-        run: |
-          du -sh ~/.nuget || true
-          rm -rf ~/.nuget || true
 
       - name: Upload CMake logs on error
         if: failure()
@@ -141,6 +133,19 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}_logs
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
+      - name: Cleanup
+        shell: 'bash'
+        run: |
+          echo "Space left"
+          df -h
+
+          echo "Cleaning up..."
+          rm -rf vcpkg || true
+          rm -rf ~/.nuget || true
+
+          echo "Space left"
+          df -h
 
       - name: 'Export Packages'
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
