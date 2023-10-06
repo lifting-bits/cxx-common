@@ -121,6 +121,9 @@ jobs:
 
           rm -rf vcpkg/downloads
           rm -rf ~/.nuget/packages
+          echo "Check space..."
+          df -h
+          echo "DONE."
 
           ./build_dependencies.sh --release --target-arch ${{ matrix.target_arch }} --export-dir ./${{ env.ARTIFACT_NAME }} ${{ matrix.llvm }} --clean-after-build --debug
 
