@@ -130,6 +130,21 @@ jobs:
           echo "VCPKG_ROOT=$(pwd)/${{ env.ARTIFACT_NAME }}" >> $GITHUB_ENV
           echo "TARGET_TRIPLET=${{ matrix.target_arch }}-linux-rel" >> $GITHUB_ENV
 
+      - name: Check space
+        if: failure()
+        run: |
+          echo "## Space left"
+          df -h
+          echo ""
+          echo "## Storage in working directory"
+          du -hs *
+          echo ""
+          echo "## Storage in vcpkg"
+          du -hs vcpkg/*
+          echo ""
+          echo "## Storage in nuget"
+          du -hs ~/.nuget/*
+
       - name: Upload CMake logs on error
         if: failure()
         uses: actions/upload-artifact@v3
