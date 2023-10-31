@@ -1,6 +1,6 @@
 {
   "name": "llvm-17",
-  "version": "17.0.3",
+  "version": "17.0.4",
   "description": "The LLVM Compiler Infrastructure.",
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
@@ -324,28 +324,28 @@
           "features": [
             "target-aarch64",
             "target-amdgpu",
+            "target-arc",
             "target-arm",
             "target-avr",
             "target-bpf",
+            "target-csky",
+            "target-directx",
             "target-hexagon",
             "target-lanai",
             "target-loongarch",
+            "target-m68k",
             "target-mips",
             "target-msp430",
             "target-nvptx",
             "target-powerpc",
             "target-riscv",
             "target-sparc",
+            "target-spirv",
             "target-systemz",
             "target-ve",
             "target-webassembly",
             "target-x86",
             "target-xcore",
-            "target-arc",
-            "target-csky",
-            "target-directx",
-            "target-m68k",
-            "target-spirv",
             "target-xtensa"
           ]
         }
@@ -353,6 +353,9 @@
     },
     "target-amdgpu": {
       "description": "Build with AMDGPU backend."
+    },
+    "target-arc": {
+      "description": "Build with ARC backend (experimental)."
     },
     "target-arm": {
       "description": "Build with ARM backend."
@@ -363,6 +366,12 @@
     "target-bpf": {
       "description": "Build with BPF backend."
     },
+    "target-csky": {
+      "description": "Build with CSKY backend (experimental)."
+    },
+    "target-directx": {
+      "description": "Build with DirectX backend (experimental)."
+    },
     "target-hexagon": {
       "description": "Build with Hexagon backend."
     },
@@ -371,6 +380,9 @@
     },
     "target-loongarch": {
       "description": "Build with LoongArch backend."
+    },
+    "target-m68k": {
+      "description": "Build with M68k backend (experimental)."
     },
     "target-mips": {
       "description": "Build with Mips backend."
@@ -390,6 +402,9 @@
     "target-sparc": {
       "description": "Build with Sparc backend."
     },
+    "target-spirv": {
+      "description": "Build with SPIRV backend (experimental)."
+    },
     "target-systemz": {
       "description": "Build with SystemZ backend."
     },
@@ -404,21 +419,6 @@
     },
     "target-xcore": {
       "description": "Build with XCore backend."
-    },
-    "target-arc": {
-      "description": "Build with ARC backend (experimental)."
-    },
-    "target-csky": {
-      "description": "Build with CSKY backend (experimental)."
-    },
-    "target-directx": {
-      "description": "Build with DirectX backend (experimental)."
-    },
-    "target-m68k": {
-      "description": "Build with M68k backend (experimental)."
-    },
-    "target-spirv": {
-      "description": "Build with SPIRV backend (experimental)."
     },
     "target-xtensa": {
       "description": "Build with Xtensa backend (experimental)."
