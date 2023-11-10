@@ -3,9 +3,9 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO trail-of-forks/llvm-project
-    REF 60033c5
+    REF 60033c528ca1213efe615cf1cc07067a991210db
     SHA512 df68879cb3f23489e19bbec4aac1898d213e837132072f8bbc1a49eb561c8cc7ccdb6ae9202b68b0915c84c8f2b41e536ab690697eb8ab8c9f44d5ae600b575b
-    HEAD_REF release/17.x
+    HEAD_REF 60033c528ca1213efe615cf1cc07067a991210db
     PATCHES
         0001-Fix-install-paths.patch
         0006-Fix-libffi.patch
