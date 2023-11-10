@@ -39,7 +39,8 @@ jobs:
           - { runner: 'macos-13', xcode: '15.0' }
         llvm: [
           'llvm-16',
-          'llvm-17'
+          'llvm-17',
+          'liftingbits-llvm-17'
         ]
         target_arch: [ 'x64', 'arm64' ]
 
