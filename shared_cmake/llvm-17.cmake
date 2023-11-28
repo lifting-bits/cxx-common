@@ -468,7 +468,7 @@ function(llvm-17-port repo_target ref sha512 head_ref patches)
         file(READ "${release_target}" contents)
         string(REPLACE "${CURRENT_INSTALLED_DIR}" "\${_IMPORT_PREFIX}" contents "${contents}")
         string(REGEX REPLACE
-            "\\\${_IMPORT_PREFIX}/tools/liftingbits-llvm-17/([^ \"]+${EXECUTABLE_SUFFIX})"
+            "\\\${_IMPORT_PREFIX}/tools/llvm-17/([^ \"]+${EXECUTABLE_SUFFIX})"
             "\${_IMPORT_PREFIX}/bin/\\1"
             contents "${contents}")
         file(WRITE "${release_target}" "${contents}")
