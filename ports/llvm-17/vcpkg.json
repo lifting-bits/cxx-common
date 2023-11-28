@@ -30,6 +30,14 @@
     "utils"
   ],
   "features": {
+    "liftingbits-llvm": {
+      "description": "Custom llvm source tree",
+      "default-features": false,
+      "features": [
+        "libunwind",
+        "enable-rtti"
+      ]
+    },
     "bolt": {
       "description": "BOLT is a post-link optimizer developed to speed up large applications.",
       "dependencies": [
