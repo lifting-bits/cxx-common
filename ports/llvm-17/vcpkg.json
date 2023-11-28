@@ -32,10 +32,15 @@
   "features": {
     "liftingbits-llvm": {
       "description": "Custom llvm source tree",
-      "default-features": false,
       "dependencies": [
-        "libunwind",
-        "enable-rtti"
+        {
+          "name": "llvm-17",
+          "default-features": false,
+          "features": [
+            "libunwind",
+            "enable-rtti"
+          ]
+        }
       ]
     },
     "bolt": {
