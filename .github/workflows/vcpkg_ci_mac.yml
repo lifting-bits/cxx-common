@@ -2,8 +2,8 @@ name: MacOS Continuous Integration
 
 env:
   # "Source" is set in the setup-dotnet action
-  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
-  VCPKG_DEFAULT_HOST_TRIPLET: 'x64-osx-rel'
+  VCPKG_BINARY_SOURCES: "clear;nuget,Source,readwrite;nugettimeout,3601"
+  VCPKG_DEFAULT_HOST_TRIPLET: "x64-osx-rel"
 
 on:
   release:
@@ -11,20 +11,20 @@ on:
       - published
   pull_request:
     paths-ignore:
-      - 'docker/**'
-      - '.github/**'
-      - '**.md'
-      - '!.github/workflows/vcpkg_ci_mac.yml'
+      - "docker/**"
+      - ".github/**"
+      - "**.md"
+      - "!.github/workflows/vcpkg_ci_mac.yml"
   push:
     paths-ignore:
-      - 'docker/**'
-      - '.github/**'
-      - '**.md'
-      - '!.github/workflows/vcpkg_ci_mac.yml'
+      - "docker/**"
+      - ".github/**"
+      - "**.md"
+      - "!.github/workflows/vcpkg_ci_mac.yml"
     tags-ignore:
-      - 'v*'
+      - "v*"
     branches:
-      - 'master'
+      - "master"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -36,13 +36,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - { runner: 'macos-13', xcode: '15.0' }
-        llvm: [
-          'llvm-16',
-          'llvm-17',
-          'liftingbits-llvm-17'
-        ]
-        target_arch: [ 'x64', 'arm64' ]
+          - { runner: "macos-13", xcode: "15.0" }
+        llvm: ["llvm-16", "llvm-17", "llvm-17[liftingbits-llvm]"]
+        target_arch: ["x64", "arm64"]
 
     runs-on: ${{ matrix.os.runner }}
 
@@ -71,7 +67,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '3.1.x' # SDK Version to use.
+          dotnet-version: "3.1.x" # SDK Version to use.
           # Sets as "Source"
           source-url: https://nuget.pkg.github.com/lifting-bits/index.json
         env:
@@ -92,8 +88,8 @@ jobs:
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
-      - name: 'vcpkg install dependencies'
-        shell: 'bash'
+      - name: "vcpkg install dependencies"
+        shell: "bash"
         run: |
           export VCPKG_DISABLE_METRICS=1
           brew install bash ninja
@@ -115,14 +111,14 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}_logs
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
-      - name: 'Adhoc codesign'
-        shell: 'bash'
+      - name: "Adhoc codesign"
+        shell: "bash"
         run: |
           find ./${{ env.ARTIFACT_NAME }} \( -path '**/bin/*' -or -path '**/libexec/*' -or -path '**/tools/*'  \) -type f -perm +111 -exec codesign --force -s - \{\} \;
 
-      - name: 'Export Packages'
+      - name: "Export Packages"
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
-        shell: 'bash'
+        shell: "bash"
         run: |
           brew install pixz
           tar --use-compress-program pixz -cf "${{ env.ARTIFACT_NAME }}.tar.xz" ./${{ env.ARTIFACT_NAME }}
@@ -141,8 +137,8 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}.tar.xz
           path: ${{ env.ARTIFACT_NAME }}.tar.xz
 
-      - name: 'Install build dependencies'
-        shell: 'bash'
+      - name: "Install build dependencies"
+        shell: "bash"
         run: |
           brew install ninja ccache
 
@@ -170,8 +166,8 @@ jobs:
         run: |
           ccache --show-stats
 
-      - name: 'Rellic build'
-        shell: 'bash'
+      - name: "Rellic build"
+        shell: "bash"
         working-directory: rellic
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -185,15 +181,15 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
-      - name: 'Rellic test'
-        shell: 'bash'
+      - name: "Rellic test"
+        shell: "bash"
         working-directory: rellic
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
-      - name: 'Remill dependencies'
-        shell: 'bash'
+      - name: "Remill dependencies"
+        shell: "bash"
         working-directory: remill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -202,8 +198,8 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: 'Remill build'
-        shell: 'bash'
+      - name: "Remill build"
+        shell: "bash"
         working-directory: remill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -218,16 +214,16 @@ jobs:
           cmake --build build
           cmake --install build
           cmake --build build --target test_dependencies
-      - name: 'Remill test'
-        shell: 'bash'
+      - name: "Remill test"
+        shell: "bash"
         working-directory: remill/build
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Only run test on x64
           env CTEST_OUTPUT_ON_FAILURE=1 ctest .
 
-      - name: 'Anvill build'
-        shell: 'bash'
+      - name: "Anvill build"
+        shell: "bash"
         working-directory: anvill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -246,15 +242,15 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
-      - name: 'Anvill test'
-        shell: 'bash'
+      - name: "Anvill test"
+        shell: "bash"
         working-directory: anvill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: Cache cleanup and reporting
-        shell: 'bash'
+        shell: "bash"
         run: |
           rm -rf vcpkg/{buildtrees,installed,packages}
           ccache --show-stats

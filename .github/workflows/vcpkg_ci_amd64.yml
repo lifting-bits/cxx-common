@@ -2,10 +2,10 @@ name: Linux CI
 
 env:
   # "Source" is set in the vcpkg install step
-  VCPKG_BINARY_SOURCES: 'clear;nuget,Source,readwrite;nugettimeout,3601'
+  VCPKG_BINARY_SOURCES: "clear;nuget,Source,readwrite;nugettimeout,3601"
   # Self-hosted runners can hopefully reuse already downloaded packages
   VCPKG_USE_NUGET_CACHE: 1
-  VCPKG_DEFAULT_HOST_TRIPLET: 'x64-linux-rel'
+  VCPKG_DEFAULT_HOST_TRIPLET: "x64-linux-rel"
 
 on:
   release:
@@ -13,20 +13,20 @@ on:
       - published
   pull_request:
     paths-ignore:
-      - 'docker/**'
-      - '.github/**'
-      - '**.md'
-      - '!.github/workflows/vcpkg_ci_amd64*'
+      - "docker/**"
+      - ".github/**"
+      - "**.md"
+      - "!.github/workflows/vcpkg_ci_amd64*"
   push:
     paths-ignore:
-      - 'docker/**'
-      - '.github/**'
-      - '**.md'
-      - '!.github/workflows/vcpkg_ci_amd64*'
+      - "docker/**"
+      - ".github/**"
+      - "**.md"
+      - "!.github/workflows/vcpkg_ci_amd64*"
     tags-ignore:
-      - 'v*'
+      - "v*"
     branches:
-      - 'master'
+      - "master"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -39,13 +39,9 @@ jobs:
       matrix:
         image:
           # 'name' is Docker image name whereas 'os' is more generic
-          - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
-        llvm: [
-          'llvm-16',
-          'llvm-17',
-          'liftingbits-llvm-17'
-        ]
-        target_arch: [ 'x64', 'arm64' ]
+          - { os: "ubuntu", name: "ubuntu-v2", tag: "22.04" }
+        llvm: ["llvm-16", "llvm-17", "llvm-17[liftingbits-llvm]"]
+        target_arch: ["x64", "arm64"]
 
     container:
       image: docker.pkg.github.com/lifting-bits/cxx-common/vcpkg-builder-${{ matrix.image.name }}:${{ matrix.image.tag }}
@@ -103,8 +99,8 @@ jobs:
           ./vcpkg/bootstrap-vcpkg.sh
           echo "VCPKG_ROOT=$(pwd)/vcpkg" >> $GITHUB_ENV
 
-      - name: 'vcpkg install dependencies'
-        shell: 'bash'
+      - name: "vcpkg install dependencies"
+        shell: "bash"
         run: |
           export VCPKG_DISABLE_METRICS=1
 
@@ -163,7 +159,7 @@ jobs:
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
       - name: Cleanup
-        shell: 'bash'
+        shell: "bash"
         run: |
           echo "Space left"
           df -h
@@ -175,9 +171,9 @@ jobs:
           echo "Space left"
           df -h
 
-      - name: 'Export Packages'
+      - name: "Export Packages"
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
-        shell: 'bash'
+        shell: "bash"
         run: |
           apt-get update
           apt-get install -y pixz
@@ -221,8 +217,8 @@ jobs:
         run: |
           ccache --show-stats
 
-      - name: 'Rellic build'
-        shell: 'bash'
+      - name: "Rellic build"
+        shell: "bash"
         working-directory: rellic
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -238,15 +234,15 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --build build --target install
-      - name: 'Rellic test'
-        shell: 'bash'
+      - name: "Rellic test"
+        shell: "bash"
         working-directory: rellic
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
-      - name: 'Remill dependencies'
-        shell: 'bash'
+      - name: "Remill dependencies"
+        shell: "bash"
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
@@ -255,8 +251,8 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: 'Remill build'
-        shell: 'bash'
+      - name: "Remill build"
+        shell: "bash"
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         working-directory: remill
         run: |
@@ -270,16 +266,16 @@ jobs:
           cmake --build build
           cmake --install build
           cmake --build build --target test_dependencies
-      - name: 'Remill test'
-        shell: 'bash'
+      - name: "Remill test"
+        shell: "bash"
         working-directory: remill/build
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           # Some tests fail on ubuntu 22.04
           env CTEST_OUTPUT_ON_FAILURE=1 ctest . || true
 
-      - name: 'Anvill build'
-        shell: 'bash'
+      - name: "Anvill build"
+        shell: "bash"
         working-directory: anvill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
@@ -301,15 +297,15 @@ jobs:
             -S . -B build
           cmake --build build
           cmake --install build
-      - name: 'Anvill test'
-        shell: 'bash'
+      - name: "Anvill test"
+        shell: "bash"
         working-directory: anvill
         if: matrix.target_arch == 'x64' && startswith(matrix.llvm, 'llvm-16')
         run: |
           cmake --build build --target test
 
       - name: Cache cleanup and reporting
-        shell: 'bash'
+        shell: "bash"
         run: |
           rm -rf vcpkg/{buildtrees,installed,packages}
           ccache --show-stats
