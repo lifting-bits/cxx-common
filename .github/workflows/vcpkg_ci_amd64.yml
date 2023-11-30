@@ -42,7 +42,8 @@ jobs:
           - { os: 'ubuntu', name: 'ubuntu-v2', tag: '22.04' }
         llvm: [
           'llvm-16',
-          'llvm-17'
+          'llvm-17',
+          'llvm-17[liftingbits-llvm]'
         ]
         target_arch: [ 'x64', 'arm64' ]
 

@@ -30,6 +30,19 @@
     "utils"
   ],
   "features": {
+    "liftingbits-llvm": {
+      "description": "Custom llvm source tree that allows for custom calling convention registration. These custom calling conventions allow for specifying binary level compatibility.",
+      "dependencies": [
+        {
+          "name": "llvm-17",
+          "default-features": false,
+          "features": [
+            "libunwind",
+            "enable-rtti"
+          ]
+        }
+      ]
+    },
     "bolt": {
       "description": "BOLT is a post-link optimizer developed to speed up large applications.",
       "dependencies": [
