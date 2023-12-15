@@ -130,7 +130,7 @@ jobs:
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts')
         with:
           name: ${{ env.ARTIFACT_NAME }}.7z
