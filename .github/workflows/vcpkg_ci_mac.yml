@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload CMake logs on error
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}_logs
           path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -135,7 +135,7 @@ jobs:
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: contains(env.COMMIT_MESSAGE, 'debug artifacts') || github.event.release
         with:
           name: ${{ env.ARTIFACT_NAME }}.tar.xz
