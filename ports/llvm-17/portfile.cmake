@@ -21,7 +21,7 @@ else()
         OUT_SOURCE_PATH SOURCE_PATH
         REPO llvm/llvm-project
         REF llvmorg-${VERSION}
-        SHA512 df68879cb3f23489e19bbec4aac1898d213e837132072f8bbc1a49eb561c8cc7ccdb6ae9202b68b0915c84c8f2b41e536ab690697eb8ab8c9f44d5ae600b575b
+        SHA512 5300a452e706c1b6183ba300233804d97e4468d2588c2c2e0cf59e56ee5c83f20b7e03f5c0782198c34c63653b3e12d7407e4e8bb8214bae7e6532fa22730443
         HEAD_REF release/17.x
         PATCHES
             0001-Fix-install-paths.patch
@@ -30,7 +30,7 @@ else()
             0021-fix-find_dependency.patch
             0026-fix-prefix-path-calc.patch
             0029-Do-not-attempt-macro-expansion-on-invalid-sourceloc.patch
-    )  
+    )
 endif()
 
 string(REPLACE "." ";" VERSION_LIST ${VERSION})
