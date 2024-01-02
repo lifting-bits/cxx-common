@@ -13,12 +13,11 @@ vcpkg_cmake_configure(
 
 vcpkg_cmake_install()
 vcpkg_copy_tools(
-    TOOL_NAMES re2c
+    TOOL_NAMES re2c re2go re2rust
     DESTINATION "${CURRENT_PACKAGES_DIR}/tools/re2c"
     AUTO_CLEAN
 )
 
 set(VCPKG_POLICY_EMPTY_INCLUDE_FOLDER enabled)
-file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 
 file(INSTALL "${SOURCE_PATH}/LICENSE" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
