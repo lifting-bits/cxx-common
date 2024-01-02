@@ -6,17 +6,19 @@ vcpkg_from_github(
     HEAD_REF master
 )
 
+set(VCPKG_BUILD_TYPE release)
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
 )
 
 vcpkg_cmake_install()
-vcpkg_cmake_config_fixup()
-vcpkg_copy_pdbs()
+vcpkg_copy_tools(
+    TOOL_NAMES re2c
+    DESTINATION "${CURRENT_PACKAGES_DIR}/tools/re2c"
+    AUTO_CLEAN
+)
 
-file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+set(VCPKG_POLICY_EMPTY_INCLUDE_FOLDER enabled)
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 
 file(INSTALL "${SOURCE_PATH}/LICENSE" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
-
-vcpkg_fixup_pkgconfig()
