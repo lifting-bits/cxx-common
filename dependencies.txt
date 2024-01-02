@@ -1,6 +1,7 @@
 xed
 z3
 glog
+re2c
 gtest
 gflags
 protobuf
