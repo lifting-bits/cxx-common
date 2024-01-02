@@ -15,4 +15,6 @@ re2
 zstd
 lz4
 doctest
+fmt
+spdlog
 sqlite3[fts5]
