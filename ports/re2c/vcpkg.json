@@ -1,7 +1,6 @@
 {
   "name": "re2c",
   "version": "3.1",
-  "port-version": 1,
   "description": "Lexer generator for C, C++, Go and Rust.",
   "homepage": "https://re2c.org/",
   "license": null,
