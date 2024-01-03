@@ -1,6 +1,7 @@
 xed
 z3
 glog
+re2c
 gtest
 gflags
 protobuf
@@ -14,4 +15,6 @@ re2
 zstd
 lz4
 doctest
+fmt
+spdlog
 sqlite3[fts5]
