@@ -9,7 +9,7 @@ set -euo pipefail
 IMAGE_VER=v2
 
 # Ubuntu versions to build
-UBUNTU_VERSION_MATRIX=( "focal" "jammy" )
+UBUNTU_VERSION_MATRIX=( "jammy" )
 
 for version in "${UBUNTU_VERSION_MATRIX[@]}"; do
   # Always pull from upstream

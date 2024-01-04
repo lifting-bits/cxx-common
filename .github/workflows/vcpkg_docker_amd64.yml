@@ -28,23 +28,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # arch is to tag docker images for uniqueness
-        host:
-          - { name: 'ubuntu-22.04', arch: '' }
         container:
           - { version: '22.04', codename: 'jammy' }
+        platform:
+          - 'linux/amd64'
+          - 'linux/arm64/v8' # Apple Silicon Linux support
 
-    runs-on: ${{ matrix.host.name }}
+    runs-on: ubuntu-22.04
 
     permissions:
       packages: write
       contents: read
 
     steps:
-      - name: Cleanup working directory with container root
-        run: |
-          docker run --rm -v $(pwd):/workspace -w /workspace ubuntu:latest find . -name . -o -prune -exec rm -rf -- {} + || true
       - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Generate Image Name
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -53,16 +52,17 @@ jobs:
           if [[ "${GITHUB_REF}" != "refs/heads/master" ]] ; then
             test_name="test-${BRANCH_NAME////_}-"
           fi
-          echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}${{ matrix.host.arch }}" >> ${GITHUB_ENV}
+          echo "IMAGE_NAME=ghcr.io/lifting-bits/cxx-common/${test_name}vcpkg-builder-ubuntu-${{ env.IMAGE_VER }}:${{ matrix.container.version }}" >> ${GITHUB_ENV}
 
       - name: Build image
         working-directory: docker
         run: |
           # Pull freshest ubuntu Docker image
-          docker pull ubuntu:${{ matrix.container.version}}
+          docker pull --platform "${{ matrix.platform }}" ubuntu:${{ matrix.container.version}}
 
           docker build -f Dockerfile.ubuntu.vcpkg \
               --no-cache \
+              --platform "${{ matrix.platform }}" \
               --target caching \
               --build-arg "DISTRO_VERSION=${{ matrix.container.codename }}" \
               -t "${IMAGE_NAME}" \
