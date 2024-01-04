@@ -37,7 +37,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cd ~ && mkdir build && cd build && \
     curl -s  https://api.github.com/repos/ccache/ccache/releases/latest | grep tarball_url | cut -d '"' -f 4 | wget -i- -O - | tar -xz && \
     cd ccache-ccache-* && \
-    cmake -S . -B build -G Ninja -DREDIS_STORAGE_BACKEND=OFF -DCMAKE_BUILD_TYPE=Release && \
+    cmake -S . -B build -G Ninja -DREDIS_STORAGE_BACKEND=OFF -DENABLE_TESTING=OFF -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build --target install && \
     cd .. && rm -rf ccache-ccache-*
 
