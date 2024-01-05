@@ -56,16 +56,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate Image Name
-        env:
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        run: |
-          test_name=""
-          if [[ "${GITHUB_REF}" != "refs/heads/master" ]] ; then
-            test_name="test-${BRANCH_NAME////_}-"
-          fi
-          echo "REGISTRY_IMAGE=" >> ${GITHUB_ENV}
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
