@@ -1,4 +1,4 @@
-ARG DISTRO_VERSION=focal
+ARG DISTRO_VERSION=jammy
 ARG LLVM_VERSION=16
 
 ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
@@ -47,10 +47,8 @@ ARG DISTRO_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     \
-    if [ ${DISTRO_VERSION} != "jammy" ] ; then \
-        apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
-        echo "deb https://download.mono-project.com/repo/ubuntu stable-${DISTRO_VERSION} main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
-    fi && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF && \
+    echo "deb https://download.mono-project.com/repo/ubuntu stable-${DISTRO_VERSION} main" | tee /etc/apt/sources.list.d/mono-official-stable.list ; \
     \
     apt-get update && \
     apt-get install --yes mono-devel && \
