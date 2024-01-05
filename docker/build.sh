@@ -5,18 +5,16 @@ set -euo pipefail
 # Builds base images with all required dependencies to bootstrap vcpkg and
 # build vcpkg libraries as well as all lifting-bits tools
 
-# Also remember to change the '.github/workflows/vcpkg_docker_amd64.yml' variable
-IMAGE_VER=v2
-
 # Ubuntu versions to build
-UBUNTU_VERSION_MATRIX=( "jammy" )
+UBUNTU_VERSION_MATRIX=( "22.04" )
 
 for version in "${UBUNTU_VERSION_MATRIX[@]}"; do
   # Always pull from upstream
   docker pull "ubuntu:${version}"
 
+  # Also remember to change the '.github/workflows/vcpkg_docker.yml' variable
   # Image identification
-  tag="vcpkg-builder-ubuntu-${IMAGE_VER}:${version}"
+  tag="vcpkg-builder-ubuntu-${version}-v2"
 
   # Build
   docker build \

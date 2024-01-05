@@ -1,9 +1,7 @@
-ARG DISTRO_VERSION=jammy
+ARG UBUNTU_VERSION=22.04
 ARG LLVM_VERSION=16
 
-ARG BUILD_BASE=ubuntu:${DISTRO_VERSION}
-FROM ${BUILD_BASE} as base
-ARG DISTRO_VERSION
+FROM ubuntu:${UBUNTU_VERSION} as base
 ARG LLVM_VERSION
 
 # All build dependencies for vcpkg packages
