@@ -21,18 +21,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  # Also remember to change the 'docker/build.sh' script
-  # NOTE: Setting the environment variable here isn't ideal because we
-  # can't use any matrix variables here, and in the future we will probably
-  # want to support building multiple Ubuntu versions
-  REGISTRY_IMAGE_ROOT: ""
-
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       # This needs to be the same as in the `merge` job
+      # Also remember to change the 'docker/build.sh' script
       REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-${{ matrix.ubuntu_version }}
     strategy:
       fail-fast: false
@@ -135,8 +129,8 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create "$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")" \
-            "$(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)"
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
