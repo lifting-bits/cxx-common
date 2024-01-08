@@ -2,6 +2,7 @@ ARG UBUNTU_VERSION=22.04
 ARG LLVM_VERSION=16
 
 FROM ubuntu:${UBUNTU_VERSION} as base
+ARG UBUNTU_VERSION
 ARG LLVM_VERSION
 
 # All build dependencies for vcpkg packages
@@ -13,16 +14,18 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && apt-get install --yes apt-utils && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends apt-transport-https software-properties-common gnupg ca-certificates wget && \
     apt-add-repository ppa:git-core/ppa --yes && \
-    wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-$(uname -m).sh" && \
+    wget "https://github.com/Kitware/CMake/releases/download/v3.28.1/cmake-3.28.1-linux-$(uname -m).sh" && \
     /bin/bash cmake-*.sh --skip-license --prefix=/usr/local && rm cmake-*.sh && \
     \
-    wget https://apt.llvm.org/llvm.sh && \
-    chmod +x llvm.sh && \
-    ./llvm.sh ${LLVM_VERSION} clang lld && \
+    if [ "${UBUNTU_VERSION}" != "24.04" ] ; then \
+        wget https://apt.llvm.org/llvm.sh && \
+        chmod +x llvm.sh && \
+        ./llvm.sh ${LLVM_VERSION} clang lld ; \
+    fi && \
     \
     apt-get update && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
-      libtinfo-dev libzstd-dev python3-pip python3-setuptools python-setuptools \
+      libtinfo-dev libzstd-dev python3-pip python3-setuptools \
       build-essential binutils-multiarch g++ gcc clang lld clang-${LLVM_VERSION} lld-${LLVM_VERSION} ninja-build \
       pixz xz-utils make rpm curl unzip tar git zip python3 pkg-config && \
       apt-get install --yes --no-install-recommends \
@@ -41,7 +44,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 # Much heavier installation due to mono dependency for NuGet
 FROM base as caching
-ARG DISTRO_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install --yes mono-devel && \
