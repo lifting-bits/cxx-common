@@ -1,0 +1,169 @@
+name: Docker Build Images
+
+# Based on https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
+
+on:
+  schedule:
+    # Once every Wednesday at 00:00
+    - cron: '0 0 * * 3'
+  push:
+    branches:
+      - master
+    paths:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+  pull_request:
+    paths:
+      - 'docker/**'
+      - '.github/workflows/vcpkg_docker.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # This needs to be the same as in the `merge` job
+      # Also remember to change the 'docker/build.sh' script
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-v2
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+        ubuntu_version:
+          - 22.04
+          - 24.04
+    steps:
+      - name: Prepare
+        run: |
+          platform="${{ matrix.platform }}"
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "${GITHUB_ENV}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # BEGIN Copied to the next job
+      - name: Generate Tag
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          test_tag=""
+          if [[ "${GITHUB_REF}" != "refs/heads/${{ github.event.repository.default_branch }}" ]] ; then
+            test_tag="test-${BRANCH_NAME////_}-"
+          fi
+          echo "TEST_TAG=${test_tag}" >> "${GITHUB_ENV}"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTERY_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ env.TEST_TAG }}${{ matrix.ubuntu_version }}
+      # END Copied to the next job
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: docker
+          file: docker/Dockerfile.ubuntu.vcpkg
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.ubuntu_version }}-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    env:
+      # This needs to be the same as in the `build` job
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-v2
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu_version:
+          - 22.04
+          - 24.04
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.ubuntu_version }}-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # BEGIN Copied to the previous job
+      - name: Generate Tag
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          test_tag=""
+          if [[ "${GITHUB_REF}" != "refs/heads/${{ github.event.repository.default_branch }}" ]] ; then
+            test_tag="test-${BRANCH_NAME////_}-"
+          fi
+          echo "TEST_TAG=${test_tag}" >> "${GITHUB_ENV}"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ env.TEST_TAG }}${{ matrix.ubuntu_version }}
+      # END Copied from the previous job
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
