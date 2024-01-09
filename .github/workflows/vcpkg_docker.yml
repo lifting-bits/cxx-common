@@ -27,7 +27,7 @@ jobs:
     env:
       # This needs to be the same as in the `merge` job
       # Also remember to change the 'docker/build.sh' script
-      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-v2
     strategy:
       fail-fast: false
       matrix:
@@ -111,7 +111,7 @@ jobs:
       - build
     env:
       # This needs to be the same as in the `build` job
-      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-v2
     strategy:
       fail-fast: false
       matrix:
