@@ -129,6 +129,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # BEGIN Copied to the previous job
       - name: Generate Tag
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -148,13 +156,7 @@ jobs:
             latest=false
           tags: |
             type=raw,value=${{ env.TEST_TAG }}${{ matrix.ubuntu_version }}
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # END Copied from the previous job
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
