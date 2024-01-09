@@ -14,13 +14,13 @@ for version in "${UBUNTU_VERSION_MATRIX[@]}"; do
 
   # Also remember to change the '.github/workflows/vcpkg_docker.yml' variable
   # Image identification
-  image="vcpkg-builder-ubuntu-${version}"
+  image=vcpkg-builder-ubuntu
 
   # Build
   docker build \
       -f Dockerfile.ubuntu.vcpkg \
       --no-cache \
       --build-arg "UBUNTU_VERSION=${version}" \
-      -t "${image}" \
+      -t "${image}:${version}" \
       .
 done

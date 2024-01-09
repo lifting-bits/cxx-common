@@ -27,7 +27,7 @@ jobs:
     env:
       # This needs to be the same as in the `merge` job
       # Also remember to change the 'docker/build.sh' script
-      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-${{ matrix.ubuntu_version }}
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu
     strategy:
       fail-fast: false
       matrix:
@@ -59,11 +59,27 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # BEGIN Copied to the next job
+      - name: Generate Tag
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          test_tag=""
+          if [[ "${GITHUB_REF}" != "refs/heads/${{ github.event.repository.default_branch }}" ]] ; then
+            test_tag="test-${BRANCH_NAME////_}-"
+          fi
+          echo "TEST_TAG=${test_tag}" >> "${GITHUB_ENV}"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTERY_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ env.TEST_TAG }}${{ matrix.ubuntu_version }}
+      # END Copied to the next job
 
       - name: Build and push by digest
         id: build
@@ -95,7 +111,7 @@ jobs:
       - build
     env:
       # This needs to be the same as in the `build` job
-      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu-${{ matrix.ubuntu_version }}
+      REGISTRY_IMAGE: ghcr.io/lifting-bits/cxx-common/vcpkg-builder-ubuntu
     strategy:
       fail-fast: false
       matrix:
@@ -113,11 +129,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Generate Tag
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          test_tag=""
+          if [[ "${GITHUB_REF}" != "refs/heads/${{ github.event.repository.default_branch }}" ]] ; then
+            test_tag="test-${BRANCH_NAME////_}-"
+          fi
+          echo "TEST_TAG=${test_tag}" >> "${GITHUB_ENV}"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ env.TEST_TAG }}${{ matrix.ubuntu_version }}
 
       - name: Login to GHCR
         uses: docker/login-action@v3
