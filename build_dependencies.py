@@ -81,14 +81,16 @@ if args.upgrade_ports:
     msg("Upgrading any outdated ports")
 if args.export_dir:
     msg(f"Exporting to directory: {args.export_dir}")
-msg(f"Passing args to `vcpkg install`:")
+msg("Passing args to `vcpkg install`:")
 msg(f"  {shlex.join(args.VCPKG_ARGS)}")
 
-for pkg in ["git", "zip", "unzip", "cmake", "python3", "curl", "tar", "pkg-config"]:
-    err_if_not_installed(pkg)
+plat = platform.system()
+if plat != "Windows":
+    for pkg in ["git", "zip", "unzip", "cmake", "python3", "curl", "tar", "pkg-config"]:
+        err_if_not_installed(pkg)
 
 # vcpkg tries to download some pre-built tools but only x86_64 is widely supported
-if platform.machine() != "x86_64":
+if platform.machine() != "x86_64" and plat == "Linux":
     os.environ["VCPKG_FORCE_SYSTEM_BINARIES"] = "1"
 
 os.environ["VCPKG_DISABLE_METRICS"] = "1"
@@ -106,7 +108,6 @@ else:
     err(f"Unsupported CPU: {cpu}")
 
 triplet_os = ""
-plat = platform.system()
 if plat == "Darwin":
     triplet_os = "osx"
 elif plat == "Linux":
