@@ -213,7 +213,7 @@ vcpkg_exe = vcpkg_dir / "vcpkg"
 if args.upgrade_ports:
     print("")
     msg("Checking and upgrading outdated ports")
-    subprocess.check_call(
+    subprocess.run(
         [
             vcpkg_exe,
             "upgrade",

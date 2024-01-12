@@ -1,2 +1,2 @@
 https://github.com/trail-of-forks/vcpkg.git
-6258cbffe91897b52573929d2937481de7d66c8e
+4696f896c49538055a2109efcac9bf6345be4711
