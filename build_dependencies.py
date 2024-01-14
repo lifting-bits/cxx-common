@@ -174,11 +174,12 @@ subprocess.check_call(["git", "checkout", vcpkg_commit], cwd=vcpkg_dir)
 print("")
 msg("Bootstrapping vcpkg")
 ccache = shutil.which("ccache")
+env_ccache = {}
 if ccache:
-    os.environ["CMAKE_C_COMPILER_LAUNCHER"] = ccache
-    os.environ["CMAKE_CXX_COMPILER_LAUNCHER"] = ccache
+    env_ccache["CMAKE_C_COMPILER_LAUNCHER"] = ccache
+    env_ccache["CMAKE_CXX_COMPILER_LAUNCHER"] = ccache
 bootstrap_script = "bootstrap-vcpkg.bat" if plat == "Windows" else "bootstrap-vcpkg.sh"
-subprocess.check_call([vcpkg_dir / bootstrap_script])
+subprocess.check_call([vcpkg_dir / bootstrap_script], env={**os.environ, **env_ccache})
 
 # Copy required buildsystem scripts to export directory (this is what the
 # `vcpkg export` command does).
