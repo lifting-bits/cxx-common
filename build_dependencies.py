@@ -100,7 +100,7 @@ msg("Building dependencies from source")
 # Figure out triplet based on host info
 triplet_arch = ""
 cpu = platform.machine()
-if cpu == "x86_64":
+if cpu == "x86_64" or cpu.lower() == "amd64":
     triplet_arch = "x64"
 elif cpu == "aarch64" or cpu.lower() == "arm64":
     triplet_arch = "arm64"
