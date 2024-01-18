@@ -209,7 +209,7 @@ jobs:
           echo "timestamp=$(date +"%Y-%m-%d-%H:%M:%S" --utc)" >> ${GITHUB_OUTPUT}
 
       - name: ccache cache files
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{  github.workspace }}/.ccache
           key: ccache-${{ matrix.image.name }}-${{ matrix.image.tag }}-${{ matrix.target_arch }}-${{ matrix.llvm }}-${{ steps.ccache_prep.outputs.timestamp }}
