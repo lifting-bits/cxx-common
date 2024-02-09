@@ -5,7 +5,7 @@ if("liftingbits-llvm" IN_LIST FEATURES)
     vcpkg_from_github(
         OUT_SOURCE_PATH SOURCE_PATH
         REPO trail-of-forks/llvm-project
-        REF 29fea6a8ab4a1d423bf4d4737b8e5ef33effe61c
+        REF 61bbb0669c906686974329ceb6870408fe0e2518
         SHA512 d4065298f50f6728abb604312101e96ab7946622c9f18761cb1af30118c9dbd6e96dc91cc03650d423f4543a0c445775fa7f85e27c91ba5b486585f823c80780
         HEAD_REF main
         PATCHES
