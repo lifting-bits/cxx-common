@@ -86,7 +86,8 @@
             "target-nvptx",
             "target-sparc",
             "target-webassembly",
-            "target-x86"
+            "target-x86",
+            "target-powerpc"
           ]
         }
       ]
