@@ -6,7 +6,7 @@ if("liftingbits-llvm" IN_LIST FEATURES)
         OUT_SOURCE_PATH SOURCE_PATH
         REPO trail-of-forks/llvm-project
         REF 3bd1628521dc4de68cb3f796a6f0b6f9cc17374d
-        SHA512 01f5fc24fe2de57d4b119b6f32b828919fd2c4e2019349ef22f787a43cdf005c63319c297ba3e85c13fbe2d64618fe455e834a04cd785a55920a686a4bc3b890
+        SHA512 25a1acba79a956799decee11b408a3ce7c1d03ab916fb7788629137ee45aa60b9ff0095cef38358a67a4312435bf10c59f6dfcad6928aae6ff0329432f4fcdcb
         HEAD_REF main
         PATCHES
             0001-Fix-install-paths.patch
