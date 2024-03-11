@@ -124,7 +124,7 @@ jobs:
 
       - name: Publish Release Assets
         if: github.event.release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ARTIFACT_NAME }}
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'rc') }}
