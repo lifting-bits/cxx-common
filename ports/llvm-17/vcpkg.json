@@ -5,7 +5,7 @@
   "homepage": "https://llvm.org",
   "license": "Apache-2.0",
   "supports": "!uwp & !(arm & windows)",
-  "port-version": 1,
+  "port-version": 2,
   "dependencies": [
     {
       "name": "vcpkg-cmake",
